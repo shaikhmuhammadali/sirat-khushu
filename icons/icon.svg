@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Sabr Engine icon">
+  <!-- Source design for the raster icons (crescent + 8-point star, gold on navy). -->
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="65%">
+      <stop offset="0" stop-color="#111a26"/>
+      <stop offset="1" stop-color="#0a0e14"/>
+    </radialGradient>
+    <mask id="crescent">
+      <rect width="512" height="512" fill="black"/>
+      <circle cx="238" cy="262" r="150" fill="white"/>
+      <circle cx="290" cy="232" r="126" fill="black"/>
+    </mask>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect x="44" y="44" width="424" height="424" rx="84" fill="none" stroke="#d9b45b" stroke-opacity="0.35" stroke-width="3"/>
+  <rect width="512" height="512" fill="#e6c169" mask="url(#crescent)"/>
+  <path transform="translate(360,176)" fill="#d9b45b"
+        d="M0,-52 L12,-17 49,-17 19,6 30,42 0,20 -30,42 -19,6 -49,-17 -12,-17 Z"/>
+</svg>

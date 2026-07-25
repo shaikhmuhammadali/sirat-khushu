@@ -1,0 +1,38 @@
+{
+  "id": "./",
+  "name": "Sirat Khushu — Salah, Qur'an & Khushu",
+  "short_name": "Sirat Khushu",
+  "description": "On-device prayer times, qibla, Hijri calendar, Islamic events and a live world clock. Private, ad-free and fully offline.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#0a0e14",
+  "theme_color": "#0a0e14",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["lifestyle", "utilities", "education"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Prayer times",
+      "short_name": "Prayers",
+      "description": "Jump to today's prayer times",
+      "url": "./#pgrid",
+      "icons": [{ "src": "icons/shortcut-prayers.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Islamic events",
+      "short_name": "Events",
+      "description": "Upcoming Islamic calendar events",
+      "url": "./#events",
+      "icons": [{ "src": "icons/shortcut-events.png", "sizes": "96x96", "type": "image/png" }]
+    }
+  ]
+}
