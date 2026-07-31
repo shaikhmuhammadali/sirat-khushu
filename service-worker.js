@@ -10,7 +10,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
 
-const VERSION = 'sabr-engine-v3.76.0';          // ← bump to ship an update
+const VERSION = 'sabr-engine-v3.82.0';          // ← bump to ship an update
 const SHELL   = VERSION + '-shell';
 const RUNTIME = VERSION + '-runtime';
 
@@ -137,7 +137,11 @@ self.addEventListener('fetch', event => {
     event.respondWith((async () => {
       try {
         const res = await withTimeout(fetch(req), 4500);
-        if (res && res.ok){ event.waitUntil((async () => { const c = await caches.open(SHELL); await c.put('./index.html', res.clone()); })()); }
+        // Clone SYNCHRONOUSLY, before returning res. If we cloned inside the async IIFE (after
+        // `await caches.open`), `return res` would already have handed the body to respondWith and
+        // locked it, so res.clone() would throw and the SHELL refresh would silently never run —
+        // leaving offline users on a stale shell after content-only (no-VERSION-bump) deploys.
+        if (res && res.ok){ const copy = res.clone(); event.waitUntil((async () => { const c = await caches.open(SHELL); await c.put('./index.html', copy); })()); }
         return res;
       } catch (e) {
         return (await caches.match('./index.html')) || (await caches.match('./')) || (await caches.match('./offline.html')) || Response.error();

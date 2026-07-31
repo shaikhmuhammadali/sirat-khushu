@@ -96,7 +96,11 @@
      listed (the galaxy, moon canvas and qibla compass are deliberately excluded — they read their
      own box size). contain-intrinsic-size:auto lets the browser remember each card's real height
      after first render, so scrolling doesn't jump. */
-  #dailyCard, #adhkarCard, #duasCard, #calendarCard, #eventsCard, #journalHistoryCard{
+  /* #journalHistoryCard is deliberately NOT in this list: the "Read all N reflections →" button
+     scrollIntoView()s it, and scrolling to a render-skipped element lands on its estimated
+     placeholder height rather than its real one. It also sits in Settings, not on the long Today
+     scroll, so skipping it bought nothing anyway. */
+  #dailyCard, #adhkarCard, #duasCard, #calendarCard, #eventsCard{
     content-visibility:auto; contain-intrinsic-size:auto 320px;
   }
   h2.sec{font-size:.72rem; letter-spacing:.28em; text-transform:uppercase; color:var(--gold-ink); font-weight:800; margin-bottom:14px; display:flex; align-items:center; gap:8px}
@@ -1548,7 +1552,8 @@ const DEFAULTS = {
   profile:null, nameAsked:0, xp:0, achievements:[], questClaim:null, dhikrDay:null, greetSeen:null,
   remind:true, notifPre:0, notifPost:0, soundName:'bell', vol:1, vibrate:true,
   quiet:false, quietFrom:22, quietTo:6, hadithPopup:true, progressToasts:true, loveEvery:45,
-  gender:null, dhikrVoice:false, adhkarCount:null, voiceDepth:'deep', salawatAudio:true, reciter:'afasy', reciterReminded:false, rot:null, lockEnabled:false, lockFails:null, account:null, emailjs:{service:'',template:'',pubkey:'',privkey:''}, resetCode:null, push:{url:'',key:'',appkey:'',on:false}, methodAuto:true
+  gender:null, dhikrVoice:false, adhkarCount:null, voiceDepth:'deep', salawatAudio:true, reciter:'afasy', reciterReminded:false, rot:null, lockEnabled:false, lockFails:null, account:null, emailjs:{service:'',template:'',pubkey:'',privkey:''}, resetCode:null, push:{url:'',key:'',appkey:'',on:false}, methodAuto:true,
+  analytics:false          // anonymous usage sharing — OFF by default; opt-in only
 };
 function isValidTz(tz){
   if (!tz || typeof tz !== 'string') return false;
@@ -1563,6 +1568,14 @@ let S = (() => {
   if (merged.loc && !isValidTz(merged.loc.tz)) merged.loc = null;
   return merged;
 })();
+/* DO NOT REMOVE. `let S` at the top level of a classic script creates a binding in the
+   global *lexical* environment — it is NOT a property of window. The Android native
+   bridge (android-app/web/native-bridge.js) is a separate script that reads `window.S`
+   to build the prayer schedule; without this line window.S is permanently undefined, its
+   wire() retry loop spins every 300ms forever, no alarm is ever armed, and the entire
+   phone-wide Prayer Lock silently never fires. S is mutated in place (never reassigned),
+   so this reference stays correct for the life of the page. */
+window.S = S;
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ /* private mode / quota — non-fatal */ } try{ if (typeof scheduleCloudSync === 'function') scheduleCloudSync(); }catch(e){} }
 
 /* ── calculation methods (angles verified against AlAdhan /v1/methods, 2026) ── */
@@ -2036,13 +2049,16 @@ function renderVoluntary(set, now, tz){
 let _tdSig = '';
 function renderTimeDetails(set, now, tz){
   const c = set.today;
-  // These six only change once per day (or on tz/DST change) — rewrite them only when the
-  // day-signature changes, not on every 500ms tick. Unix / Julian / ISO below are live, so
-  // they still update each tick.
-  const sig = [c.y, c.m, c.d, tz].join('|');
+  // These six only change once per day — rewrite them only when the signature changes, not on
+  // every 500ms tick. Unix / Julian / ISO below are live, so they still update each tick.
+  // NOTE: offMin is part of the signature and is computed every tick on purpose. A DST change
+  // happens MID-day, so a date-only signature would leave the UTC-offset and DST rows showing
+  // stale values until the next day. (The original code recomputed offMin every tick too, so
+  // this costs nothing extra — we still skip the 6 DOM writes + isDST + isoWeek on most ticks.)
+  const offMin = tzOffsetMin(tz, new Date(now));
+  const sig = [c.y, c.m, c.d, tz, offMin].join('|');
   if (sig !== _tdSig){
     _tdSig = sig;
-    const offMin = tzOffsetMin(tz, new Date(now));
     const sign = offMin >= 0 ? '+' : '−';
     document.getElementById('tdOffset').textContent = `${sign}${pad(Math.floor(Math.abs(offMin)/60))}:${pad(Math.abs(offMin)%60)}`;
     document.getElementById('tdDst').textContent = isDST(tz, now) ? 'Active' : 'No';
@@ -3203,6 +3219,8 @@ async function renderQuran(){
     + '<div style="margin-top:9px">' + ((s.ayahs[0] && s.ayahs[0].g) ? reciteSurahBtn(s.n, s.ayahs.length, s.ayahs[0].g) : reciteBtn(full, 'Recite surah')) + '</div></div>'
     + (showBism ? '<div class="qbism ar" lang="ar" dir="rtl">' + QBISM + '</div>' : '')
     + body;
+  // anonymous reading stat — no-op unless the user opted into usage sharing (and a server is set)
+  try{ if (window.SiratTrack && s && s.n) SiratTrack.read(s.n); }catch(e){}
 }
 
 
@@ -3390,8 +3408,83 @@ const AUTH_REQUIRED = true;
    device with just their name & password and their data comes back automatically. Empty =
    fall back to the push-server URL saved in Settings; if neither is set, cloud login is
    hidden and the backup-file restore is offered instead. */
-const CLOUD_URL = '';
+const CLOUD_URL = 'https://sabr-push-server.onrender.com';
 function cloudUrl(){ return (CLOUD_URL || (S.push && S.push.url) || '').replace(/\/+$/, ''); }
+
+/* ── anonymous, OPT-IN usage sharing ───────────────────────────────────────────
+   Sends ONLY when S.analytics is true (off by default; the user turns it on in
+   Settings). What leaves the device: a random anonymous id (not the username, not
+   the account), the device type, a coarse country from the timezone, and which
+   surah was opened. Never a name, never account data, never any Qur'an text. All
+   of it also requires a server URL — with none configured, nothing is sent. */
+function _anonId(){
+  try{
+    let v = localStorage.getItem('sk_anon');
+    if (!v){ v = 'a_' + (randomHex(8) || Math.random().toString(36).slice(2,12)); localStorage.setItem('sk_anon', v); }
+    return v;
+  }catch(e){ return null; }
+}
+function _anonDevice(){
+  const ua = navigator.userAgent || '';
+  if (/Tablet|iPad/i.test(ua)) return 'tablet';
+  if (/Mobi|Android|iPhone/i.test(ua)) return 'phone';
+  return 'desktop';
+}
+// Coarse country from the device's IANA timezone (no IP, no geolocation) — a privacy-clean
+// signal of where the user is. Falls back to the locale region, then "Unknown".
+const _TZ_COUNTRY = {
+  'Asia/Karachi':'Pakistan','Asia/Kolkata':'India','Asia/Calcutta':'India','Asia/Dhaka':'Bangladesh',
+  'Asia/Jakarta':'Indonesia','Asia/Makassar':'Indonesia','Asia/Kuala_Lumpur':'Malaysia','Asia/Singapore':'Singapore',
+  'Asia/Riyadh':'Saudi Arabia','Asia/Dubai':'UAE','Asia/Qatar':'Qatar','Asia/Kuwait':'Kuwait','Asia/Bahrain':'Bahrain',
+  'Asia/Muscat':'Oman','Asia/Baghdad':'Iraq','Asia/Tehran':'Iran','Asia/Amman':'Jordan','Asia/Beirut':'Lebanon',
+  'Asia/Damascus':'Syria','Asia/Jerusalem':'Palestine','Asia/Gaza':'Palestine','Asia/Istanbul':'Türkiye',
+  'Europe/Istanbul':'Türkiye','Africa/Cairo':'Egypt','Africa/Lagos':'Nigeria','Africa/Casablanca':'Morocco',
+  'Africa/Algiers':'Algeria','Africa/Tunis':'Tunisia','Africa/Khartoum':'Sudan','Africa/Mogadishu':'Somalia',
+  'Africa/Nairobi':'Kenya','Asia/Kabul':'Afghanistan','Asia/Tashkent':'Uzbekistan','Asia/Almaty':'Kazakhstan',
+  'Europe/London':'United Kingdom','Europe/Paris':'France','Europe/Berlin':'Germany','Europe/Amsterdam':'Netherlands',
+  'America/New_York':'United States','America/Chicago':'United States','America/Los_Angeles':'United States',
+  'America/Toronto':'Canada','Australia/Sydney':'Australia'
+};
+function _anonCountry(){
+  try{
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz && _TZ_COUNTRY[tz]) return _TZ_COUNTRY[tz];
+    const loc = (navigator.language || '').split('-')[1];
+    return loc ? loc.toUpperCase() : 'Unknown';
+  }catch(e){ return 'Unknown'; }
+}
+function _track(path, body){
+  if (!S.analytics) return;                 // opt-in gate — the whole feature hinges on this
+  const base = cloudUrl(); if (!base) return;
+  try{
+    const h = {'Content-Type':'application/json'};
+    if (S.push && S.push.appkey) h['X-App-Key'] = S.push.appkey;
+    fetch(base + path, {method:'POST', headers:h, body:JSON.stringify(Object.assign({id:_anonId()}, body)), keepalive:true}).catch(()=>{});
+  }catch(e){}
+}
+let _trackedActive = false;
+function trackVisit(){
+  if (!S.analytics || !cloudUrl()) return;
+  if (!localStorage.getItem('sk_anon_signed')){ _track('/api/track/signup', {device:_anonDevice(), country:_anonCountry()}); try{ localStorage.setItem('sk_anon_signed','1'); }catch(e){} }
+  if (!_trackedActive){ _trackedActive = true; _track('/api/track/active', {}); }
+}
+// called from the Qur'an reader when a surah opens
+window.SiratTrack = { read: function(surah){ _track('/api/track/read', {surah: surah||0}); } };
+// turning the setting on/off
+function setAnalytics(on){
+  S.analytics = !!on; save();
+  if (S.analytics){ _trackedActive = false; trackVisit(); }
+  else { _track2forget(); }         // send a one-off delete for this device, then stop
+}
+function _track2forget(){
+  const base = cloudUrl(); if (!base) return;
+  try{
+    const h = {'Content-Type':'application/json'};
+    if (S.push && S.push.appkey) h['X-App-Key'] = S.push.appkey;
+    fetch(base + '/api/track/forget', {method:'POST', headers:h, body:JSON.stringify({id:_anonId()}), keepalive:true}).catch(()=>{});
+    localStorage.removeItem('sk_anon_signed');
+  }catch(e){}
+}
 function kdfAvailable(){ return !!(window.crypto && crypto.subtle && crypto.getRandomValues); }
 function randomHex(bytes){
   if (!(window.crypto && crypto.getRandomValues)) return null;
@@ -4935,6 +5028,7 @@ function renderAppFeatures(){
   }catch(e){} }, 50);
   const rp = document.getElementById('setRamadanPrev'); if (rp) rp.checked = !!S.ramadanPreview;
   const pp = document.getElementById('setPrayerPopup'); if (pp) pp.checked = S.prayerPopup !== false;
+  const an = document.getElementById('setAnalytics'); if (an) an.checked = !!S.analytics;
   const plk = document.getElementById('setPrayerLock'); if (plk) plk.checked = !!S.prayerLock;
   const plr = document.getElementById('plMinsRow'); if (plr) plr.style.display = S.prayerLock ? 'flex' : 'none';
   const plm = document.getElementById('setPlMins'); if (plm) plm.value = String(S.prayerLockMins || 15);
@@ -5755,6 +5849,7 @@ function boot(){
   try{ autoLocate(); }catch(e){}
   try{ if (!(typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission)) setTimeout(function(){ try{ enableCompass(true); }catch(e){} }, 900); }catch(e){}
   try{ renderGreetline(); renderTopAyah(); }catch(e){}
+  try{ setTimeout(function(){ trackVisit(); }, 3000); }catch(e){}   // anonymous visit ping — no-op unless opted in
   try{ setTimeout(function(){ if (S.push && S.push.on) syncPush(); }, 2500); document.addEventListener('visibilitychange', function(){ if (document.visibilityState!=='visible') return; try{ renderTick(); rollDaily('hadith'); rollDaily('ayah'); renderReflection(); renderTopAyah(); }catch(e){} if (S.push && S.push.on) syncPush(); }); }catch(e){}
 }
 let lastDayKey = '';
