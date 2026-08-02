@@ -3,22 +3,34 @@
    • Precache the (single-file, self-contained) app shell with a VERSIONED cache.
    • cache-first for static assets; network-first (short timeout → cache) for the
      four whitelisted geo/prayer APIs; offline fallback for navigations.
-   • Never phones home: this worker only ever fetches same-origin assets or one of
-     the four opt-in API hosts — nothing else, upholding the app's constitution.
+   • NEW (v3.84.0): offline Qur'an recitation — reciter audio from the two
+     allow-listed CDNs is cached on first play so a heard ayah recites offline;
+     Navigation Preload for faster first paint; stale-while-revalidate for static.
+   • Never phones home: this worker only ever fetches same-origin assets, one of
+     the four opt-in API hosts, or the two allow-listed reciter-audio CDNs —
+     nothing else, upholding the app's constitution and matching the page CSP.
    • Calls skipWaiting on install so a new version activates immediately (never stuck),
      so a running session is never swapped out underneath the user.
    ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
 
-const VERSION = 'sabr-engine-v3.82.0';          // ← bump to ship an update
+const VERSION = 'sabr-engine-v3.85.0';          // ← bump to ship an update (clients auto-drop the old cache)
 const SHELL   = VERSION + '-shell';
 const RUNTIME = VERSION + '-runtime';
+const AUDIO   = VERSION + '-audio';             // reciter audio (offline recitation), bounded + FIFO
 
 const API_HOSTS = new Set([
   'geocoding-api.open-meteo.com',
   'nominatim.openstreetmap.org',
   'api.aladhan.com',
   'api.bigdatacloud.net'
+]);
+
+// Reciter-audio CDNs — MUST stay in lock-step with the page CSP `media-src` allow-list.
+// These are the ONLY cross-origin hosts this worker will cache. Nothing else is touched.
+const AUDIO_HOSTS = new Set([
+  'everyayah.com',
+  'cdn.islamic.network'
 ]);
 
 const PRECACHE = [
@@ -59,6 +71,12 @@ self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
     await Promise.all(keys.filter(k => !k.startsWith(VERSION)).map(k => caches.delete(k)));
+    // Navigation Preload: let the browser start the page request in parallel with this worker
+    // booting, so a network-first navigation isn't blocked on SW startup. Feature-detected —
+    // silently skipped where unsupported.
+    if (self.registration.navigationPreload) {
+      try { await self.registration.navigationPreload.enable(); } catch (e) {}
+    }
     await self.clients.claim();
   })());
 });
@@ -72,8 +90,8 @@ self.addEventListener('message', event => {
 self.addEventListener('push', event => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; }
-  catch (e) { data = { title: '\u0635\u0650\u0631\u064e\u0627\u0637 \u00b7 Sirat Khushu', body: (event.data && event.data.text()) || '' }; }
-  event.waitUntil(self.registration.showNotification(data.title || '\u0635\u0650\u0631\u064e\u0627\u0637 \u00b7 Sirat Khushu', {
+  catch (e) { data = { title: 'صِرَاط · Sirat Khushu', body: (event.data && event.data.text()) || '' }; }
+  event.waitUntil(self.registration.showNotification(data.title || 'صِرَاط · Sirat Khushu', {
     body: data.body || '', tag: data.tag || 'sabr', renotify: true,
     icon: './icons/icon-192.png', badge: './icons/favicon-32.png', dir: 'auto'
   }));
@@ -94,10 +112,10 @@ function withTimeout(promise, ms){
   });
 }
 
-// Bounded runtime cache. Geocoding/search URLs are high-cardinality (one entry per
-// typed query and per GPS jitter), so cap RUNTIME (FIFO) to stop it growing without
-// limit — an unbounded cache could push the origin to its storage quota and get the
-// whole origin (including the offline SHELL precache) evicted.
+// Bounded runtime cache (FIFO). Geocoding/search URLs are high-cardinality (one entry per
+// typed query and per GPS jitter) and reciter audio accumulates one file per heard ayah, so
+// cap each cache to stop it growing without limit — an unbounded cache could push the origin
+// to its storage quota and get the whole origin (including the offline SHELL precache) evicted.
 async function putCapped(cacheName, req, res, max){
   const c = await caches.open(cacheName);
   await c.put(req, res);
@@ -127,16 +145,41 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 2) only same-origin beyond this point — foreign hosts are left untouched
+  // 1b) reciter audio (cross-origin, ALLOW-LISTED) → network-first so online is unchanged, but
+  //     cache the full file so a previously-heard ayah recites OFFLINE. Recitation can therefore
+  //     never be *worse* than before: online still hits the network first, and any network error
+  //     falls back to the cached copy. We deliberately do NOT cache 206 (partial/range) responses
+  //     — caches.put() rejects them — only full 200s and opaque (no-CORS) media responses; a range
+  //     request offline still matches the cached full file by URL, which players accept.
+  if (AUDIO_HOSTS.has(url.hostname)){
+    event.respondWith((async () => {
+      try {
+        const res = await fetch(req);
+        if (res && (res.status === 200 || res.type === 'opaque')){
+          event.waitUntil(putCapped(AUDIO, req, res.clone(), 200));
+        }
+        return res;
+      } catch (e) {
+        const cached = await caches.match(req);
+        return cached || Response.error();
+      }
+    })());
+    return;
+  }
+
+  // 2) only same-origin beyond this point — any other foreign host is left untouched
   if (url.origin !== self.location.origin) return;
 
 
   // 3) navigations → NETWORK-FIRST so a freshly deployed app shows up immediately on reload;
-  //    fall back to the cached shell (then the offline page) only when the network is unavailable.
+  //    use the Navigation Preload response when present (faster). Fall back to the cached shell
+  //    (then the offline page) only when the network is unavailable.
   if (req.mode === 'navigate'){
     event.respondWith((async () => {
       try {
-        const res = await withTimeout(fetch(req), 4500);
+        let res = null;
+        try { res = event.preloadResponse ? await event.preloadResponse : null; } catch (e) { res = null; }
+        if (!res) res = await withTimeout(fetch(req), 4500);
         // Clone SYNCHRONOUSLY, before returning res. If we cloned inside the async IIFE (after
         // `await caches.open`), `return res` would already have handed the body to respondWith and
         // locked it, so res.clone() would throw and the SHELL refresh would silently never run —
@@ -150,16 +193,23 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 4) other same-origin static (icons, manifest) → cache-first, then network (and cache it)
+  // 4) other same-origin static (icons, manifest, fonts, local audio) → STALE-WHILE-REVALIDATE:
+  //    serve the cached copy instantly if present, and refresh it in the background so a changed
+  //    asset self-heals without waiting for a full VERSION bump. No cache yet → go to network.
   event.respondWith((async () => {
     const cached = await caches.match(req);
-    if (cached) return cached;
+    if (cached){
+      event.waitUntil((async () => {
+        try { const res = await fetch(req); if (res && res.ok){ const c = await caches.open(SHELL); await c.put(req, res.clone()); } } catch (e) {}
+      })());
+      return cached;
+    }
     try {
       const res = await fetch(req);
       if (res && res.ok){ const c = await caches.open(SHELL); c.put(req, res.clone()); }
       return res;
     } catch (e) {
-      return cached || Response.error();
+      return Response.error();
     }
   })());
 });

@@ -9,7 +9,17 @@
      geo/timezone providers, the Qur'an text and reciter CDNs, and (only if you set them up) EmailJS and
      your own push server. Everything else is computed locally on your device. -->
 <!-- (c) Sirat Khushu - Proprietary. All rights reserved. Only the owner may modify, copy, or redistribute this code. Unauthorized modification is prohibited. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https: http://localhost:* http://127.0.0.1:*; media-src 'self' https: http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<!-- Content-Security-Policy = the app's "API firewall". connect-src / media-src are an EXPLICIT
+     allow-list of the ONLY hosts this app may reach — never a bare `https:` wildcard, which would let
+     any injected code exfiltrate on-device data (journal, logs, location, name) to any server. The list:
+       • geocoding-api.open-meteo.com / nominatim.openstreetmap.org — city search
+       • api.aladhan.com / api.bigdatacloud.net — prayer-time / reverse-geocode helpers
+       • sabr-push-server.onrender.com — YOUR optional account/sync/push/TTS server (CLOUD_URL)
+       • api.emailjs.com — optional password-reset email
+       • everyayah.com / cdn.islamic.network — reciter audio
+     SELF-HOSTING NOTE: if you point CLOUD_URL / push at a different server, add that exact origin to
+     BOTH connect-src and media-src below, or sync/TTS will be blocked. Keep the list minimal. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://geocoding-api.open-meteo.com https://nominatim.openstreetmap.org https://api.aladhan.com https://api.bigdatacloud.net https://sabr-push-server.onrender.com https://api.emailjs.com http://localhost:* http://127.0.0.1:*; media-src 'self' https://everyayah.com https://cdn.islamic.network https://sabr-push-server.onrender.com http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
 <!-- PWA layer: installable + fully offline. Manifest, icons, and iOS standalone meta. -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
@@ -1050,7 +1060,8 @@
   .jayah-tr{font-size:.86rem;line-height:1.55;color:var(--ink);opacity:.92;margin-top:10px;font-style:italic}
   .jayah-ref{font-size:.64rem;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--gold-ink);margin-top:9px}
   .jayah-note{font-size:.82rem;line-height:1.65;color:var(--dim);margin-top:12px;padding-top:12px;border-top:1px solid var(--stroke)}
-  .mood .moodEmo{font-size:1.5rem;display:block;line-height:1}
+  .mood .moodEmo{font-size:2.05rem;display:block;line-height:1}
+  .jh-mood .moodEmo{font-size:1.55rem;line-height:1}
   .mood .moodLbl{font-size:.55rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);margin-top:5px;display:block}
   .mood.on .moodLbl{color:var(--gold-ink)}
   .qayah.sajda{background:linear-gradient(120deg,rgba(217,180,91,.16),rgba(90,211,198,.07)); border:1px solid var(--stroke-gold); border-radius:16px; padding:12px 14px; box-shadow:inset 0 0 30px -10px var(--gold)}
@@ -1080,13 +1091,17 @@
   .mood .moodIcon svg{width:42px;height:42px;transition:transform .28s cubic-bezier(.2,1.5,.4,1)}
   /* cute kawaii mood faces — shared by the picker AND the journal-history medallion */
   .kw-body{fill:url(#moodBody)}
-  .kw-gloss{fill:#fff;opacity:.22}
+  .kw-gloss{fill:#fff;opacity:.30}
   .kw-arm{fill:#f0a300}
-  .kw-eye{fill:#43392c}
+  .kw-eye{fill:#3a3128}
   .kw-glint{fill:#fff}
+  .kw-glint2{fill:#fff;opacity:.7}
   .kw-cheek{fill:#ff9ba1;opacity:.82}
-  .kw-line{fill:none;stroke:#4a3f2c;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .kw-line{fill:none;stroke:#4a3f2c;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   .kw-tear{fill:#8ecdee}
+  .kw-mouth{fill:#4a3f2c}
+  .kw-heart{fill:#ff5d6c}
+  .kw-spark{fill:#ffe08a}
   .mood.on .moodIcon svg{transform:scale(1.12)}
   .mood.on .moodIcon{animation:moodpop .55s cubic-bezier(.2,1.6,.42,1)}
   @keyframes moodpop{0%{transform:scale(.82)}55%{transform:scale(1.14)}100%{transform:scale(1)}}
@@ -1469,7 +1484,7 @@
   </footer>
 </div>
 
-<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><linearGradient id="navGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7e9b0"/><stop offset=".55" stop-color="#e6c96f"/><stop offset="1" stop-color="#c9a24b"/></linearGradient><radialGradient id="moodBody" cx="40%" cy="32%" r="72%"><stop offset="0" stop-color="#ffe680"/><stop offset=".52" stop-color="#ffcf43"/><stop offset="1" stop-color="#f2b005"/></radialGradient></defs></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><linearGradient id="navGold" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="24"><stop offset="0" stop-color="#f7e9b0"/><stop offset=".55" stop-color="#e6c96f"/><stop offset="1" stop-color="#c9a24b"/></linearGradient><radialGradient id="moodBody" cx="35%" cy="26%" r="85%"><stop offset="0" stop-color="#fff3c8"/><stop offset=".4" stop-color="#ffde84"/><stop offset=".75" stop-color="#f3c150"/><stop offset="1" stop-color="#dd9d2f"/></radialGradient></defs></svg>
 <nav class="bnav" aria-label="Main navigation"><div class="inner">
   <button data-tab="today" class="active" onclick="go('today')" aria-label="Today"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span>Today</span></button>
   <button data-tab="calendar" onclick="go('calendar')" aria-label="Calendar"><svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg><span>Calendar</span></button>
@@ -2114,7 +2129,7 @@ const EVENT_DEFS = [
 ];
 /* premium gold line-icons for the Islamic calendar (tinted by the medallion's currentColor) */
 const EV_ICON = {
-  mosque:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4c1.4 1.2 1.4 2.9 0 4.1-1.4-1.2-1.4-2.9 0-4.1z"/><path d="M12 7.4c-4.3 0-7.3 2.3-7.3 5.7V20H9.4v-2.5a2.6 2.6 0 0 1 5.2 0V20h4.7v-6.9C19.3 9.7 16.3 7.4 12 7.4z"/></svg>',
+  mosque:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4c1.4 1.2 1.4 2.9 0 4.1z"/><path d="M12 7.4c-4.3 0-7.3 2.3-7.3 5.7V20H9.4v-2.5a2.6 2.6 0 0 1 5.2 0V20h4.7v-6.9C19.3 9.7 16.3 7.4 12 7.4z"/></svg>',
   fullmoon:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="7.6"/></svg>',
   candle:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4c1.6 1.7 2.5 3.1 2.5 4.4a2.5 2.5 0 1 1-5 0c0-1.3.9-2.7 2.5-4.4z"/><rect x="9.5" y="9.3" width="5" height="10.2" rx="1.1"/><rect x="7.7" y="19.4" width="8.6" height="1.8" rx=".9"/></svg>',
   sparkle:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 3.3l1.55 4.15L16.7 9l-4.15 1.55L11 14.7l-1.55-4.15L5.3 9l4.15-1.55z"/><path d="M17.7 14.2l.75 1.9 1.9.75-1.9.75-.75 1.9-.75-1.9-1.9-.75 1.9-.75z"/></svg>',
@@ -2123,7 +2138,7 @@ const EV_ICON = {
   star:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.7l2.6 5.28 5.82.85-4.21 4.1.99 5.8L12 16.03l-5.2 2.7.99-5.8-4.21-4.1 5.82-.85z"/></svg>',
   crescent:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 3.2a8.8 8.8 0 1 0 5.2 16A7.1 7.1 0 0 1 15 3.2z"/></svg>',
   droplet:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.6s6.2 6.6 6.2 10.8A6.2 6.2 0 1 1 5.8 13.4C5.8 9.2 12 2.6 12 2.6z"/></svg>',
-  gift:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.4 12.4h6.7V21H6a1.6 1.6 0 0 1-1.6-1.6z"/><path d="M12.9 12.4h6.7v7a1.6 1.6 0 0 1-1.6 1.6h-5.1z"/><path d="M4 8.7a1.6 1.6 0 0 1 1.6-1.6h5.5v4.1H4z"/><path d="M12.9 7.1h5.5A1.6 1.6 0 0 1 20 8.7v2.5h-7.1z"/><path d="M11.1 6.6c-1.9-.05-3.5-.7-3.5-2.1 0-1.5 2-1.9 3.5.1zM12.9 6.6c1.9-.05 3.5-.7 3.5-2.1 0-1.5-2-1.9-3.5.1z"/></svg>',
+  gift:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.4 12.4h6.7V21H6a1.6 1.6 0 0 1-1.6-1.6z"/><path d="M12.9 12.4h6.7v7a1.6 1.6 0 0 1-1.6 1.6h-5.1z"/><path d="M4 8.7a1.6 1.6 0 0 1 1.6-1.6h5.5v4.1H4z"/><path d="M12.9 7.1h5.5a1.6 1.6 0 0 1 1.6 1.6v2.5h-7.1z"/><path d="M11.9 6.9C11.9 5.4 10.5 3.4 8.6 3.4 7.2 3.4 7.2 5.5 11.9 6.9zM12.1 6.9C12.1 5.4 13.5 3.4 15.4 3.4 16.8 3.4 16.8 5.5 12.1 6.9z"/></svg>',
   mountain:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 19.6h18L13.7 5.6l-2.9 5-2-2.6z"/></svg>',
   kaaba:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l7.6 3.9v9.1L12 21.5l-7.6-6V6.4z"/></svg>'
 };
@@ -3902,7 +3917,10 @@ async function createAccount(){
   S.account = acct;
   S.gender = _acGender; S.profile = {name:dn, since: todayKey() || ''}; S.lockEnabled = true; S.guestMode = false; S.staySignedIn = true;
   save(); sessionUnlock(); afterAuth(); try{ renderLockControls(); }catch(e){} try{ onboardNotifications(); }catch(e){}
-  try{ cloudSignup(pw); }catch(e){}   // background — registers name/email/password on the server so email reset + cross-device login work
+  // PRIVACY — cloud sync is OPT-IN. We deliberately do NOT auto-upload on sign-up: a new account stays
+  // on THIS device only and nothing leaves it ("data between them and Allah" by default). The user can
+  // later enable cross-device sync + emailed password reset from Settings → "Turn on cloud login"
+  // (cloudConnect → cloudSignup), which is the moment their data is first sent to the server.
 }
 async function tryUnlock(){
   const err = document.getElementById('lkErr'), pw = val('lkPass');
@@ -4373,33 +4391,39 @@ const MOODS = ['😞','😐','🙂','😊','🤲'];
 const MOOD_LABELS = ['Heavy','Low','Okay','Good','Grateful'];
 /* Cute kawaii "mochi" mood faces — plump glossy-yellow blobs with big eyes, rosy cheeks and little arms. */
 function _kwBase(){
-  return '<path class="kw-arm" d="M8 19.4 L3.7 21.6 L8 23.8 Z"/><path class="kw-arm" d="M32 19.4 L36.3 21.6 L32 23.8 Z"/>'
-    + '<ellipse class="kw-body" cx="20" cy="21" rx="15.2" ry="14.6"/>'
-    + '<ellipse class="kw-gloss" cx="14.5" cy="11.6" rx="6.4" ry="3.5"/>'
-    + '<ellipse class="kw-cheek" cx="11.6" cy="24" rx="2.8" ry="1.95"/><ellipse class="kw-cheek" cx="28.4" cy="24" rx="2.8" ry="1.95"/>';
+  return '<ellipse class="kw-body" cx="20" cy="20.8" rx="16.4" ry="15.4"/>'
+    + '<ellipse class="kw-gloss" cx="14.3" cy="10.8" rx="7" ry="3.8"/>'
+    + '<ellipse class="kw-cheek" cx="10.6" cy="24.8" rx="3" ry="2"/><ellipse class="kw-cheek" cx="29.4" cy="24.8" rx="3" ry="2"/>';
 }
-const _KW_EYES_OPEN = '<ellipse class="kw-eye" cx="14.7" cy="19.2" rx="2.6" ry="3.2"/><ellipse class="kw-eye" cx="25.3" cy="19.2" rx="2.6" ry="3.2"/><circle class="kw-glint" cx="13.8" cy="17.8" r=".95"/><circle class="kw-glint" cx="24.4" cy="17.8" r=".95"/>';
+const _KW_EYES_OPEN = '<ellipse class="kw-eye" cx="14.2" cy="20" rx="3.2" ry="3.9"/><ellipse class="kw-eye" cx="25.8" cy="20" rx="3.2" ry="3.9"/><ellipse class="kw-glint" cx="12.9" cy="18.1" rx="1.25" ry="1.45"/><ellipse class="kw-glint" cx="24.5" cy="18.1" rx="1.25" ry="1.45"/><circle class="kw-glint2" cx="15.4" cy="21.6" r=".55"/><circle class="kw-glint2" cx="27" cy="21.6" r=".55"/>';
+// Five glossy-3D kawaii faces — each a COMPLETELY different feeling, no two alike. Both the mood
+// picker and the journal-history medallion read this array, so they always stay in sync.
 const MOOD_SVG = [
-  // Heavy — squeezed-shut crying eyes, two streaming tears and an open frown
+  // Heavy — scrunched-shut eyes, two big streaming tears, an open wail
   '<svg viewBox="0 0 40 40">' + _kwBase()
-    + '<path class="kw-line" d="M12.2 18.2 Q14.7 20.7 17.2 18.2"/><path class="kw-line" d="M22.8 18.2 Q25.3 20.7 27.8 18.2"/>'
-    + '<path class="kw-tear" d="M13 20.2 c-1.4 2 -1.4 3.6 0 3.6 s1.4 -1.6 0 -3.6 z"/><path class="kw-tear" d="M27 20.2 c-1.4 2 -1.4 3.6 0 3.6 s1.4 -1.6 0 -3.6 z"/>'
-    + '<path class="kw-line" d="M17.2 27.2 Q20 24.8 22.8 27.2"/></svg>',
-  // Low — downcast half-moon eyes and a soft little frown
+    + '<path class="kw-line" d="M10.6 19.6 Q14.2 22.6 17.8 19.6"/><path class="kw-line" d="M22.2 19.6 Q25.8 22.6 29.4 19.6"/>'
+    + '<path class="kw-tear" d="M13.6 21.8 c-2.1 3.3 -2.1 5.6 0 5.6 s2.1 -2.3 0 -5.6 z"/>'
+    + '<path class="kw-tear" d="M26.4 21.8 c-2.1 3.3 -2.1 5.6 0 5.6 s2.1 -2.3 0 -5.6 z"/>'
+    + '<ellipse class="kw-mouth" cx="20" cy="28.4" rx="2.7" ry="2.3"/></svg>',
+  // Low — droopy half-lidded eyes, a single tear, a gentle frown
   '<svg viewBox="0 0 40 40">' + _kwBase()
-    + '<path class="kw-eye" d="M12.1 18.7 a2.6 2.6 0 0 1 5.2 0 Z"/><path class="kw-eye" d="M22.7 18.7 a2.6 2.6 0 0 1 5.2 0 Z"/>'
-    + '<path class="kw-line" d="M17.3 26.3 Q20 25.1 22.7 26.3"/></svg>',
-  // Okay — a plain round stare and a straight, neutral mouth
+    + '<path class="kw-line" d="M11 19.9 Q14.2 21.5 17.4 20.1"/><path class="kw-line" d="M22.6 20.1 Q25.8 21.5 29 19.9"/>'
+    + '<ellipse class="kw-eye" cx="14.2" cy="20.9" rx="1.7" ry="1.9"/><ellipse class="kw-eye" cx="25.8" cy="20.9" rx="1.7" ry="1.9"/>'
+    + '<path class="kw-tear" d="M27 22.7 c-1.5 2.3 -1.5 3.9 0 3.9 s1.5 -1.6 0 -3.9 z"/>'
+    + '<path class="kw-line" d="M16.6 28 Q20 25.9 23.4 28"/></svg>',
+  // Okay — big calm eyes, a flat neutral mouth
   '<svg viewBox="0 0 40 40">' + _kwBase() + _KW_EYES_OPEN
-    + '<path class="kw-line" d="M17.6 26 h4.8"/></svg>',
-  // Good — bright sparkly eyes and a sweet round smile
+    + '<path class="kw-line" d="M17 27 h6"/></svg>',
+  // Good — sparkly eyes, a happy smile, a little gold sparkle
   '<svg viewBox="0 0 40 40">' + _kwBase() + _KW_EYES_OPEN
-    + '<circle class="kw-glint" cx="15.9" cy="20.4" r=".55"/><circle class="kw-glint" cx="26.5" cy="20.4" r=".55"/>'
-    + '<path class="kw-line" d="M16.8 25.3 Q20 28.6 23.2 25.3"/></svg>',
-  // Grateful — blissful closed ⌒⌒ eyes and a big beaming smile
+    + '<path class="kw-line" d="M16 25.8 Q20 30 24 25.8"/>'
+    + '<path class="kw-spark" d="M32 8.4 l.82 2.2 2.2 .82 -2.2 .82 -.82 2.2 -.82 -2.2 -2.2 -.82 2.2 -.82 z"/></svg>',
+  // Grateful — blissful closed eyes, a big beaming smile, two floating hearts
   '<svg viewBox="0 0 40 40">' + _kwBase()
-    + '<path class="kw-line" d="M11.9 20 Q14.6 17.2 17.3 20"/><path class="kw-line" d="M22.7 20 Q25.4 17.2 28.1 20"/>'
-    + '<path class="kw-line" d="M16 25.2 Q20 29.4 24 25.2"/></svg>'
+    + '<path class="kw-line" d="M11 20.6 Q14.2 17.2 17.4 20.6"/><path class="kw-line" d="M22.6 20.6 Q25.8 17.2 29 20.6"/>'
+    + '<path class="kw-line" d="M15.4 25.6 Q20 31.4 24.6 25.6"/>'
+    + '<path class="kw-heart" d="M31.4 6.5 c.78 -1.05 2.5 -.32 2.5 .98 c0 1.08 -1.43 1.96 -2.5 2.85 c-1.07 -.89 -2.5 -1.77 -2.5 -2.85 c0 -1.3 1.72 -2.03 2.5 -.98 z"/>'
+    + '<path class="kw-heart" d="M7.6 9.4 c.6 -.8 1.9 -.24 1.9 .75 c0 .82 -1.08 1.5 -1.9 2.17 c-.82 -.67 -1.9 -1.35 -1.9 -2.17 c0 -.99 1.3 -1.55 1.9 -.75 z"/></svg>'
 ];
 
 /* ── logging + the delightful moment ── */
@@ -5227,8 +5251,25 @@ function persistCloudMeta(){ if (_storeInvalidated) return; try{ localStorage.se
 // Write a server account+data onto THIS device and reload into it. Shared by cloud login and the
 // "you already have an account" re-signup link. `pw` (just proven by the user) rebuilds the local
 // lock hash; `urlThatWorked` keeps the address that actually connected, not the blob's stale one.
+/* Defense-in-depth for the cloud trust boundary. Now that data can only reach the device from the
+   server the USER opted into, treat that server as semi-trusted: a compromised or hostile one could
+   return a blob carrying prototype-polluting keys (__proto__ / constructor / prototype) that would
+   otherwise ride into the local store via Object.assign at boot. Strip them at EVERY level before any
+   server-provided object is persisted. Deep, bounded, and non-destructive to legitimate app data. */
+function _sanitizeServerData(v, depth){
+  depth = depth || 0;
+  if (depth > 8 || v === null || typeof v !== 'object') return v;
+  if (Array.isArray(v)) return v.map(x => _sanitizeServerData(x, depth + 1));
+  const out = {};
+  for (const k in v){
+    if (!Object.prototype.hasOwnProperty.call(v, k)) continue;
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+    out[k] = _sanitizeServerData(v[k], depth + 1);
+  }
+  return out;
+}
 async function applyCloudRestore(j, pw, urlThatWorked){
-  const data = (j.data && typeof j.data === 'object') ? j.data : {};
+  const data = _sanitizeServerData((j.data && typeof j.data === 'object') ? j.data : {});
   data.dhikrTotal = Number(data.dhikrTotal) || 0;        // never persist a non-numeric value the garden renders into innerHTML
   data.emailjs = S.emailjs;                              // keep THIS device's email config — a server must not redirect reset emails
   const baseAcct = (data.account && typeof data.account === 'object') ? data.account
@@ -5471,7 +5512,7 @@ async function cloudResolveConflict(keep){
   } else {
     if (!(_cloudConflict && _cloudConflict.data)){ try{ toast('Nothing to restore', 'The cloud copy is empty.', 'ℹ️'); }catch(e){} return; }
     if (!confirm('Replace this device’s data with the cloud copy? Changes made only on this device will be lost.')) return;
-    const data = Object.assign({}, _cloudConflict.data);
+    const data = Object.assign({}, _sanitizeServerData(_cloudConflict.data));
     data.account = S.account; data.lockEnabled = S.lockEnabled; data.guestMode = S.guestMode; data.push = S.push;   // keep local login + server url
     data.cloud = {user:S.cloud.user, token:S.cloud.token, rev:_cloudConflict.rev, ts:Date.now(), err:null};
     _storeInvalidated = true; clearTimeout(_cloudTimer);
