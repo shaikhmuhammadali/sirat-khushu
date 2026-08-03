@@ -5901,7 +5901,7 @@ function enableCompass(auto){
   const handler = e => {
     let h = null, absolute = false;
     if (e.webkitCompassHeading != null && !isNaN(e.webkitCompassHeading)){ h = e.webkitCompassHeading; absolute = true; }   // iOS: degrees clockwise from TRUE north
-    else if (e.alpha != null && e.absolute){ h = 360 - e.alpha; absolute = true; }                                          // Android absolute stream: true-north referenced
+    else if (e.alpha != null && (e.type === 'deviceorientationabsolute' || e.absolute)){ h = 360 - e.alpha; absolute = true; }  // Android: a reading from the ABSOLUTE event is true-north even when the e.absolute flag is wrongly false/undefined (common WebView/Chromium quirk)
     else if (e.alpha != null){ h = 360 - e.alpha; absolute = false; }                                                       // plain stream: NOT north-referenced
     if (h == null || !S.loc) return;
     window._compassGotEvent = true; clearTimeout(window._compassTimer);                                                     // a real reading arrived → cancel the "no sensor" fallback
