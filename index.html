@@ -4174,15 +4174,10 @@ function requestAllPermissions(){
 }
 // Guarded trigger: only once the user is past the login/tour gate and no blocking sheet is open.
 function maybeOfferFeatures(){
-  try{ if(localStorage.getItem('sk_features_prompted')) return; }catch(e){}                 // ask at most once, ever
-  try{ if(document.documentElement.classList.contains('locked')) return; }catch(e){}
-  var ids=['welcome','namePop','hadithPop','tourOverlay','featuresModal'];
-  for(var i=0;i<ids.length;i++){ var el=document.getElementById(ids[i]); if(el&&el.classList.contains('open')) return; }
-  try{ localStorage.setItem('sk_features_prompted','1'); }catch(e){}
-  // Auto-open the guided setup. Each "Allow" tap is a real user gesture, so the OS prompts
-  // (notifications, iOS motion, geolocation) reliably fire — a gesture-less auto-request is
-  // suppressed by the browser for exactly those permissions.
-  setTimeout(openFeaturesSetup, 300);
+  // DISABLED by request — NO "Enable app features" modal and NO auto permission prompt on login.
+  // The app runs autonomously; each OS permission (location, notifications, live compass) is asked
+  // for ONLY when the user actually uses that feature. Kept as a no-op so existing callers (login,
+  // endTour, initNav) don't error. (openFeaturesSetup remains available for manual/explicit use.)
 }
 function buildPushSchedule(){
   if (!S.loc) return [];
@@ -4420,8 +4415,12 @@ function rotAdvance(key, len){
   if (len<=0) return 0;
   S.rot = S.rot || {};
   let r = S.rot[key];
-  if (!r || r.len!==len || !Array.isArray(r.seq) || r.i>=r.seq.length){ r = {len, i:0, seq:_shuffleSeq(len)}; }
-  const idx = r.seq[r.i]; r.i++; S.rot[key] = r; return idx;
+  if (!r || r.len!==len || !Array.isArray(r.seq) || r.i>=r.seq.length){
+    const last = r ? r.last : -1; let seq = _shuffleSeq(len);
+    if (len>1 && seq[0]===last){ const j=1+Math.floor(Math.random()*(len-1)), t=seq[0]; seq[0]=seq[j]; seq[j]=t; }  // never repeat across a reshuffle boundary
+    r = {len, i:0, seq, last};
+  }
+  const idx = r.seq[r.i]; r.i++; r.last = idx; S.rot[key] = r; return idx;
 }
 let DAILY = null;
 function rollDaily(which){
