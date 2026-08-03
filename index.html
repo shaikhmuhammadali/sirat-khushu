@@ -1329,7 +1329,6 @@
   </div>
 
   <div class="glass">
-    <button class="btn" style="width:100%;margin-bottom:16px" onclick="openFeaturesSetup()">⚙️ Enable app features &amp; permissions</button>
     <h2 class="sec">Qibla &amp; Makkah</h2>
     <div class="qrow">
       <div class="qdial">
@@ -4174,10 +4173,15 @@ function requestAllPermissions(){
 }
 // Guarded trigger: only once the user is past the login/tour gate and no blocking sheet is open.
 function maybeOfferFeatures(){
+  try{ if(localStorage.getItem('sk_features_prompted')) return; }catch(e){}                 // ask at most once, ever
   try{ if(document.documentElement.classList.contains('locked')) return; }catch(e){}
   var ids=['welcome','namePop','hadithPop','tourOverlay','featuresModal'];
   for(var i=0;i<ids.length;i++){ var el=document.getElementById(ids[i]); if(el&&el.classList.contains('open')) return; }
-  requestAllPermissions();
+  try{ localStorage.setItem('sk_features_prompted','1'); }catch(e){}
+  // Auto-open the guided setup. Each "Allow" tap is a real user gesture, so the OS prompts
+  // (notifications, iOS motion, geolocation) reliably fire — a gesture-less auto-request is
+  // suppressed by the browser for exactly those permissions.
+  setTimeout(openFeaturesSetup, 300);
 }
 function buildPushSchedule(){
   if (!S.loc) return [];
@@ -5880,6 +5884,7 @@ function enableCompass(auto){
     window._compassGotEvent = true; clearTimeout(window._compassTimer);                                                     // a real reading arrived → cancel the "no sensor" fallback
     const note = document.getElementById('qCompassNote');
     if (!absolute){
+      if (compassHeading != null) return;   // a true-north (absolute) reading is already live — ignore the relative stream so the note + button don't flicker between contradictory states
       // No true-north (magnetometer) heading here. A relative heading would swing the needle the
       // WRONG way, so we DON'T move it: the dial stays North-up with the needle on the real Kaaba
       // bearing (compassHeading stays null → renderStatic keeps it correct). We just guide the user.
