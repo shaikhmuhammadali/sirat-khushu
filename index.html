@@ -1159,6 +1159,7 @@
   .cdots .cdot.on{background:var(--gold-soft); border-color:var(--gold); color:var(--gold-ink)}
   .cdots .cdot.on .cdi{opacity:0}
   .cdots .cdot.on .cdk{opacity:1; transform:scale(1)}
+  .cdots .cdot.locked,.cdots .cdot:disabled{opacity:.3; cursor:not-allowed; pointer-events:none; border-style:dashed}
   .cring{position:relative; width:40px; height:40px; flex:none; display:inline-grid; place-items:center; margin-left:auto}
   .cring svg{position:absolute; inset:0; width:100%; height:100%; transform:rotate(-90deg)}
   .cring .crt{fill:none; stroke:var(--stroke); stroke-width:3}
@@ -4536,7 +4537,22 @@ function toggleLog(key){
   if (navigator.vibrate) navigator.vibrate([30,40,60]);
   showHadithPop(key);
 }
-function logForDate(dk, key){ /* backfill disabled — Sirat Khushu logs only the CURRENT prayer, never past days */ }
+function logForDate(dk, key){
+  try{
+    if (!dk || !key) return;
+    // 3-day catch-up window ONLY — today, yesterday, day-before-yesterday. Older days stay closed.
+    const t = currentSet().today; let within = false, isToday = false;
+    for (let i = 0; i <= 2; i++){ if (keyForCivil(addCivilDays(t, -i)) === dk){ within = true; isToday = (i === 0); break; } }
+    if (!within) return;
+    // Never backfill a FUTURE prayer: a prayer today whose adhan hasn't come yet stays closed.
+    if (isToday){ try{ const tt = engineFor(t).E[key.toLowerCase()]; if (tt && tt > Date.now()) return; }catch(e){} }
+    const logs = S.logs[dk] || (S.logs[dk] = {});
+    if (logs[key]){ delete logs[key]; if (!Object.keys(logs).length) delete S.logs[dk]; }
+    else { logs[key] = { t: Date.now(), backfill: (dk !== todayKey()) }; }
+    save(); renderAppFeatures();
+    try{ if (navigator.vibrate) navigator.vibrate(25); }catch(e){}
+  }catch(e){}
+}
 function markLogButtons(){ if (cardRefs) cardRefs.forEach(r => { if (r.logBtn) r.logBtn.classList.toggle('done', !!todayLogs()[r.w.k]); }); }
 
 /* ── garden (constellation) ── */
@@ -4764,16 +4780,22 @@ function renderStreak(){
 }
 function renderCatchup(){
   const el = document.getElementById('catchupCard'); if (!el) return;
-  el.className = ''; el.innerHTML = ''; el.style.display = 'none'; return;   // Catch-up/backfill removed — only the CURRENT prayer is loggable
-  if (!S.loc) return;
-  const KEYS = ['Fajr','Dhuhr','Asr','Maghrib','Isha'], t = currentSet().today; let rows = '', missing = 0, complete = 0;
+  if (!S.loc){ el.className = ''; el.innerHTML = ''; el.style.display = 'none'; return; }
+  el.style.display = '';   // Catch-up re-enabled — 3-day window (today, yesterday, day-before-yesterday)
+  const KEYS = ['Fajr','Dhuhr','Asr','Maghrib','Isha'], t = currentSet().today, now = Date.now(); let rows = '', missing = 0, complete = 0;
   const C = 2 * Math.PI * 15.5;
-  for (let i = 1; i <= 3; i++){
+  for (let i = 0; i <= 2; i++){                                            // today, yesterday, day-before-yesterday
     const c = addCivilDays(t, -i), dk = keyForCivil(c), logs = S.logs[dk] || {};
     const dateStr = new Date(Date.UTC(c.y,c.m-1,c.d)).toLocaleDateString([], {day:'numeric', month:'short', timeZone:'UTC'});
-    const label = i === 1 ? 'Yesterday' : new Date(Date.UTC(c.y,c.m-1,c.d)).toLocaleDateString([], {weekday:'long', timeZone:'UTC'});
-    const n = Object.keys(logs).length, full = n === 5; missing += (5 - n); if (full) complete++;
-    const dots = KEYS.map(k => '<button class="cdot ' + (logs[k]?'on':'') + '" onclick="logForDate(&quot;' + dk + '&quot;,&quot;' + k + '&quot;)" aria-label="' + k + ' on ' + label + '"><span class="cdi">' + k[0] + '</span><svg class="cdk" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg></button>').join('');
+    const label = i === 0 ? 'Today' : i === 1 ? 'Yesterday' : new Date(Date.UTC(c.y,c.m-1,c.d)).toLocaleDateString([], {weekday:'long', timeZone:'UTC'});
+    // Which prayers have ENTERED on this day — past days: all five; today: only those whose adhan has come.
+    // A not-yet-entered prayer stays LOCKED so a future prayer can never be backfilled.
+    let entered = KEYS;
+    if (i === 0){ let E = null; try{ E = engineFor(t).E; }catch(e){} entered = E ? KEYS.filter(k => { const tt = E[k.toLowerCase()]; return tt && tt <= now; }) : []; }
+    const loggedEntered = entered.filter(k => logs[k]).length, n = KEYS.filter(k => logs[k]).length;
+    const full = entered.length > 0 && loggedEntered === entered.length; missing += (entered.length - loggedEntered); if (full) complete++;
+    const dots = KEYS.map(k => { const open = entered.indexOf(k) >= 0, on = !!logs[k];
+      return '<button class="cdot ' + (on?'on':'') + (open?'':' locked') + '"' + (open ? ' onclick="logForDate(&quot;' + dk + '&quot;,&quot;' + k + '&quot;)"' : ' disabled aria-disabled="true"') + ' aria-label="' + k + ' on ' + label + '"><span class="cdi">' + k[0] + '</span><svg class="cdk" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg></button>'; }).join('');
     const ring = '<span class="cring' + (full?' full':'') + '"><svg viewBox="0 0 36 36" aria-hidden="true"><circle class="crt" cx="18" cy="18" r="15.5"/><circle class="crv" cx="18" cy="18" r="15.5" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + (C * (1 - n/5)).toFixed(1) + '"/></svg><b>' + n + '<i>/5</i></b></span>';
     rows += '<div class="catchrow' + (full?' done':'') + '"><span class="cd"><b>' + label + '</b><small>' + dateStr + '</small></span><span class="cdots">' + dots + '</span>' + ring + '</div>';
   }
