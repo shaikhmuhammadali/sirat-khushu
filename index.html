@@ -3584,6 +3584,9 @@ function afterAuth(){
   if (_pendingPrompt){ const p = _pendingPrompt; _pendingPrompt = null; if (!todayLogs()[p.k]) setTimeout(() => p.lock ? openPrayerLock(p.k, p.e, p.tz) : showPrayerPrompt(p.k, p.e, p.tz), 500); }
   setTimeout(function(){ try{ if (_pendingPw) cloudPushPassword(); else if (S.cloud && S.cloud.pwPending){ delete S.cloud.pwPending; persistCloudMeta(); } cloudSyncNow(); }catch(e){} }, 4000);   // quiet mirror-to-cloud on open (no-op unless connected)
   setTimeout(function(){ try{ if (S.account && !S.tourSeen) startTour(); }catch(e){} }, 1000);   // first-run guided tour
+  // Auto-request permissions on login (once per device). New users get them right after the tour
+  // (see endTour); returning users & guests, who see no tour, get them shortly after landing.
+  setTimeout(function(){ try{ if (S.tourSeen || !S.account) maybeOfferFeatures(); }catch(e){} }, 1800);
 }
 /* ── first-run guided tour: a friendly walk through each section after the first login ── */
 const TOUR_STEPS = [
@@ -4156,14 +4159,25 @@ function renderFeaturesSetup(){
 }
 function openFeaturesSetup(){ try{ renderFeaturesSetup(); }catch(e){} var m=document.getElementById('featuresModal'); if(m) m.classList.add('open'); }
 function closeFeaturesSetup(){ var m=document.getElementById('featuresModal'); if(m) m.classList.remove('open'); }
+// Automatically ask for every app permission on a new login — the OS dialogs fire in SEQUENCE
+// (one at a time; two at once would be suppressed by the browser), reusing the app's own request
+// flow. Runs at most once per device; an already-granted permission simply never re-prompts.
+function requestAllPermissions(){
+  try{ if(localStorage.getItem('sk_perms_auto')) return; }catch(e){}
+  try{ localStorage.setItem('sk_perms_auto','1'); }catch(e){}
+  var steps=[];
+  if(!S.loc) steps.push(function(){ try{ useGPS(); }catch(e){} });                                             // OS location prompt
+  steps.push(function(){ try{ if(!S.notifMaster){ S.remind=true; save(); toggleMasterNotif(); } }catch(e){} }); // notifications (graceful in the app WebView)
+  steps.push(function(){ try{ if(_compassSupported()) enableCompass(); }catch(e){} });                          // motion / live compass
+  var i=0;
+  (function nxt(){ if(i>=steps.length) return; try{ steps[i](); }catch(e){} i++; setTimeout(nxt, 1800); })();
+}
+// Guarded trigger: only once the user is past the login/tour gate and no blocking sheet is open.
 function maybeOfferFeatures(){
-  try{ if(localStorage.getItem('sk_features_prompted')) return; }catch(e){}
   try{ if(document.documentElement.classList.contains('locked')) return; }catch(e){}
-  try{ if(S.account && !S.tourSeen) return; }catch(e){}                                  // let the guided tour finish first
   var ids=['welcome','namePop','hadithPop','tourOverlay','featuresModal'];
   for(var i=0;i<ids.length;i++){ var el=document.getElementById(ids[i]); if(el&&el.classList.contains('open')) return; }
-  try{ localStorage.setItem('sk_features_prompted','1'); }catch(e){}                       // ask at most once, ever
-  setTimeout(openFeaturesSetup, 300);
+  requestAllPermissions();
 }
 function buildPushSchedule(){
   if (!S.loc) return [];
