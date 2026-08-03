@@ -1169,7 +1169,7 @@
     <div class="brand"><span class="brand-mark" id="brandMark" aria-hidden="true"></span><span class="ar">صراط</span></div>
     <div class="row">
       <button class="iconbtn" id="notifBtn" onclick="toggleMasterNotif()" title="Prayer notifications" aria-label="Toggle prayer notifications">🔔</button>
-      <button class="iconbtn" id="themeBtn" onclick="cycleTheme()" title="Theme: dark / light / AMOLED" aria-label="Switch theme">☀️</button>
+      <button class="iconbtn" id="themeBtn" onclick="cycleTheme()" title="Change theme" aria-label="Change theme"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="7.6" stroke="currentColor" stroke-width="1.6" opacity=".45"/><path d="M12 4.4A7.6 7.6 0 0 0 12 19.6Z" fill="currentColor"/><path d="M18.7 3.9l.62 1.66 1.66.62-1.66.62-.62 1.66-.62-1.66-1.66-.62 1.66-.62z" fill="var(--gold)"/></svg></button>
     </div>
   </header>
 
@@ -1339,7 +1339,7 @@
       <div>
         <div style="font-weight:800; font-size:1.25rem"><span id="qDeg">—</span> <span class="small muted">from true North</span></div>
         <div class="small muted" style="margin-top:4px"><b id="qDist">—</b> to the Kaaba, Makkah al-Mukarramah</div>
-        <div class="small dim" style="margin-top:4px" id="qCompassNote">The dial is North-up: the gold needle shows the Kaaba’s direction from North. Tap “Enable live compass” on a phone to make it follow the way you face.</div>
+        <div class="small dim" style="margin-top:4px" id="qCompassNote">Turn toward the Kaaba with a humble heart — the gold needle points the way. Tap below to let it follow you as you turn.</div>
         <button class="btn ghost" style="margin-top:10px; padding:8px 16px; font-size:.78rem" id="qCompassBtn" onclick="enableCompass()">Enable live compass</button>
       </div>
     </div>
@@ -1906,13 +1906,8 @@ function buildCards(win){
     const card = document.createElement('div'); card.className = 'pcard';
     const hd = document.createElement('div'); hd.className = 'hd';
     hd.innerHTML = `<span class="nm">${w.k}<span class="ar" lang="ar" dir="rtl">${w.ar}</span></span>`;
-    if (!w.info){
-      const bell = document.createElement('button');
-      bell.className = 'bell' + (S.notif[w.k] ? ' on' : ''); bell.type = 'button';
-      bell.textContent = '🔔'; bell.setAttribute('aria-label', `Toggle ${w.k} notification`);
-      bell.addEventListener('click', () => toggleBell(w.k, bell));
-      hd.appendChild(bell);
-    }
+    // Per-card bell removed for a calmer card — prayer reminders stay ON by default and are
+    // managed in Settings › Notifications & reminders (per-prayer chips). Scheduling is unchanged.
     let logBtn = null;
     if (!w.info){
       logBtn = document.createElement('button'); logBtn.className = 'logbtn'; logBtn.type = 'button';
@@ -5144,26 +5139,30 @@ function go(sec){
   try{ if (sec==='learn'){ try{ rollDaily('ayah'); rollDaily('hadith'); }catch(e){} renderReflection(); renderBookmarks(); renderQuran(); } else if (sec==='dhikr'){ renderDhikr(); try{ rollDaily('name'); rollDaily('dua'); }catch(e){} renderDaily(); } else if (sec==='journal'){ newJournalAyah(); renderJournal(); } else if (sec==='settings'){ try{ renderJournalHistory(); }catch(e){} } else if (sec==='today'){ renderCommemToday(); } else if (sec==='calendar'){ renderCalendar(); try{ var _ev=document.getElementById('events'); if(_ev){ _ev.classList.remove('reveal'); void _ev.offsetWidth; _ev.classList.add('reveal'); } }catch(e){} } }catch(e){}
   highlightNamesSoon();
 }
-let _salawat=null;
+let _salawat=null, _alham=null, _assalam=null;
+// One clean voice at a time — stop any other spoken clip before starting a new one, so two clips
+// can never overlap into an echo / "messy" blur. A single <audio> can't overlap itself, so we only
+// need to silence the OTHER two of the salawat family.
+function _stopVoices(except){
+  [_salawat, _alham, _assalam].forEach(a => { if (a && a !== except){ try{ a.pause(); a.currentTime = 0; }catch(e){} } });
+}
 function playSalawat(){
   if (S.salawatAudio === false) return;
-  try{ if(!_salawat){ _salawat=new Audio('audio/salawat.mp3'); _salawat.preload='auto'; } _salawat.volume=1.0; _salawat.currentTime=0; const p=_salawat.play(); if(p&&p.catch) p.catch(()=>{}); }catch(e){}
+  try{ if(!_salawat){ _salawat=new Audio('audio/salawat.mp3'); _salawat.preload='auto'; } _stopVoices(_salawat); _salawat.volume=1.0; _salawat.currentTime=0; const p=_salawat.play(); if(p&&p.catch) p.catch(()=>{}); }catch(e){}
 }
-let _alham=null;
 function playAlhamdulillah(){
   if (S.salawatAudio === false) return;
-  try{ if(!_alham){ _alham=new Audio('audio/alhamdulillah.mp3'); _alham.preload='auto'; } _alham.volume=1.0; _alham.currentTime=0; const p=_alham.play(); if(p&&p.catch) p.catch(()=>{}); }catch(e){}
+  try{ if(!_alham){ _alham=new Audio('audio/alhamdulillah.mp3'); _alham.preload='auto'; } _stopVoices(_alham); _alham.volume=1.0; _alham.currentTime=0; const p=_alham.play(); if(p&&p.catch) p.catch(()=>{}); }catch(e){}
 }
-let _assalam=null;
 function playAssalam(){
   if (S.salawatAudio === false) return;
   try{
     if(!_assalam){ _assalam=new Audio('audio/assalamualaikum.mp3'); _assalam.preload='auto'; }
-    _assalam.volume=1.0; _assalam.currentTime=0;
+    _stopVoices(_assalam); _assalam.volume=1.0; _assalam.currentTime=0;
     const p=_assalam.play();
     if(p&&p.catch) p.catch(()=>{
       const evs=['pointerdown','keydown','touchstart'];
-      const go=()=>{ evs.forEach(ev=>window.removeEventListener(ev,go)); if (S.salawatAudio===false) return; try{ _assalam.currentTime=0; _assalam.play().catch(()=>{}); }catch(e){} };
+      const go=()=>{ evs.forEach(ev=>window.removeEventListener(ev,go)); if (S.salawatAudio===false) return; try{ _stopVoices(_assalam); _assalam.currentTime=0; _assalam.play().catch(()=>{}); }catch(e){} };
       evs.forEach(ev=>window.addEventListener(ev,go));
       setTimeout(()=>evs.forEach(ev=>window.removeEventListener(ev,go)), 8000);
     });
@@ -5173,7 +5172,7 @@ function applyTheme(){
   if (THEMES.indexOf(S.theme) < 0 && S.theme !== 'amoled') S.theme = 'dark';
   document.documentElement.dataset.theme = S.theme;
   document.getElementById('themeColorMeta').setAttribute('content', THEME_COLORS[S.theme] || '#0a0e14');
-  document.getElementById('themeBtn').textContent = '🎨';
+  { const _tb = document.getElementById('themeBtn'); if (_tb) _tb.innerHTML = '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="7.6" stroke="currentColor" stroke-width="1.6" opacity=".45"/><path d="M12 4.4A7.6 7.6 0 0 0 12 19.6Z" fill="currentColor"/><path d="M18.7 3.9l.62 1.66 1.66.62-1.66.62-.62 1.66-.62-1.66-1.66-.62 1.66-.62z" fill="var(--gold)"/></svg>'; }
   renderThemes();
 }
 function cycleTheme(){
@@ -5187,12 +5186,22 @@ function toggleBell(k, btn){
 }
 function toggleMasterNotif(){
   if (!S.notifMaster){
-    if (!('Notification' in window)){ alert('This browser does not support notifications.'); return; }
+    if (!('Notification' in window) || typeof Notification.requestPermission !== 'function'){
+      // Installed-app WebViews have no web Notification API — so don't show a scary browser error.
+      // Reminders still work while the app is open (a gentle prompt + adhan), and Prayer Lock can
+      // cover the whole phone at prayer time. Turn the in-app reminders on and guide the user there.
+      S.remind = true; save();
+      const _b = document.getElementById('notifBtn'); if (_b) _b.classList.remove('on');
+      try{ toast('Reminders are on 🔔', 'Sirat Khushu will remind you at each prayer while it’s open. For a reminder that covers your whole phone, turn on Prayer Lock in Settings.', '🔔', true); }
+      catch(e){ try{ alert('Reminders are on. Sirat Khushu will remind you at each prayer while the app is open. For a phone-wide reminder, turn on Prayer Lock in Settings.'); }catch(_){} }
+      return;
+    }
     Notification.requestPermission().then(p => {
       S.notifMaster = (p === 'granted'); save();
-      document.getElementById('notifBtn').classList.toggle('on', S.notifMaster);
-    });
-  } else { S.notifMaster = false; save(); document.getElementById('notifBtn').classList.remove('on'); }
+      const _b = document.getElementById('notifBtn'); if (_b) _b.classList.toggle('on', S.notifMaster);
+      if (p === 'denied'){ try{ toast('Notifications are blocked', 'Allow notifications for Sirat Khushu in your browser or site settings, then tap the bell again.', '🔔'); }catch(e){} }
+    }).catch(()=>{});
+  } else { S.notifMaster = false; save(); const _b = document.getElementById('notifBtn'); if (_b) _b.classList.remove('on'); }
 }
 function exportData(){
   const blob = new Blob([JSON.stringify(S, null, 2)], {type:'application/json'});
@@ -5781,10 +5790,20 @@ function enableCompass(auto){
   };
   const handler = e => {
     let h = null, absolute = false;
-    if (e.webkitCompassHeading != null && !isNaN(e.webkitCompassHeading)){ h = e.webkitCompassHeading; absolute = true; }  // iOS: degrees clockwise from north
-    else if (e.alpha != null){ h = 360 - e.alpha; absolute = !!e.absolute; }                                              // Android: absolute → true north; else best-effort
-    if (h != null){ window._compassGotEvent = true; clearTimeout(window._compassTimer); }                                 // a real reading arrived → cancel the "no sensor" fallback
+    if (e.webkitCompassHeading != null && !isNaN(e.webkitCompassHeading)){ h = e.webkitCompassHeading; absolute = true; }   // iOS: degrees clockwise from TRUE north
+    else if (e.alpha != null && e.absolute){ h = 360 - e.alpha; absolute = true; }                                          // Android absolute stream: true-north referenced
+    else if (e.alpha != null){ h = 360 - e.alpha; absolute = false; }                                                       // plain stream: NOT north-referenced
     if (h == null || !S.loc) return;
+    window._compassGotEvent = true; clearTimeout(window._compassTimer);                                                     // a real reading arrived → cancel the "no sensor" fallback
+    const note = document.getElementById('qCompassNote');
+    if (!absolute){
+      // No true-north (magnetometer) heading here. A relative heading would swing the needle the
+      // WRONG way, so we DON'T move it: the dial stays North-up with the needle on the real Kaaba
+      // bearing (compassHeading stays null → renderStatic keeps it correct). We just guide the user.
+      if (!auto && note) note.textContent = 'Your phone can’t sense North here, so the needle can’t follow you — but the dial is North-up and the gold needle already points to the Kaaba from North. Face North, then turn to it.';
+      const btnR = document.getElementById('qCompassBtn'); if (btnR && !auto) btnR.textContent = 'Using the North-up dial';
+      return;
+    }
     h = ((h + screenAngle()) % 360 + 360) % 360;        // compensate if the screen itself is rotated (landscape)
     compassHeading = h;
     const raw = (qiblaBearing(S.loc.lat, S.loc.lng) - h + 360) % 360;
@@ -5798,11 +5817,9 @@ function enableCompass(auto){
     try{ const kEl = document.getElementById('qKaaba'); if (kEl){ kEl.classList.add('live'); kEl.style.transform = `rotate(${rot}deg)`; } }catch(_){}
     const aligned = (rot < 5 || rot > 355);
     const acc = (e.webkitCompassAccuracy != null && e.webkitCompassAccuracy >= 0 && e.webkitCompassAccuracy <= 20);   // iOS: small = well-calibrated
-    const note = document.getElementById('qCompassNote');
     if (note) note.textContent = aligned
-      ? ('✓ You are facing the Kaaba — hold steady. Heading ' + Math.round(h) + '°.')
-      : (absolute ? 'Live — turn your body until the gold needle points straight up (▲). Heading ' + Math.round(h) + '°.' + (acc ? '' : ' If it drifts, wave the phone in a figure-8 to calibrate.')
-                  : 'Live (uncalibrated) — this device has no true-north sensor; point its top North once, then turn to the needle. Heading ' + Math.round(h) + '°.');
+      ? '✓ You are facing the Kaaba — hold steady, and may Allah accept from you.'
+      : 'Turn gently until the gold needle points straight up (▲).' + (acc ? '' : ' If it drifts, trace a slow figure-8 to calibrate.');
     const btn = document.getElementById('qCompassBtn'); if (btn) btn.textContent = 'Live compass active';
   };
   const NOSENS = 'This device has no live compass sensor (common on laptops & desktops). The dial above is already North-up — the gold needle points to the Kaaba from North, so use it with any compass. On a phone, this makes the needle follow the way you face.';
@@ -5821,8 +5838,20 @@ function enableCompass(auto){
       if (p === 'granted'){ listen('deviceorientation'); }
       else { noSensor('Compass permission was declined. You can still use the static bearing above (the dial is North-up).'); }
     }).catch(() => { noSensor('Compass permission was declined.'); });
-  } else if ('ondeviceorientationabsolute' in window){ listen('deviceorientationabsolute'); }
-  else if ('ondeviceorientation' in window){ listen('deviceorientation'); }
+  } else if ('ondeviceorientationabsolute' in window || 'ondeviceorientation' in window){
+    // Android / in-app WebView: attach BOTH streams. The handler prefers the true-north (absolute)
+    // reading and safely ignores a non-absolute one, so whichever the device provides, we stay correct.
+    if ('ondeviceorientationabsolute' in window) window.addEventListener('deviceorientationabsolute', handler, true);
+    if ('ondeviceorientation' in window) window.addEventListener('deviceorientation', handler, true);
+    if (btn0 && !auto) btn0.textContent = 'Starting compass…';
+    clearTimeout(window._compassTimer);
+    window._compassTimer = setTimeout(function(){
+      if (!window._compassGotEvent){
+        try{ window.removeEventListener('deviceorientationabsolute', handler, true); window.removeEventListener('deviceorientation', handler, true); }catch(e){}
+        noSensor(NOSENS);
+      }
+    }, 2600);
+  }
   else { noSensor(NOSENS); }
 }
 
@@ -5905,7 +5934,9 @@ function boot(){
   try{ initNav(); }catch(e){ console.warn('initNav', e); }
   try{ startApp(); }catch(e){ console.warn('startApp', e); }
   try{ autoLocate(); }catch(e){}
-  try{ if (!(typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission)) setTimeout(function(){ try{ enableCompass(true); }catch(e){} }, 900); }catch(e){}
+  // Auto-start removed: on a device without a true-north sensor an auto-started relative reading
+  // would hijack the needle to the WRONG direction. The dial now always shows the correct static
+  // Kaaba bearing on load; the user taps “Enable live compass” to opt into live follow.
   try{ renderGreetline(); renderTopAyah(); }catch(e){}
   try{ setTimeout(function(){ trackVisit(); }, 3000); }catch(e){}   // anonymous visit ping — no-op unless opted in
   try{ setTimeout(function(){ if (S.push && S.push.on) syncPush(); }, 2500); document.addEventListener('visibilitychange', function(){ if (document.visibilityState!=='visible') return; try{ renderTick(); rollDaily('hadith'); rollDaily('ayah'); renderReflection(); renderTopAyah(); }catch(e){} if (S.push && S.push.on) syncPush(); }); }catch(e){}
