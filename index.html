@@ -4137,11 +4137,11 @@ function featuresSetupModel(){
     {k:'compass', ic:'\ud83e\udded', t:'Live qibla compass', why:'Let the gold needle follow the way you face, so you can turn to the Kaaba.',
       status:function(){ return !_compassSupported() ? 'na' : (window._compassOn ? 'on':'off'); }, act:function(){ try{ enableCompass(); }catch(e){} } },
     {k:'lock', ic:'\ud83d\udd12', t:'Prayer Lock', why:'At each prayer time, gently lock your phone to prayer for a few minutes.'+(native?'':' (A phone-wide lock needs the installed Android app.)'),
-      status:function(){ return S.prayerLock ? 'on':'off'; }, act:function(){ try{ if(!S.prayerLock && typeof togglePrayerLock==='function') togglePrayerLock(); }catch(e){} } },
+      status:function(){ return S.prayerLock ? 'on':'off'; }, act:function(){ try{ if(!S.prayerLock){ var _pl=document.getElementById('setPrayerLock'); if(_pl) _pl.checked=true; if(typeof togglePrayerLock==='function') togglePrayerLock(); else { S.prayerLock=true; save(); } } }catch(e){} } },
     {k:'bg', ic:'\ud83d\udce2', t:'Background reminders', why:'Reminders that arrive even when the app is closed.',
-      status:function(){ return (S.push && S.push.on) ? 'on':'off'; }, act:function(){ try{ togglePush(); }catch(e){} } },
+      status:function(){ return (S.push && S.push.on) ? 'on':'off'; }, act:function(){ try{ togglePush(); setTimeout(function(){ try{ if(!(S.push&&S.push.on)) toast('Background reminders','Turn these on in Settings › Background reminders (needs your server URL). Prayer Lock already covers your phone at each prayer time.','📢'); }catch(e){} }, 500); }catch(e){} } },
     {k:'cloud', ic:'\u2601\ufe0f', t:'Cloud backup (your data)', why:'Save your journal and progress to your private account so nothing is ever lost.',
-      status:function(){ return S.account ? 'on':'off'; }, act:function(){ try{ closeFeaturesSetup(); if(typeof showAuth==='function') showAuth('login'); }catch(e){} } }
+      status:function(){ return S.account ? 'on':'off'; }, act:function(){ try{ closeFeaturesSetup(); if(typeof showAuth==='function') showAuth('welcome'); }catch(e){} } }
   ];
 }
 function renderFeaturesSetup(){
@@ -4884,8 +4884,7 @@ function showHadithPop(loggedKey){
   }
   document.getElementById('hadithPopBody').innerHTML = head + '<div class="pophadith">' + hadithHTML(idx) + '</div>';
   document.getElementById('hadithPop').classList.add('open');
-  if (loggedKey) playAlhamdulillah();
-  playSalawat();
+  if (loggedKey) playAlhamdulillah(); else playSalawat();   // mutually exclusive — ONE clean voice (logged a prayer → Alhamdulillah; otherwise → Salawat). Never both, so no overlap/echo.
 }
 function closeHadithPop(){ document.getElementById('hadithPop').classList.remove('open'); }
 function maybeDailyHadith(){
@@ -5862,8 +5861,10 @@ function setLocation(loc){
 let compassHeading = null, _csx = null, _csy = null;   // _cs* = smoothed unit-vector of the needle angle
 function screenAngle(){ try{ if (screen.orientation && typeof screen.orientation.angle === 'number') return screen.orientation.angle; }catch(e){} return (typeof window.orientation === 'number') ? window.orientation : 0; }
 function enableCompass(auto){
-  if (window._compassOn) return; window._compassOn = true;
-  _csx = _csy = null; window._compassGotEvent = false;
+  // Skip only when we're genuinely already live (locked onto true north) or this is an auto re-arm;
+  // a manual tap may always (re)start, so the button is never a dead no-op after the auto-start.
+  if (window._compassOn && (auto || window._compassGotAbs)) return; window._compassOn = true;
+  _csx = _csy = null; window._compassGotEvent = false; window._compassGotAbs = false;
   const btn0 = document.getElementById('qCompassBtn'), note0 = document.getElementById('qCompassNote');
   const noSensor = (msg) => {
     window._compassOn = false; clearTimeout(window._compassTimer);
@@ -5887,7 +5888,7 @@ function enableCompass(auto){
       return;
     }
     h = ((h + screenAngle()) % 360 + 360) % 360;        // compensate if the screen itself is rotated (landscape)
-    compassHeading = h;
+    compassHeading = h; window._compassGotAbs = true;
     const raw = (qiblaBearing(S.loc.lat, S.loc.lng) - h + 360) % 360;
     // Low-pass filter on a UNIT VECTOR (handles the 360°→0° wrap cleanly) so the needle glides
     // instead of jittering with sensor noise — steadier reads as more accurate to the eye.
@@ -5904,7 +5905,7 @@ function enableCompass(auto){
       : 'Turn gently until the gold needle points straight up (▲).' + (acc ? '' : ' If it drifts, trace a slow figure-8 to calibrate.');
     const btn = document.getElementById('qCompassBtn'); if (btn) btn.textContent = 'Live compass active';
   };
-  const NOSENS = 'This device has no live compass sensor (common on laptops & desktops). The dial above is already North-up — the gold needle points to the Kaaba from North, so use it with any compass. On a phone, this makes the needle follow the way you face.';
+  const NOSENS = 'No compass sensor on this device — and that’s alright. The dial is already North-up and the gold needle points to the Kaaba from North, so you can face it with any compass. On a phone the needle follows the way you turn. May Allah make it easy for you and accept your prayer.';
   const listen = (evt) => {
     window.addEventListener(evt, handler, true);
     if (btn0 && !auto) btn0.textContent = 'Starting compass…';
@@ -6016,9 +6017,10 @@ function boot(){
   try{ initNav(); }catch(e){ console.warn('initNav', e); }
   try{ startApp(); }catch(e){ console.warn('startApp', e); }
   try{ autoLocate(); }catch(e){}
-  // Auto-start removed: on a device without a true-north sensor an auto-started relative reading
-  // would hijack the needle to the WRONG direction. The dial now always shows the correct static
-  // Kaaba bearing on load; the user taps “Enable live compass” to opt into live follow.
+  // Autonomous live compass: auto-start on load (non-iOS; iOS needs a user tap for its permission).
+  // Safe now — a relative (non-true-north) reading no longer moves the needle, so the dial keeps the
+  // correct static Kaaba bearing; only a real true-north reading turns on live follow.
+  try{ if (!(typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission)) setTimeout(function(){ try{ enableCompass(true); }catch(e){} }, 1200); }catch(e){}
   try{ renderGreetline(); renderTopAyah(); }catch(e){}
   try{ setTimeout(function(){ trackVisit(); }, 3000); }catch(e){}   // anonymous visit ping — no-op unless opted in
   try{ setTimeout(function(){ if (S.push && S.push.on) syncPush(); }, 2500); document.addEventListener('visibilitychange', function(){ if (document.visibilityState!=='visible') return; try{ renderTick(); rollDaily('hadith'); rollDaily('ayah'); renderReflection(); renderTopAyah(); }catch(e){} if (S.push && S.push.on) syncPush(); }); }catch(e){}
