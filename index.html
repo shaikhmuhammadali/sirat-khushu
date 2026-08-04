@@ -4098,7 +4098,7 @@ function normServerUrl(u){
   if (!/^https?:\/\//i.test(u)) u = (/^(localhost|127\.|192\.168\.|10\.)/i.test(u) ? 'http://' : 'https://') + u;
   return u.replace(/\/+$/,'');
 }
-function savePush(){ S.push = S.push || {url:'',key:'',appkey:'',on:false}; S.push.url = normServerUrl(val('pushUrl')); S.push.appkey = (val('pushAppKey')||'').trim(); save(); renderPush(); }
+function savePush(){ S.push = S.push || {url:'',key:'',appkey:'',on:false}; var _pu=document.getElementById('pushUrl'); if(_pu) S.push.url = normServerUrl(_pu.value); var _pk=document.getElementById('pushAppKey'); if(_pk) S.push.appkey = (_pk.value||'').trim(); save(); renderPush(); }   // only overwrite when the (optional/advanced) inputs are actually present — never wipe a stored URL
 async function checkServer(){
   const el=document.getElementById('srvChk'); if(!el) return;
   savePush();
@@ -5856,7 +5856,7 @@ function autoLocate(){
           if (isNaN(p.lat) || isNaN(p.lng)){ ipLookup(i+1); return; }
           var tz = (p.tz && isValidTz(p.tz)) ? p.tz : Intl.DateTimeFormat().resolvedOptions().timeZone;
           setLocation({ name: p.city || p.region || 'My area', admin1: p.region || '', country: p.country || '',
-            cc: (p.cc || '').toLowerCase(), lat: +p.lat.toFixed(3), lng: +p.lng.toFixed(3),
+            cc: (p.cc || '').toUpperCase(), lat: +p.lat.toFixed(3), lng: +p.lng.toFixed(3),   // UPPERCASE — CC_METHOD / auto method-by-country is keyed by uppercase ISO codes
             elev: null, tz: isValidTz(tz) ? tz : 'UTC', source: 'ip' });
         } else ipLookup(i+1);
       }).catch(function(){ ipLookup(i+1); });
@@ -5871,11 +5871,11 @@ function autoLocate(){
         elev:(pos.coords.altitude != null && !isNaN(pos.coords.altitude)) ? pos.coords.altitude : null,
         tz:isValidTz(tz) ? tz : 'UTC', source:'gps'});
       try{ nameThisPlace(); }catch(e){}
-    }, ipLookup, {enableHighAccuracy:true, timeout:8000, maximumAge:600000});
+    }, function(){ ipLookup(0); }, {enableHighAccuracy:true, timeout:8000, maximumAge:600000});   // on GPS error/timeout → try the network sources (must NOT pass the error object as the source index)
   }
   try{
     if (navigator.geolocation && navigator.permissions && navigator.permissions.query){
-      navigator.permissions.query({name:'geolocation'}).then(function(st){ if (st.state === 'granted') useGps(); else ipLookup(); }).catch(ipLookup);
+      navigator.permissions.query({name:'geolocation'}).then(function(st){ if (st.state === 'granted') useGps(); else ipLookup(0); }).catch(function(){ ipLookup(0); });
     } else ipLookup();
   }catch(e){ ipLookup(); }
 }
