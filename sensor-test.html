@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Compass sensor test — Sirat Khushu</title>
+<style>
+  *{box-sizing:border-box;margin:0}
+  body{min-height:100dvh;background:#0a0e14;color:#f4efe4;font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    padding:28px 20px;display:flex;flex-direction:column;align-items:center;text-align:center}
+  h1{font-size:1.4rem;font-weight:800;margin-bottom:6px;color:#e6c169}
+  p.sub{color:#9aa3ba;font-size:.95rem;max-width:34ch;margin:0 auto 20px}
+  #verdict{font-size:1.15rem;font-weight:800;padding:16px;border-radius:16px;background:#121826;border:1px solid #232c40;
+    width:100%;max-width:440px;margin-bottom:16px;min-height:64px;display:flex;align-items:center;justify-content:center}
+  button{font-size:1.05rem;font-weight:800;color:#20170a;background:linear-gradient(180deg,#f4d98a,#e6c169);border:0;
+    border-radius:14px;padding:15px 30px;cursor:pointer;margin-bottom:20px}
+  .grid{width:100%;max-width:440px;background:#0f1420;border:1px solid #232c40;border-radius:16px;padding:6px 16px;text-align:left}
+  .row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #1b2436;font-size:.9rem}
+  .row:last-child{border-bottom:0}
+  .row span{color:#9aa3ba}
+  .row b{font-family:ui-monospace,Menlo,monospace;color:#c9b98a;text-align:right}
+  .big{font-size:1.6rem;font-weight:800;color:#e6c169}
+  .hint{color:#9aa3ba;font-size:.82rem;margin-top:18px;max-width:36ch}
+</style>
+</head>
+<body>
+  <h1>Compass sensor test</h1>
+  <p class="sub">This tells you if your phone actually has a working compass. Tap Start, then <b style="color:#f4efe4">slowly turn your whole body</b> holding the phone flat.</p>
+
+  <div id="verdict">Tap “Start test” below.</div>
+  <button id="startBtn" onclick="start()">▶ Start test</button>
+
+  <div class="grid">
+    <div class="row"><span>Live heading</span><b class="big" id="heading">—</b></div>
+    <div class="row"><span>Sensor readings received</span><b id="count">0</b></div>
+    <div class="row"><span>alpha (raw)</span><b id="alpha">—</b></div>
+    <div class="row"><span>iOS webkitCompassHeading</span><b id="webkit">—</b></div>
+    <div class="row"><span>absolute flag</span><b id="absflag">—</b></div>
+    <div class="row"><span>which event fired</span><b id="evt">—</b></div>
+    <div class="row"><span>browser support</span><b id="support">—</b></div>
+  </div>
+
+  <p class="hint">If the <b style="color:#f4efe4">Live heading</b> changes as you turn — your phone HAS a compass and the qibla will follow. If it stays “—” and readings stay 0 — your phone has no compass sensor (nothing can be done about missing hardware).</p>
+
+<script>
+  var count = 0, ok = false;
+  function S(id, v){ var e = document.getElementById(id); if (e) e.textContent = v; }
+  function handler(e, absEvt){
+    count++;
+    var h = null;
+    if (e.webkitCompassHeading != null && !isNaN(e.webkitCompassHeading)) h = e.webkitCompassHeading;
+    else if (e.alpha != null) h = (360 - e.alpha) % 360;
+    S('count', count);
+    S('heading', h == null ? '—' : (Math.round(h) + '°'));
+    S('alpha', e.alpha == null ? '—' : e.alpha.toFixed(1));
+    S('webkit', e.webkitCompassHeading == null ? 'not on this phone' : e.webkitCompassHeading.toFixed(1));
+    S('absflag', String(e.absolute));
+    S('evt', absEvt ? 'deviceorientationabsolute' : 'deviceorientation');
+    if (!ok){ ok = true;
+      var v = document.getElementById('verdict');
+      v.textContent = '✅ SENSOR WORKS — turn your body; the heading changes. Your qibla compass CAN follow.';
+      v.style.color = '#5fd08a'; v.style.borderColor = '#2f7a52';
+    }
+  }
+  function attach(){
+    S('support', 'abs:' + ('ondeviceorientationabsolute' in window) + ' · orient:' + ('ondeviceorientation' in window) + ' · secure:' + window.isSecureContext);
+    if ('ondeviceorientationabsolute' in window) window.addEventListener('deviceorientationabsolute', function(e){ handler(e, true); }, true);
+    if ('ondeviceorientation' in window) window.addEventListener('deviceorientation', function(e){ handler(e, false); }, true);
+    setTimeout(function(){
+      if (count === 0){
+        var v = document.getElementById('verdict');
+        v.textContent = '❌ NO SENSOR — your phone sent zero orientation readings. It has no compass (magnetometer), or motion sensors are blocked. A live needle is impossible here — but the app still shows the exact direction.';
+        v.style.color = '#e88'; v.style.borderColor = '#7a2f2f';
+      }
+    }, 3500);
+  }
+  function start(){
+    document.getElementById('verdict').textContent = 'Waiting for the sensor… turn your body now.';
+    document.getElementById('startBtn').textContent = 'Testing… turn your body';
+    try{
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
+        DeviceOrientationEvent.requestPermission().then(function(p){
+          if (p === 'granted') attach();
+          else { document.getElementById('verdict').textContent = '⚠️ Motion permission was DENIED. Allow it and tap Start again.'; }
+        }).catch(function(){ document.getElementById('verdict').textContent = '⚠️ Could not request motion permission.'; });
+      } else attach();
+    }catch(e){ attach(); }
+  }
+</script>
+</body>
+</html>
