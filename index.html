@@ -19,7 +19,7 @@
        • everyayah.com / cdn.islamic.network — reciter audio
      SELF-HOSTING NOTE: if you point CLOUD_URL / push at a different server, add that exact origin to
      BOTH connect-src and media-src below, or sync/TTS will be blocked. Keep the list minimal. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://geocoding-api.open-meteo.com https://nominatim.openstreetmap.org https://api.aladhan.com https://api.bigdatacloud.net https://ipwho.is https://sabr-push-server.onrender.com https://api.emailjs.com http://localhost:* http://127.0.0.1:*; media-src 'self' https://everyayah.com https://cdn.islamic.network https://sabr-push-server.onrender.com http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://geocoding-api.open-meteo.com https://nominatim.openstreetmap.org https://api.aladhan.com https://api.bigdatacloud.net https://ipwho.is https://get.geojs.io https://sabr-push-server.onrender.com https://api.emailjs.com http://localhost:* http://127.0.0.1:*; media-src 'self' https://everyayah.com https://cdn.islamic.network https://sabr-push-server.onrender.com http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
 <!-- PWA layer: installable + fully offline. Manifest, icons, and iOS standalone meta. -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
@@ -5837,19 +5837,30 @@ function autoLocate(){
   // Auto-detect the user's area so prayer times + the qibla DIRECTION appear immediately — no tapping,
   // no permission. Prefer GPS ONLY if already granted (precise, no prompt); otherwise fall back to a
   // permission-free network lookup (ipwho.is → approximate city). The 'GPS' button refines it precisely.
-  function ipLookup(){
-    if (S.loc) return;
+  // Two INDEPENDENT free location sources — if the first is down/blocked, try the next, so a single
+  // service outage can never leave the qibla without a location. If BOTH fail, the search box remains.
+  var _ipSrc = [
+    { url:'https://ipwho.is/', ok:function(j){ return !!(j && j.success && j.latitude!=null && j.longitude!=null); },
+      map:function(j){ return { lat:+j.latitude, lng:+j.longitude, city:j.city, region:j.region, country:j.country, cc:j.country_code, tz:(j.timezone&&j.timezone.id) }; } },
+    { url:'https://get.geojs.io/v1/ip/geo.json', ok:function(j){ return !!(j && j.latitude!=null && j.longitude!=null && !isNaN(+j.latitude)); },
+      map:function(j){ return { lat:+j.latitude, lng:+j.longitude, city:j.city, region:j.region, country:j.country, cc:j.country_code, tz:j.timezone }; } }
+  ];
+  function ipLookup(i){
+    if (S.loc) return; i = i || 0; if (i >= _ipSrc.length) return;
+    var s = _ipSrc[i];
     try{
-      fetch('https://ipwho.is/', {cache:'no-store'}).then(function(r){ return r.json(); }).then(function(j){
+      fetch(s.url, {cache:'no-store'}).then(function(r){ return r.json(); }).then(function(j){
         if (S.loc) return;
-        if (j && j.success && j.latitude != null && j.longitude != null){
-          var tz = (j.timezone && j.timezone.id && isValidTz(j.timezone.id)) ? j.timezone.id : Intl.DateTimeFormat().resolvedOptions().timeZone;
-          setLocation({ name: j.city || j.region || 'My area', admin1: j.region || '', country: j.country || '',
-            cc: (j.country_code || '').toLowerCase(), lat: +(+j.latitude).toFixed(3), lng: +(+j.longitude).toFixed(3),
+        if (s.ok(j)){
+          var p = s.map(j);
+          if (isNaN(p.lat) || isNaN(p.lng)){ ipLookup(i+1); return; }
+          var tz = (p.tz && isValidTz(p.tz)) ? p.tz : Intl.DateTimeFormat().resolvedOptions().timeZone;
+          setLocation({ name: p.city || p.region || 'My area', admin1: p.region || '', country: p.country || '',
+            cc: (p.cc || '').toLowerCase(), lat: +p.lat.toFixed(3), lng: +p.lng.toFixed(3),
             elev: null, tz: isValidTz(tz) ? tz : 'UTC', source: 'ip' });
-        }
-      }).catch(function(){});
-    }catch(e){}
+        } else ipLookup(i+1);
+      }).catch(function(){ ipLookup(i+1); });
+    }catch(e){ ipLookup(i+1); }
   }
   function useGps(){
     navigator.geolocation.getCurrentPosition(function(pos){
