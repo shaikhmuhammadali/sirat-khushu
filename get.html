@@ -66,14 +66,19 @@
   .hero{text-align:center; margin-bottom:22px}
   .eyebrow{font-size:.7rem;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);font-weight:800;margin-bottom:16px;opacity:.9}
   .medallion{position:relative; width:92px;height:92px;margin:0 auto 18px; display:grid;place-items:center; animation:floaty 5.5s ease-in-out infinite}
+  .medallion::before{content:"";position:absolute;inset:2px;z-index:0;border-radius:26px;border:1.5px solid rgba(230,193,105,.5);animation:pulseRing 3.2s cubic-bezier(.3,.7,.4,1) infinite}
+  @keyframes pulseRing{0%{transform:scale(.9);opacity:.7}70%{opacity:0}100%{transform:scale(1.55);opacity:0}}
   @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
   .medallion .halo{position:absolute; inset:-9px; border-radius:50%; z-index:0;
     background:conic-gradient(from 0deg, transparent, rgba(230,193,105,.55), transparent 42%, transparent 60%, rgba(244,217,138,.4), transparent);
     filter:blur(7px); animation:spin 9s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg)}}
   .medallion .disc{position:relative; z-index:1; width:84px;height:84px;border-radius:24px; display:grid;place-items:center;
-    background:radial-gradient(120% 120% at 30% 22%,#1c2740,#0c1120); border:1px solid rgba(230,193,105,.4);
-    box-shadow:0 18px 44px -16px rgba(230,193,105,.55), inset 0 1px 0 rgba(255,255,255,.06);}
+    background:radial-gradient(120% 120% at 30% 22%,#1c2740,#0c1120); border:1px solid rgba(230,193,105,.45);
+    box-shadow:0 18px 44px -16px rgba(230,193,105,.55), 0 0 26px -4px rgba(230,193,105,.4), inset 0 1px 0 rgba(255,255,255,.06);
+    animation:discGlow 3.6s ease-in-out infinite;}
+  @keyframes discGlow{0%,100%{box-shadow:0 18px 44px -16px rgba(230,193,105,.5),0 0 24px -6px rgba(230,193,105,.35),inset 0 1px 0 rgba(255,255,255,.06)}
+    50%{box-shadow:0 22px 56px -12px rgba(230,193,105,.8),0 0 46px 0 rgba(230,193,105,.62),inset 0 1px 0 rgba(255,255,255,.09)}}
   .medallion img{width:62px;height:62px;border-radius:15px;display:block}
   .arb{font-size:1.9rem;line-height:1;letter-spacing:.02em;color:var(--gold);font-weight:700;margin-bottom:9px;font-family:"Segoe UI","Noto Naskh Arabic",serif;
     text-shadow:0 0 22px rgba(230,193,105,.35)}
@@ -153,7 +158,7 @@
   code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#c9b98a;font-size:.78rem}
   @media (prefers-reduced-motion:reduce){
     .rise{opacity:1;transform:none;animation:none}
-    .sky,.stars,.shoot,.medallion,.medallion .halo,h1,.dl,.dl::after,.dl svg{animation:none!important}
+    .sky,.stars,.shoot,.medallion,.medallion::before,.medallion .halo,.medallion .disc,h1,.dl,.dl::after,.dl svg{animation:none!important}
   }
 </style>
 </head>
