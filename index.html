@@ -19,7 +19,7 @@
        • everyayah.com / cdn.islamic.network — reciter audio
      SELF-HOSTING NOTE: if you point CLOUD_URL / push at a different server, add that exact origin to
      BOTH connect-src and media-src below, or sync/TTS will be blocked. Keep the list minimal. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://geocoding-api.open-meteo.com https://nominatim.openstreetmap.org https://api.aladhan.com https://api.bigdatacloud.net https://sabr-push-server.onrender.com https://api.emailjs.com http://localhost:* http://127.0.0.1:*; media-src 'self' https://everyayah.com https://cdn.islamic.network https://sabr-push-server.onrender.com http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://geocoding-api.open-meteo.com https://nominatim.openstreetmap.org https://api.aladhan.com https://api.bigdatacloud.net https://ipwho.is https://sabr-push-server.onrender.com https://api.emailjs.com http://localhost:* http://127.0.0.1:*; media-src 'self' https://everyayah.com https://cdn.islamic.network https://sabr-push-server.onrender.com http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
 <!-- PWA layer: installable + fully offline. Manifest, icons, and iOS standalone meta. -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
@@ -5833,22 +5833,40 @@ function useGPS(){
   }, {enableHighAccuracy:true, timeout:15000, maximumAge:60000});
 }
 function autoLocate(){
-  if (S.loc || !navigator.geolocation) return;
-  function grab(){
+  if (S.loc) return;
+  // Auto-detect the user's area so prayer times + the qibla DIRECTION appear immediately — no tapping,
+  // no permission. Prefer GPS ONLY if already granted (precise, no prompt); otherwise fall back to a
+  // permission-free network lookup (ipwho.is → approximate city). The 'GPS' button refines it precisely.
+  function ipLookup(){
+    if (S.loc) return;
+    try{
+      fetch('https://ipwho.is/', {cache:'no-store'}).then(function(r){ return r.json(); }).then(function(j){
+        if (S.loc) return;
+        if (j && j.success && j.latitude != null && j.longitude != null){
+          var tz = (j.timezone && j.timezone.id && isValidTz(j.timezone.id)) ? j.timezone.id : Intl.DateTimeFormat().resolvedOptions().timeZone;
+          setLocation({ name: j.city || j.region || 'My area', admin1: j.region || '', country: j.country || '',
+            cc: (j.country_code || '').toLowerCase(), lat: +(+j.latitude).toFixed(3), lng: +(+j.longitude).toFixed(3),
+            elev: null, tz: isValidTz(tz) ? tz : 'UTC', source: 'ip' });
+        }
+      }).catch(function(){});
+    }catch(e){}
+  }
+  function useGps(){
     navigator.geolocation.getCurrentPosition(function(pos){
+      if (S.loc) return;
       var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       setLocation({name:'My location', admin1:'', country:'', cc:'',
         lat:+pos.coords.latitude.toFixed(4), lng:+pos.coords.longitude.toFixed(4),
         elev:(pos.coords.altitude != null && !isNaN(pos.coords.altitude)) ? pos.coords.altitude : null,
         tz:isValidTz(tz) ? tz : 'UTC', source:'gps'});
       try{ nameThisPlace(); }catch(e){}
-    }, function(){}, {enableHighAccuracy:true, timeout:12000, maximumAge:600000});
+    }, ipLookup, {enableHighAccuracy:true, timeout:8000, maximumAge:600000});
   }
   try{
-    if (navigator.permissions && navigator.permissions.query){
-      navigator.permissions.query({name:'geolocation'}).then(function(st){ if (st.state !== 'denied') grab(); }).catch(grab);
-    } else grab();
-  }catch(e){ grab(); }
+    if (navigator.geolocation && navigator.permissions && navigator.permissions.query){
+      navigator.permissions.query({name:'geolocation'}).then(function(st){ if (st.state === 'granted') useGps(); else ipLookup(); }).catch(ipLookup);
+    } else ipLookup();
+  }catch(e){ ipLookup(); }
 }
 async function nameThisPlace(){
   if (!S.loc) return;
