@@ -3126,6 +3126,7 @@ function clearRecitingAyah(){
 function stopReciteAudio(){
   _qaSeq++;
   if (_qa){ try{ _qa.pause(); }catch(e){} _qa.onended = _qa.onerror = null; _qa = null; }
+  try{ _stopVoices(); }catch(e){}                 // a starting/stopping recitation also silences any short greeting clip, so the two never overlap
   if ('speechSynthesis' in window){ try{ speechSynthesis.cancel(); }catch(e){} }
   document.querySelectorAll('.recitebtn.playing').forEach(b => b.classList.remove('playing'));
   clearRecitingAyah();
@@ -4099,24 +4100,7 @@ function normServerUrl(u){
   return u.replace(/\/+$/,'');
 }
 function savePush(){ S.push = S.push || {url:'',key:'',appkey:'',on:false}; var _pu=document.getElementById('pushUrl'); if(_pu) S.push.url = normServerUrl(_pu.value); var _pk=document.getElementById('pushAppKey'); if(_pk) S.push.appkey = (_pk.value||'').trim(); save(); renderPush(); }   // only overwrite when the (optional/advanced) inputs are actually present — never wipe a stored URL
-async function checkServer(){
-  const el=document.getElementById('srvChk'); if(!el) return;
-  savePush();
-  if (!S.push.url){ el.textContent=''; return; }
-  el.style.color=''; el.textContent='Checking your server\u2026';
-  try{
-    const ctl=new AbortController(); const t=setTimeout(function(){ ctl.abort(); },8000);
-    const r=await fetch(S.push.url+'/health',{signal:ctl.signal}); clearTimeout(t);
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const j=await r.json();
-    el.innerHTML='\u2713 Server connected \u00b7 Voice (recite) '+(j.tts?'\u2713':'\u2717')+' \u00b7 Background push '+(j.push?'\u2713':'\u2717');
-    el.style.color='var(--gold-ink)';
-  }catch(e){
-    el.textContent = (e.name==='AbortError')
-      ? '\u2717 No reply \u2014 free servers sleep when idle; give it ~40 s to wake and tap Check again.'
-      : '\u2717 Could not reach it. Check the URL \u2014 https://\u2026 for a hosted server, http://localhost:3000 for your own PC.';
-  }
-}
+// (checkServer removed v3.100.0 \u2014 the server-URL field it validated was retired; it had no caller.)
 function renderPush(){
   const u=document.getElementById('pushUrl'); if(u&&S.push) u.value=S.push.url||'';
   const k=document.getElementById('pushAppKey'); if(k&&S.push) k.value=S.push.appkey||'';
@@ -5254,16 +5238,21 @@ let _salawat=null, _alham=null, _assalam=null;
 function _stopVoices(except){
   [_salawat, _alham, _assalam].forEach(a => { if (a && a !== except){ try{ a.pause(); a.currentTime = 0; }catch(e){} } });
 }
+// True while a Qur'an recitation is actually sounding — used so a short greeting clip never talks over it.
+function _reciting(){ try{ if (_qa && !_qa.paused && !_qa.ended) return true; }catch(e){} try{ if ('speechSynthesis' in window && speechSynthesis.speaking) return true; }catch(e){} return false; }
 function playSalawat(){
   if (S.salawatAudio === false) return;
+  if (_reciting()) return;
   try{ if(!_salawat){ _salawat=new Audio('audio/salawat.mp3'); _salawat.preload='auto'; } _stopVoices(_salawat); _salawat.volume=1.0; _salawat.currentTime=0; const p=_salawat.play(); if(p&&p.catch) p.catch(()=>{}); }catch(e){}
 }
 function playAlhamdulillah(){
   if (S.salawatAudio === false) return;
+  if (_reciting()) return;
   try{ if(!_alham){ _alham=new Audio('audio/alhamdulillah.mp3'); _alham.preload='auto'; } _stopVoices(_alham); _alham.volume=1.0; _alham.currentTime=0; const p=_alham.play(); if(p&&p.catch) p.catch(()=>{}); }catch(e){}
 }
 function playAssalam(){
   if (S.salawatAudio === false) return;
+  if (_reciting()) return;
   try{
     if(!_assalam){ _assalam=new Audio('audio/assalamualaikum.mp3'); _assalam.preload='auto'; }
     _stopVoices(_assalam); _assalam.volume=1.0; _assalam.currentTime=0;
@@ -5908,6 +5897,7 @@ function setLocation(loc){
   S.loc = loc; save();
   try{ autoMethodForLoc(); }catch(e){}
   dayCache = {}; notifiedKeys = {}; eventCacheKey = ''; cardsSig = ''; cardRefs = null;
+  compassHeading = null; _csx = _csy = null;   // new location → drop any stale live-compass rotation so the needle recomputes for the new qibla bearing
   renderStatic();
 }
 
