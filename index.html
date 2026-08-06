@@ -5969,13 +5969,11 @@ function enableCompass(auto){
       if (!auto){ if (note0) note0.textContent = msg; else { try{ alert(msg); }catch(e){} } }
     }
   };
-  const _isIOS = (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function');
   const handler = e => {
     let h = null, absolute = false;
     if (e.webkitCompassHeading != null && !isNaN(e.webkitCompassHeading)){ h = e.webkitCompassHeading; absolute = true; }   // iOS: degrees clockwise from TRUE north
-    else if (e.alpha != null && (e.type === 'deviceorientationabsolute' || e.absolute === true)){ h = 360 - e.alpha; absolute = true; }  // an ABSOLUTE-event / e.absolute reading is true-north referenced
-    else if (e.alpha != null && !_isIOS){ h = 360 - e.alpha; absolute = true; }   // Android/Chromium: plain deviceorientation alpha on a device WITH a magnetometer IS true-north referenced even though Chrome reports e.absolute=false. (iOS is excluded above: there plain alpha is relative and iOS true-north comes from webkitCompassHeading.)
-    else if (e.alpha != null){ h = 360 - e.alpha; absolute = false; }             // iOS with no webkitCompassHeading (rare): relative → don't drive the needle
+    else if (e.alpha != null && (e.type === 'deviceorientationabsolute' || e.absolute === true)){ h = 360 - e.alpha; absolute = true; }  // TRUE-north: the ABSOLUTE event, or e.absolute===true (magnetometer-referenced)
+    else if (e.alpha != null){ h = 360 - e.alpha; absolute = false; }             // plain 'deviceorientation' on a gyro Android is RELATIVE — alpha=0 is an arbitrary start, NOT north. Do NOT drive the needle; keep the correct static dial. (A live-but-WRONG qibla is worse than a correct static one.)
     if (h == null || !S.loc) return;
     window._compassGotEvent = true; clearTimeout(window._compassTimer);                                                     // a real reading arrived → cancel the "no sensor" fallback
     try{ if (absolute && localStorage.getItem('sk_nocompass')){ localStorage.removeItem('sk_nocompass'); const _b = document.getElementById('qCompassBtn'); if (_b){ _b.style.display = ''; _b.disabled = false; _b.style.opacity = ''; } } }catch(_e){}   // a working reading proves the sensor exists → clear any stale no-compass state and restore the button
