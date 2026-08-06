@@ -5841,7 +5841,7 @@ function useGPS(){
   var restore = function(){ if (btn){ btn.textContent = prev; btn.disabled = false; } };
   var fallbackIP = function(note){
     ipLocate(0, function(){ restore(); try{ toast('Location set', note || 'Using your approximate location from the network — accurate for qibla direction and prayer times.', '📍'); }catch(e){} },
-                function(){ restore(); alert('Could not find your location automatically. Please search for your city in the box above.'); });
+                function(){ restore(); try{ toast('Couldn’t auto-locate', 'Please type your city in the search box above — it needs no permission and always works online.', '📍'); }catch(e){} });
   };
   var secure = window.isSecureContext || /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
   if (!navigator.geolocation || !secure){ try{ toast('Locating…','Finding your area from the network…','📍'); }catch(e){} fallbackIP(); return; }
@@ -5872,19 +5872,44 @@ function autoLocate(){
 }
 async function nameThisPlace(){
   if (!S.loc) return;
+  // OPTIONAL nicety only — resolve a human city name for the coordinates. Location, qibla and prayer
+  // times already work without it, so this NEVER blocks and NEVER alerts. Try two independent providers,
+  // then fall back to a timezone-derived area label; if all fail, silently keep the existing name.
+  const apply = (name, admin1, country, cc) => {
+    if (!name) return false;
+    S.loc.name = name;
+    if (admin1 != null) S.loc.admin1 = admin1 || '';
+    if (country != null) S.loc.country = country || '';
+    if (cc) S.loc.cc = String(cc).toUpperCase();
+    S.loc.named = true;
+    save(); try{ autoMethodForLoc(); }catch(e){} try{ renderLoc(); }catch(e){}
+    return true;
+  };
+  // 1) bigdatacloud (no key, client endpoint)
   try{
     const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${S.loc.lat}&longitude=${S.loc.lng}&localityLanguage=en`);
-    if (!res.ok) throw new Error('reverse ' + res.status);
-    const j = await res.json();
-    const name = j.city || j.locality || '';
-    if (!name && !j.countryName){ alert('Reverse geocoding returned no name — please try again later.'); return; }
-    S.loc.name = name || 'My location';
-    S.loc.admin1 = j.principalSubdivision || '';
-    S.loc.country = j.countryName || '';
-    S.loc.cc = (j.countryCode || '').toUpperCase();
-    S.loc.named = true;
-    save(); try{ autoMethodForLoc(); }catch(e){} renderLoc();
-  }catch(e){ alert('Reverse geocoding is unavailable right now — please try again later.'); }
+    if (res.ok){
+      const j = await res.json();
+      const name = j.city || j.locality || j.principalSubdivision || '';
+      if (name || j.countryName){ if (apply(name || j.countryName, j.principalSubdivision, j.countryName, j.countryCode)) return; }
+    }
+  }catch(e){}
+  // 2) OpenStreetMap / Nominatim reverse
+  try{
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${S.loc.lat}&lon=${S.loc.lng}&format=json&zoom=10&addressdetails=1`, {headers:{'Accept':'application/json'}});
+    if (res.ok){
+      const j = await res.json(); const a = j.address || {};
+      const name = a.city || a.town || a.village || a.county || a.state || (j.display_name||'').split(',')[0] || '';
+      if (apply(name, a.state || '', a.country || '', a.country_code)) return;
+    }
+  }catch(e){}
+  // 3) last resort: a friendly area from the IANA timezone, only if we still have the generic label
+  try{
+    if ((!S.loc.name || S.loc.name === 'My location') && S.loc.tz && S.loc.tz.indexOf('/') > -1){
+      const area = S.loc.tz.split('/').pop().replace(/_/g,' ');
+      if (area){ S.loc.name = area + ' area'; S.loc.named = true; save(); try{ renderLoc(); }catch(e){} }
+    }
+  }catch(e){}
 }
 const CC_METHOD = {IN:'India',PK:'Karachi',BD:'Karachi',AF:'Karachi',NP:'Karachi',LK:'Karachi',US:'ISNA',CA:'ISNA',EG:'Egypt',SD:'Egypt',SA:'Makkah',YE:'Makkah',AE:'Dubai',KW:'Kuwait',QA:'Qatar',BH:'Gulf',OM:'Gulf',TR:'Turkey',SG:'Singapore',MY:'JAKIM',BN:'JAKIM',ID:'Kemenag',FR:'France',BE:'France',RU:'Russia',JO:'Jordan',PS:'Jordan',SY:'Jordan',LB:'Jordan',IQ:'Jordan',MA:'Morocco',TN:'Tunisia',DZ:'Algeria',LY:'Algeria',ZA:'SouthAfrica',PT:'Portugal',BA:'Egypt2',BG:'Egypt2'};
 function autoMethodForLoc(){
