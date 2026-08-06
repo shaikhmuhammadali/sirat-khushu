@@ -2639,6 +2639,16 @@ function renderStatic(){
   const b = qiblaBearing(S.loc.lat, S.loc.lng);
   document.getElementById('qDeg').textContent = b.toFixed(1) + '° ' + cardinal(b);
   if (compassHeading == null){ document.getElementById('qNeedle').style.transform = `rotate(${b}deg)`; try{ document.getElementById('qKaaba').style.transform = `rotate(${b}deg)`; }catch(e){} }
+  // Devices with no magnetometer (most desktops, some phones) can never rotate the needle live. Once that's
+  // confirmed, stop offering a live compass that can only fail — point to the exact bearing shown above instead.
+  try{
+    if (localStorage.getItem('sk_nocompass')){
+      const _cb = document.getElementById('qCompassBtn');
+      if (_cb){ _cb.textContent = 'Compass sensor not available'; _cb.disabled = true; _cb.style.opacity = '.55'; _cb.style.cursor = 'default'; }
+      const _cn = document.getElementById('qCompassNote');
+      if (_cn && compassHeading == null) _cn.textContent = 'Your device has no compass sensor, so the needle can’t turn as you move — but the dial is North-up and the gold needle above points exactly to the Kaaba (' + b.toFixed(0) + '° ' + cardinal(b) + '). Face North, then turn toward it.';
+    }
+  }catch(e){}
   const km = distanceToMakkahKm(S.loc.lat, S.loc.lng);
   document.getElementById('qDist').textContent = Math.round(km).toLocaleString() + ' km · ' + Math.round(km*0.621371).toLocaleString() + ' mi';
   lastClock = ''; eventCacheKey = ''; cardsSig = '';
@@ -5857,7 +5867,12 @@ function useGPS(){
 // If GPS is ALREADY granted we use it (precise, no prompt); otherwise straight to the permission-free
 // network location. The GPS button can later refine to a precise fix.
 function autoLocate(){
-  if (S.loc) return;
+  if (S.loc){
+    // Already located — but a prior GPS fix that never resolved a real city name would stay "My location"
+    // (the reverse-geocode runs only right after a fresh fix). Quietly resolve the name now, no prompt.
+    if (S.loc.name === 'My location'){ try{ nameThisPlace(); }catch(e){} }
+    return;
+  }
   var gpsThenIp = function(){
     try{
       navigator.geolocation.getCurrentPosition(function(pos){ if (!S.loc) _setGpsLoc(pos); },
@@ -5939,10 +5954,18 @@ function enableCompass(auto){
   if (window._compassOn && (auto || window._compassGotAbs)) return; window._compassOn = true;
   _csx = _csy = null; window._compassGotEvent = false; window._compassGotAbs = false;
   const btn0 = document.getElementById('qCompassBtn'), note0 = document.getElementById('qCompassNote');
-  const noSensor = (msg) => {
+  const noSensor = (msg, hard) => {
     window._compassOn = false; clearTimeout(window._compassTimer);
-    if (btn0) btn0.textContent = 'Enable live compass';
-    if (!auto){ if (note0) note0.textContent = msg; else { try{ alert(msg); }catch(e){} } }
+    if (hard){
+      // Confirmed: no usable compass sensor. Remember it (device-local, NOT synced to the cloud) and turn the
+      // button into a calm, non-tappable note, so it can never nag "no sensor" again on every tap or reload.
+      try{ localStorage.setItem('sk_nocompass','1'); }catch(e){}
+      if (btn0){ btn0.textContent = 'Compass sensor not available'; btn0.disabled = true; btn0.style.opacity = '.55'; btn0.style.cursor = 'default'; }
+      if (note0) note0.textContent = msg;
+    } else {
+      if (btn0){ btn0.textContent = 'Enable live compass'; btn0.disabled = false; btn0.style.opacity = ''; }
+      if (!auto){ if (note0) note0.textContent = msg; else { try{ alert(msg); }catch(e){} } }
+    }
   };
   const handler = e => {
     let h = null, absolute = false;
@@ -5979,14 +6002,14 @@ function enableCompass(auto){
       : 'Turn gently until the gold needle points straight up (▲).' + (acc ? '' : ' If it drifts, trace a slow figure-8 to calibrate.');
     const btn = document.getElementById('qCompassBtn'); if (btn) btn.textContent = 'Live compass active';
   };
-  const NOSENS = 'No compass sensor on this device — and that’s alright. The dial is already North-up and the gold needle points to the Kaaba from North, so you can face it with any compass. On a phone the needle follows the way you turn. May Allah make it easy for you and accept your prayer.';
+  const NOSENS = 'This device has no compass sensor, so the needle can’t turn as you move — but the dial is North-up and the gold needle already points exactly to the Kaaba. Face North, then turn toward the needle. May Allah make it easy and accept your prayer.';
   const listen = (evt) => {
     window.addEventListener(evt, handler, true);
     if (btn0 && !auto) btn0.textContent = 'Starting compass…';
     clearTimeout(window._compassTimer);
     // If no real reading arrives within ~2.2s, the API exists but there's no usable sensor — say so.
     window._compassTimer = setTimeout(function(){
-      if (!window._compassGotEvent){ try{ window.removeEventListener(evt, handler, true); }catch(e){} noSensor(NOSENS); }
+      if (!window._compassGotEvent){ try{ window.removeEventListener(evt, handler, true); }catch(e){} noSensor(NOSENS, true); }
     }, 2200);
   };
   if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
@@ -6005,11 +6028,11 @@ function enableCompass(auto){
     window._compassTimer = setTimeout(function(){
       if (!window._compassGotEvent){
         try{ window.removeEventListener('deviceorientationabsolute', handler, true); window.removeEventListener('deviceorientation', handler, true); }catch(e){}
-        noSensor(NOSENS);
+        noSensor(NOSENS, true);
       }
     }, 2600);
   }
-  else { noSensor(NOSENS); }
+  else { noSensor(NOSENS, true); }
 }
 
 /* ── self-tests ── */
