@@ -2641,14 +2641,7 @@ function renderStatic(){
   if (compassHeading == null){ document.getElementById('qNeedle').style.transform = `rotate(${b}deg)`; try{ document.getElementById('qKaaba').style.transform = `rotate(${b}deg)`; }catch(e){} }
   // Devices with no magnetometer (most desktops, some phones) can never rotate the needle live. Once that's
   // confirmed, stop offering a live compass that can only fail — point to the exact bearing shown above instead.
-  try{
-    if (localStorage.getItem('sk_nocompass')){
-      const _cb = document.getElementById('qCompassBtn');
-      if (_cb){ _cb.textContent = 'Compass sensor not available'; _cb.disabled = true; _cb.style.opacity = '.55'; _cb.style.cursor = 'default'; }
-      const _cn = document.getElementById('qCompassNote');
-      if (_cn && compassHeading == null) _cn.textContent = 'Your device has no compass sensor, so the needle can’t turn as you move — but the dial is North-up and the gold needle above points exactly to the Kaaba (' + b.toFixed(0) + '° ' + cardinal(b) + '). Face North, then turn toward it.';
-    }
-  }catch(e){}
+  try{ if (localStorage.getItem('sk_nocompass') && compassHeading == null) _showStaticQibla(); }catch(e){}
   const km = distanceToMakkahKm(S.loc.lat, S.loc.lng);
   document.getElementById('qDist').textContent = Math.round(km).toLocaleString() + ' km · ' + Math.round(km*0.621371).toLocaleString() + ' mi';
   lastClock = ''; eventCacheKey = ''; cardsSig = '';
@@ -5948,6 +5941,15 @@ function setLocation(loc){
    when you physically turn until the needle points straight up (▲), you are facing the Kaaba. */
 let compassHeading = null, _csx = null, _csy = null;   // _cs* = smoothed unit-vector of the needle angle
 function screenAngle(){ try{ if (screen.orientation && typeof screen.orientation.angle === 'number') return screen.orientation.angle; }catch(e){} return (typeof window.orientation === 'number') ? window.orientation : 0; }
+// No magnetometer → present the qibla as a clean STATIC dial: hide the live-compass button (it can only fail
+// on this device) and show the exact bearing positively. The needle already points at the Kaaba, North-up.
+function _showStaticQibla(){
+  try{
+    var btn = document.getElementById('qCompassBtn'); if (btn) btn.style.display = 'none';
+    var note = document.getElementById('qCompassNote');
+    if (note && S.loc){ var b = qiblaBearing(S.loc.lat, S.loc.lng); note.textContent = 'The gold needle points to the Kaaba — ' + b.toFixed(0) + '° ' + cardinal(b) + ' from North. Face North, then turn toward the needle.'; }
+  }catch(e){}
+}
 function enableCompass(auto){
   // Skip only when we're genuinely already live (locked onto true north) or this is an auto re-arm;
   // a manual tap may always (re)start, so the button is never a dead no-op after the auto-start.
@@ -5957,11 +5959,11 @@ function enableCompass(auto){
   const noSensor = (msg, hard) => {
     window._compassOn = false; clearTimeout(window._compassTimer);
     if (hard){
-      // Confirmed: no usable compass sensor. Remember it (device-local, NOT synced to the cloud) and turn the
-      // button into a calm, non-tappable note, so it can never nag "no sensor" again on every tap or reload.
-      try{ localStorage.setItem('sk_nocompass','1'); }catch(e){}
-      if (btn0){ btn0.textContent = 'Compass sensor not available'; btn0.disabled = true; btn0.style.opacity = '.55'; btn0.style.cursor = 'default'; }
-      if (note0) note0.textContent = msg;
+      // Confirmed no usable sensor. On an explicit user tap, remember it (device-local, NOT synced) and quietly
+      // switch to the static dial — no scary "not available" label, just the exact bearing. The silent boot
+      // auto-start does NOTHING here (the needle simply stays on the correct static bearing), so a merely-slow
+      // sensor is never permanently locked out.
+      if (!auto){ try{ localStorage.setItem('sk_nocompass','1'); }catch(e){} _showStaticQibla(); }
     } else {
       if (btn0){ btn0.textContent = 'Enable live compass'; btn0.disabled = false; btn0.style.opacity = ''; }
       if (!auto){ if (note0) note0.textContent = msg; else { try{ alert(msg); }catch(e){} } }
