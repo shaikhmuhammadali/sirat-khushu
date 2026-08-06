@@ -5795,78 +5795,80 @@ async function pickResult(i){
 }
 
 /* ── GPS + reverse geocode (opt-in only) ── */
-function useGPS(){
-  if (!navigator.geolocation){ alert('Location isn’t available in this browser — search for your city above instead.'); return; }
-  // Geolocation only works on a secure origin (https, or localhost during development).
-  if (!window.isSecureContext && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)){
-    alert('Location needs a secure connection. Please open the app over https:// — or search for your city above.'); return;
-  }
-  const btn = document.querySelector('.gps'); const prev = btn ? btn.textContent : '';
-  if (btn){ btn.textContent = '…'; btn.disabled = true; }
-  try{ toast('Locating…', 'Finding your position — please allow location if your device asks.', '📍'); }catch(e){}
-  navigator.geolocation.getCurrentPosition(pos => {
-    if (btn){ btn.textContent = prev; btn.disabled = false; }
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    setLocation({name:'My location', admin1:'', country:'', cc:'',
-      lat:+pos.coords.latitude.toFixed(4), lng:+pos.coords.longitude.toFixed(4),
-      elev:(pos.coords.altitude != null && !isNaN(pos.coords.altitude)) ? pos.coords.altitude : null,
-      tz:isValidTz(tz) ? tz : 'UTC', source:'gps'});
-    try{ nameThisPlace(); }catch(e){}   // reverse-geocode the city name so it shows a real place, not "My location"
-  }, err => {
-    if (btn){ btn.textContent = prev; btn.disabled = false; }
-    let m = 'Could not get your location — you can search for your city above instead.';
-    if (err && err.code === 1) m = 'Location permission is blocked. Allow location for this site (tap the 🔒/ⓘ icon in the address bar → Location → Allow), then tap GPS again — or search for your city above.';
-    else if (err && err.code === 2) m = 'Your position is unavailable right now (no GPS or network fix). Try again near a window/outdoors, or search for your city above.';
-    else if (err && err.code === 3) m = 'Locating took too long. Please try GPS again, or search for your city above.';
-    alert(m);
-  }, {enableHighAccuracy:true, timeout:15000, maximumAge:60000});
+// ── Permission-free network (IP) location ── enough for an ACCURATE qibla direction and city-level
+// prayer times (the qibla bearing barely changes over a few km). Two INDEPENDENT free sources; if one
+// is down or blocked, fall through to the next. THIS is what makes location work inside the installed
+// app's WebView, where the OS never shows a runtime GPS prompt to pure web code.
+var _IP_SRC = [
+  { url:'https://ipwho.is/', ok:function(j){ return !!(j && j.success && j.latitude!=null && j.longitude!=null); },
+    map:function(j){ return { lat:+j.latitude, lng:+j.longitude, city:j.city, region:j.region, country:j.country, cc:j.country_code, tz:(j.timezone&&j.timezone.id) }; } },
+  { url:'https://get.geojs.io/v1/ip/geo.json', ok:function(j){ return !!(j && j.latitude!=null && j.longitude!=null && !isNaN(+j.latitude)); },
+    map:function(j){ return { lat:+j.latitude, lng:+j.longitude, city:j.city, region:j.region, country:j.country, cc:j.country_code, tz:j.timezone }; } }
+];
+// ipLocate(i, onOk, onFail): try source i; on success setLocation() + onOk(); if every source fails, onFail().
+function ipLocate(i, onOk, onFail){
+  i = i || 0;
+  if (i >= _IP_SRC.length){ if (onFail) onFail(); return; }
+  var s = _IP_SRC[i];
+  var next = function(){ ipLocate(i+1, onOk, onFail); };
+  try{
+    fetch(s.url, {cache:'no-store'}).then(function(r){ return r.json(); }).then(function(j){
+      if (!s.ok(j)){ next(); return; }
+      var p = s.map(j);
+      if (isNaN(+p.lat) || isNaN(+p.lng)){ next(); return; }
+      var tz = (p.tz && isValidTz(p.tz)) ? p.tz : Intl.DateTimeFormat().resolvedOptions().timeZone;
+      setLocation({ name: p.city || p.region || 'My area', admin1: p.region || '', country: p.country || '',
+        cc: (p.cc || '').toUpperCase(), lat: +(+p.lat).toFixed(3), lng: +(+p.lng).toFixed(3),   // UPPERCASE — CC_METHOD is keyed by uppercase ISO codes
+        elev: null, tz: isValidTz(tz) ? tz : 'UTC', source: 'ip' });
+      if (onOk) onOk();
+    }).catch(next);
+  }catch(e){ next(); }
 }
+function _setGpsLoc(pos){
+  var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  setLocation({name:'My location', admin1:'', country:'', cc:'',
+    lat:+pos.coords.latitude.toFixed(4), lng:+pos.coords.longitude.toFixed(4),
+    elev:(pos.coords.altitude != null && !isNaN(pos.coords.altitude)) ? pos.coords.altitude : null,
+    tz:isValidTz(tz) ? tz : 'UTC', source:'gps'});
+  try{ nameThisPlace(); }catch(e){}   // reverse-geocode the city name so it shows a real place, not "My location"
+}
+// The GPS button — try a precise fix, but ALWAYS fall back to the network location so a tap can NEVER
+// dead-end. Inside the installed app the OS rarely shows a runtime prompt to the WebView, so precise
+// GPS routinely fails; the network fallback keeps the qibla + prayer times working regardless.
+function useGPS(){
+  var btn = document.querySelector('.gps'); var prev = btn ? btn.textContent : '';
+  if (btn){ btn.textContent = '…'; btn.disabled = true; }
+  var restore = function(){ if (btn){ btn.textContent = prev; btn.disabled = false; } };
+  var fallbackIP = function(note){
+    ipLocate(0, function(){ restore(); try{ toast('Location set', note || 'Using your approximate location from the network — accurate for qibla direction and prayer times.', '📍'); }catch(e){} },
+                function(){ restore(); alert('Could not find your location automatically. Please search for your city in the box above.'); });
+  };
+  var secure = window.isSecureContext || /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  if (!navigator.geolocation || !secure){ try{ toast('Locating…','Finding your area from the network…','📍'); }catch(e){} fallbackIP(); return; }
+  try{ toast('Locating…', 'Finding your position — allow location if your device asks; otherwise we use your network area.', '📍'); }catch(e){}
+  navigator.geolocation.getCurrentPosition(function(pos){ restore(); _setGpsLoc(pos); }, function(err){
+    // Precise GPS failed (permission blocked / no fix / timeout) → permission-free network location.
+    fallbackIP(err && err.code === 1
+      ? 'Precise GPS is off, so we used your network location (accurate for qibla). To turn on precise GPS, allow Location for the app in your phone’s Settings.'
+      : null);
+  }, {enableHighAccuracy:true, timeout:10000, maximumAge:60000});
+}
+// Silent auto-location on launch so prayer times + the qibla DIRECTION appear with no tap and no prompt.
+// If GPS is ALREADY granted we use it (precise, no prompt); otherwise straight to the permission-free
+// network location. The GPS button can later refine to a precise fix.
 function autoLocate(){
   if (S.loc) return;
-  // Auto-detect the user's area so prayer times + the qibla DIRECTION appear immediately — no tapping,
-  // no permission. Prefer GPS ONLY if already granted (precise, no prompt); otherwise fall back to a
-  // permission-free network lookup (ipwho.is → approximate city). The 'GPS' button refines it precisely.
-  // Two INDEPENDENT free location sources — if the first is down/blocked, try the next, so a single
-  // service outage can never leave the qibla without a location. If BOTH fail, the search box remains.
-  var _ipSrc = [
-    { url:'https://ipwho.is/', ok:function(j){ return !!(j && j.success && j.latitude!=null && j.longitude!=null); },
-      map:function(j){ return { lat:+j.latitude, lng:+j.longitude, city:j.city, region:j.region, country:j.country, cc:j.country_code, tz:(j.timezone&&j.timezone.id) }; } },
-    { url:'https://get.geojs.io/v1/ip/geo.json', ok:function(j){ return !!(j && j.latitude!=null && j.longitude!=null && !isNaN(+j.latitude)); },
-      map:function(j){ return { lat:+j.latitude, lng:+j.longitude, city:j.city, region:j.region, country:j.country, cc:j.country_code, tz:j.timezone }; } }
-  ];
-  function ipLookup(i){
-    if (S.loc) return; i = i || 0; if (i >= _ipSrc.length) return;
-    var s = _ipSrc[i];
+  var gpsThenIp = function(){
     try{
-      fetch(s.url, {cache:'no-store'}).then(function(r){ return r.json(); }).then(function(j){
-        if (S.loc) return;
-        if (s.ok(j)){
-          var p = s.map(j);
-          if (isNaN(p.lat) || isNaN(p.lng)){ ipLookup(i+1); return; }
-          var tz = (p.tz && isValidTz(p.tz)) ? p.tz : Intl.DateTimeFormat().resolvedOptions().timeZone;
-          setLocation({ name: p.city || p.region || 'My area', admin1: p.region || '', country: p.country || '',
-            cc: (p.cc || '').toUpperCase(), lat: +p.lat.toFixed(3), lng: +p.lng.toFixed(3),   // UPPERCASE — CC_METHOD / auto method-by-country is keyed by uppercase ISO codes
-            elev: null, tz: isValidTz(tz) ? tz : 'UTC', source: 'ip' });
-        } else ipLookup(i+1);
-      }).catch(function(){ ipLookup(i+1); });
-    }catch(e){ ipLookup(i+1); }
-  }
-  function useGps(){
-    navigator.geolocation.getCurrentPosition(function(pos){
-      if (S.loc) return;
-      var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      setLocation({name:'My location', admin1:'', country:'', cc:'',
-        lat:+pos.coords.latitude.toFixed(4), lng:+pos.coords.longitude.toFixed(4),
-        elev:(pos.coords.altitude != null && !isNaN(pos.coords.altitude)) ? pos.coords.altitude : null,
-        tz:isValidTz(tz) ? tz : 'UTC', source:'gps'});
-      try{ nameThisPlace(); }catch(e){}
-    }, function(){ ipLookup(0); }, {enableHighAccuracy:true, timeout:8000, maximumAge:600000});   // on GPS error/timeout → try the network sources (must NOT pass the error object as the source index)
-  }
+      navigator.geolocation.getCurrentPosition(function(pos){ if (!S.loc) _setGpsLoc(pos); },
+        function(){ ipLocate(0); }, {enableHighAccuracy:true, timeout:8000, maximumAge:600000});
+    }catch(e){ ipLocate(0); }
+  };
   try{
     if (navigator.geolocation && navigator.permissions && navigator.permissions.query){
-      navigator.permissions.query({name:'geolocation'}).then(function(st){ if (st.state === 'granted') useGps(); else ipLookup(0); }).catch(function(){ ipLookup(0); });
-    } else ipLookup();
-  }catch(e){ ipLookup(); }
+      navigator.permissions.query({name:'geolocation'}).then(function(st){ if (st.state === 'granted') gpsThenIp(); else ipLocate(0); }).catch(function(){ ipLocate(0); });
+    } else { ipLocate(0); }   // no Permissions API (older WebView) → permission-free network location
+  }catch(e){ ipLocate(0); }
 }
 async function nameThisPlace(){
   if (!S.loc) return;
