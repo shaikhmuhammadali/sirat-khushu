@@ -2635,10 +2635,16 @@ function saveNotif(){
   const qr=document.getElementById('nQuietRow'); if (qr) qr.style.display = S.quiet ? 'flex' : 'none';
 }
 function togglePrayerNotif(k){ S.notif=S.notif||{}; S.notif[k]=!(S.notif[k]!==false); save(); renderNotif(); }
+// Notification.requestPermission has TWO forms: modern returns a Promise; legacy (Safari <=12, some old
+// WebViews) takes a callback and returns undefined. Support both, and never fire the callback twice.
+function askNotifPermission(cb){
+  let done = false; const fire = (p) => { if (done) return; done = true; try{ cb(p); }catch(e){} };
+  try{ const r = Notification.requestPermission(fire); if (r && typeof r.then === 'function') r.then(fire).catch(()=>{}); }catch(e){}
+}
 function toggleOSNotif(){
   const want=document.getElementById('nOS').checked;
   if (want && 'Notification' in window){
-    Notification.requestPermission().then(p => {
+    askNotifPermission(p => {
       S.notifMaster=(p==='granted'); save();
       const c=document.getElementById('nOS'); if(c) c.checked=S.notifMaster;
       const b=document.getElementById('notifBtn'); if(b) b.classList.toggle('on', S.notifMaster);
@@ -4868,7 +4874,7 @@ function renderCatchup(){
     let entered = KEYS;
     if (i === 0){ let E = null; try{ E = engineFor(t).E; }catch(e){} entered = E ? KEYS.filter(k => { const tt = E[k.toLowerCase()]; return tt && tt <= now; }) : []; }
     const loggedEntered = entered.filter(k => logs[k]).length, n = KEYS.filter(k => logs[k]).length;
-    const full = entered.length > 0 && loggedEntered === entered.length; missing += (entered.length - loggedEntered); if (full) complete++;
+    const full = (i === 0) ? (n === 5) : (entered.length > 0 && loggedEntered === entered.length); missing += (entered.length - loggedEntered); if (full) complete++;   // TODAY counts as "whole" only when all 5 are logged, not merely the prayers due so far
     const dots = KEYS.map(k => { const open = entered.indexOf(k) >= 0, on = !!logs[k];
       return '<button class="cdot ' + (on?'on':'') + (open?'':' locked') + '"' + (open ? ' onclick="logForDate(&quot;' + dk + '&quot;,&quot;' + k + '&quot;)"' : ' disabled aria-disabled="true"') + ' aria-label="' + k + ' on ' + label + '"><span class="cdi">' + k[0] + '</span><svg class="cdk" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg></button>'; }).join('');
     const ring = '<span class="cring' + (full?' full':'') + '"><svg viewBox="0 0 36 36" aria-hidden="true"><circle class="crt" cx="18" cy="18" r="15.5"/><circle class="crv" cx="18" cy="18" r="15.5" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + (C * (1 - n/5)).toFixed(1) + '"/></svg><b>' + n + '<i>/5</i></b></span>';
@@ -5383,11 +5389,11 @@ function toggleMasterNotif(){
       catch(e){ try{ alert('Reminders are on. Sirat Khushu will remind you at each prayer while the app is open. For a phone-wide reminder, turn on Prayer Lock in Settings.'); }catch(_){} }
       return;
     }
-    Notification.requestPermission().then(p => {
+    askNotifPermission(p => {
       S.notifMaster = (p === 'granted'); save();
       const _b = document.getElementById('notifBtn'); if (_b) _b.classList.toggle('on', S.notifMaster);
       if (p === 'denied'){ try{ toast('Notifications are blocked', 'Allow notifications for Sirat Khushu in your browser or site settings, then tap the bell again.', '🔔'); }catch(e){} }
-    }).catch(()=>{});
+    });
   } else { S.notifMaster = false; save(); const _b = document.getElementById('notifBtn'); if (_b) _b.classList.remove('on'); }
 }
 function exportData(){
@@ -5538,7 +5544,11 @@ async function cloudSignup(pw, recovery){
     try{ toast('Signed up ✓', 'You can now log in from any device with your name & password.', '☁️'); }catch(e){}
   }catch(e){
     const st = e && e.status;
-    if (st === 409){
+    if (st === 409 && /email/i.test((e && (e.message || (e.body && e.body.error))) || '')){
+      // The EMAIL (not the name) already belongs to a DIFFERENT account — retrying login with this
+      // device's username would target the wrong account, so don't. Report it honestly.
+      try{ toast('Email already registered', 'That email is linked to a different account. Log in to that account, or use a different email — your data stays safe on this device.', '⚠️'); }catch(_){}
+    } else if (st === 409){
       // The name already exists on the server. If this password opens it, it's the same person —
       // restore THEIR data onto this device instead of overwriting it with this fresh signup.
       try{
@@ -5714,6 +5724,7 @@ async function cloudLogin(){
     if (err) err.textContent = st === 401 ? 'Wrong name or password.'
       : st === 429 ? 'Too many attempts — please wait a minute.'
       : (m === 'no server configured') ? 'Enter the server address first.'
+      : /save on this device|quota|storage/i.test(m) ? 'Logged in, but this device is low on storage — free up some space and try again.'
       : netErr ? 'Could not reach the server — check the address and your connection, then try again.'
       : ('Could not log in — ' + m + '.');
   }
@@ -5823,7 +5834,10 @@ async function doSearch(q){
   const my = ++searchSeq;
   showMsg('Searching…');
   let results;
-  try{ results = await searchOpenMeteo(q); }
+  try{
+    results = await searchOpenMeteo(q);
+    if (!results.length){ try{ results = await searchNominatim(q); }catch(_){} }   // open-meteo returned no match (a 200, not an error) → try OpenStreetMap before giving up
+  }
   catch(e1){
     try{ results = await searchNominatim(q); }
     catch(e2){

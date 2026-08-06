@@ -14,7 +14,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
 
-const VERSION = 'sabr-engine-v3.107.0';         // ← bump to ship an update (clients auto-drop the old cache)
+const VERSION = 'sabr-engine-v3.108.0';         // ← bump to ship an update (clients auto-drop the old cache)
 const SHELL   = VERSION + '-shell';
 const RUNTIME = VERSION + '-runtime';
 const AUDIO   = VERSION + '-audio';             // reciter audio (offline recitation), bounded + FIFO
