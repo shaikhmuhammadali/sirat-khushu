@@ -4,7 +4,55 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0a0e14" id="themeColorMeta">
-<meta name="description" content="On-device global time & salah intelligence — prayer times, qibla, Hijri calendar, Islamic events. Privacy-first, offline-first.">
+<meta name="description" content="Sirat Khushu — On-device global Islamic intelligence: accurate prayer times, Qibla compass, complete Qur'an text & audio, Hijri calendar, and reflection journal. 100% privacy-first & offline-first.">
+<meta name="keywords" content="Sirat Khushu, Prayer Times, Quran, Qibla Compass, Islamic App, Hijri Calendar, Dhikr, Ramadan Mode, Islamic Journal, Privacy-First PWA, Offline Quran, Shaikh Muhammad Ali">
+<meta name="author" content="Shaikh Muhammad Ali">
+<meta name="robots" content="index, follow">
+
+<!-- Open Graph / Social Media Sharing -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sirat Khushu">
+<meta property="og:title" content="Sirat Khushu — Privacy-First Prayer Times, Qur'an & Qibla PWA">
+<meta property="og:description" content="On-device global prayer times, accurate Qibla compass, Qur'an text & audio, Hijri calendar, and reflection journal. 100% privacy-first & offline-capable.">
+<meta property="og:image" content="icons/icon-512.png">
+
+<!-- Twitter Card Meta Tags -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Sirat Khushu — Privacy-First Prayer Times, Qur'an & Qibla PWA">
+<meta name="twitter:description" content="On-device global prayer times, accurate Qibla compass, Qur'an text & audio, Hijri calendar, and reflection journal. 100% privacy-first & offline-capable.">
+<meta name="twitter:image" content="icons/icon-512.png">
+
+<!-- AEO (Answer Engine Optimization) & Rich Snippet JSON-LD Schema -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Sirat Khushu",
+  "alternateName": ["Sirat Khushu PWA", "Sirat Khushu App"],
+  "operatingSystem": "All (Web, Android, iOS, Windows, macOS, Linux)",
+  "applicationCategory": "LifestyleApplication",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "author": {
+    "@type": "Person",
+    "name": "Shaikh Muhammad Ali"
+  },
+  "description": "On-device global time & salah intelligence — prayer times, accurate Qibla compass, Qur'an text with audio recitations, Hijri calendar, and reflection journal. Privacy-first, offline-first Progressive Web App.",
+  "featureList": [
+    "Offline-first PWA architecture",
+    "Accurate Prayer Times calculation",
+    "Real-time Qibla Compass direction",
+    "Complete Qur'an text with audio recitations",
+    "Ramadan super-mode & Fasting tracker",
+    "Personal Islamic reflection journal & habit tracker",
+    "Zero third-party tracking, 100% on-device privacy"
+  ]
+}
+</script>
+
 <!-- Privacy posture: no third-party trackers or analytics, ever. This page contacts only the opt-in
      geo/timezone providers, the Qur'an text and reciter CDNs, and (only if you set them up) EmailJS and
      your own push server. Everything else is computed locally on your device. -->
@@ -29,7 +77,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Sirat Khushu">
-<title>Sirat Khushu — Salah, Qur’an &amp; Khushūʿ</title>
+<title>Sirat Khushu — Privacy-First Prayer Times, Qur’an &amp; Qibla PWA</title>
 <style>
   /* Zero-network typography: system stack (with Amiri/Naskh if locally installed).
      No external font requests — the app is fully self-contained and offline-first. */
@@ -2726,10 +2774,15 @@ function speakArabicFallback(text, btn){
 }
 function reciteText(text, btn){
   try{ if (typeof stopReciteAudio === 'function') stopReciteAudio(); else if ('speechSynthesis' in window) speechSynthesis.cancel(); }catch(e){}
-  // ONLY the user's chosen Qur'an reciter is ever used, everywhere in the app. Recite buttons are
-  // shown only on Qur'anic text (see reciteBtn/commemReciteBtn), so this always plays the real qari.
+  if (!text) return;
+  // 1) Qur'anic text → the user's chosen real reciter (qari), the same voice used everywhere.
   var _qy = qayahLookup(text);
-  if (_qy){ try{ reciteAyah(_qy[0], _qy[1], _qy[2], btn); }catch(e){} }
+  if (_qy){ try{ reciteAyah(_qy[0], _qy[1], _qy[2], btn); }catch(e){} return; }
+  // 2) Fixed dhikr / adhkar / hadith that has a pre-rendered bundled clip → play it (instant, offline).
+  try{ var vk = voiceKey(text); if (typeof VOICE_SET !== 'undefined' && VOICE_SET.has(vk)){ playBundledVoice(vk, text, btn); return; } }catch(e){}
+  // 3) Otherwise voice it with the device's own Arabic voice → the server TTS → an honest
+  //    "not available on this device" note (reciteUnavailable + ttsHelp). NEVER a silent dead button.
+  try{ speakArabicFallback(text, btn); }catch(e){ try{ if (btn) reciteUnavailable(btn); }catch(_){} }
 }
 function ttsChunks(text, max){
   const words = String(text).replace(/[۩﴾﴿ۖۗۘۚۛ]/g,' ').split(/\s+/).filter(Boolean);
@@ -3516,6 +3569,30 @@ function _track(path, body){
     fetch(base + path, {method:'POST', headers:h, body:JSON.stringify(Object.assign({id:_anonId()}, body)), keepalive:true}).catch(()=>{});
   }catch(e){}
 }
+
+let _errCount = 0;
+function _trackError(msg, src, line, col, err){
+  if (!S.analytics || _errCount >= 5) return;
+  _errCount++;
+  const stack = err && err.stack ? String(err.stack).slice(0, 500) : null;
+  _track('/api/track/error', {
+    msg: String(msg || '').slice(0, 200),
+    src: String(src || '').slice(0, 150),
+    line: line || 0,
+    col: col || 0,
+    stack: stack,
+    device: _anonDevice()
+  });
+}
+window.addEventListener('error', function(e){
+  _trackError(e.message, e.filename, e.lineno, e.colno, e.error);
+});
+window.addEventListener('unhandledrejection', function(e){
+  const r = e.reason;
+  const msg = r ? (r.message || String(r)) : 'Unhandled Promise Rejection';
+  _trackError(msg, '', 0, 0, r instanceof Error ? r : null);
+});
+
 let _trackedActive = false;
 function trackVisit(){
   if (!S.analytics || !cloudUrl()) return;
@@ -3895,12 +3972,22 @@ function showAuth(mode){
       + `<button class="btn wbtn" onclick="cloudLogin()">Log in</button>`
       + `<button class="wlink" onclick="showAuth(S.account ? 'lock' : 'welcome')">Back</button>`;
   } else if (mode === 'forgot'){
-    // Email-only recovery: type your email → server mails a 6-digit code → paste it → set a new password.
-    html = astep(1, 2) + fh('Reset your password', 'Enter the email linked to your account and we’ll send a 6-digit code to it.')
-      + afield('feEmail','email','Your email',{auto:'email',onenter:'sendForgotCode()'})
-      + `<div class="autherr" id="feErr"></div>`
-      + `<button class="btn wbtn" onclick="sendForgotCode()">Send code</button>`
-      + `<button class="wlink" onclick="showAuth(S.account ? 'lock' : 'restore')">← Back to log in</button>`;
+    if (S.account && !(S.cloud && S.cloud.token)){
+      // Local-only account (the default — never uploaded to a server): there is NO emailed reset, so be
+      // honest instead of pretending a code was sent to an address the server doesn't have. (A cloud user
+      // recovering on a fresh device has no local S.account here, so they still get the email form below.)
+      html = fh('Password recovery', 'This account is saved <b>only on this device</b> — cloud login isn’t turned on, so there’s no emailed password reset.')
+        + `<div class="small muted" style="line-height:1.65;margin:0 2px 14px">If you’ve forgotten your password you can restore from a <b>backup file</b> (Settings → Backup), or create a new account — the data already saved on this device stays.</div>`
+        + `<button class="btn wbtn" onclick="showAuth('create')">Create a new account</button>`
+        + `<button class="wlink" onclick="showAuth('lock')">← Back to log in</button>`;
+    } else {
+      // Email-only recovery for a cloud account: type your email → server mails a 6-digit code → new password.
+      html = astep(1, 2) + fh('Reset your password', 'Enter the email linked to your account and we’ll send a 6-digit code to it.')
+        + afield('feEmail','email','Your email',{auto:'email',onenter:'sendForgotCode()'})
+        + `<div class="autherr" id="feErr"></div>`
+        + `<button class="btn wbtn" onclick="sendForgotCode()">Send code</button>`
+        + `<button class="wlink" onclick="showAuth(S.account ? 'lock' : 'restore')">← Back to log in</button>`;
+    }
   } else if (mode === 'emailcode'){
     html = astep(2) + fh('Enter verification code', 'We emailed a 6-digit code'+((S.account && S.account.email) ? ' to '+esc(maskEmailC(S.account.email)) : '')+'. Enter it below.')
       + aotp('ecCode')
@@ -4931,7 +5018,7 @@ function shareHadithImage(idx){
   ctx.fillStyle = '#d9b45b'; ctx.font = '700 27px system-ui, sans-serif';
   ctx.fillText(h.reference + '   ·   ' + h.grade, W/2, Math.min(H-150, y2+56));
   ctx.fillStyle = '#5d6b7d'; ctx.font = '400 22px system-ui, sans-serif';
-  ctx.fillText('shared from ummatprayer', W/2, H-96);
+  ctx.fillText('Sirat Khushu', W/2, H-96);
   c.toBlob(function(blob){
     if (!blob) return;
     const file = new File([blob], 'hadith.png', {type:'image/png'});
@@ -5509,6 +5596,10 @@ function renderCloudReset(){
 }
 async function sendForgotCode(){
   const err = document.getElementById('feErr');
+  if (S.account && !(S.cloud && S.cloud.token)){   // local-only account: no server record → no emailed reset (never fake a "code sent")
+    if (err) err.innerHTML = 'This account is saved only on this device, so there’s no emailed reset. Restore from a backup file in Settings, or create a new account.';
+    return;
+  }
   const email = val('feEmail').trim();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ if (err) err.textContent = 'Please enter a valid email address.'; return; }
   if (!cloudUrl()){ if (err) err.textContent = 'Password reset by email needs the cloud server to be set up.'; return; }

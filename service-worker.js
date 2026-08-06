@@ -14,7 +14,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
 
-const VERSION = 'sabr-engine-v3.106.0';         // ← bump to ship an update (clients auto-drop the old cache)
+const VERSION = 'sabr-engine-v3.107.0';         // ← bump to ship an update (clients auto-drop the old cache)
 const SHELL   = VERSION + '-shell';
 const RUNTIME = VERSION + '-runtime';
 const AUDIO   = VERSION + '-audio';             // reciter audio (offline recitation), bounded + FIFO
@@ -155,12 +155,27 @@ self.addEventListener('fetch', event => {
     event.respondWith((async () => {
       try {
         const res = await fetch(req);
-        if (res && (res.status === 200 || res.type === 'opaque')){
-          event.waitUntil(putCapped(AUDIO, req, res.clone(), 200));
-        }
+        // Cache the WHOLE file (a separate non-range fetch keyed by URL) so a previously-heard ayah
+        // recites fully OFFLINE. The media element's own request is usually a partial Range response —
+        // not replayable, and caches.put() rejects a 206. This is BACKGROUND only: playback still gets
+        // the live `res` immediately, so online recitation is never affected. The inner try/catch also
+        // swallows the QuotaExceededError that opaque-audio padding can raise (previously an unhandled
+        // rejection on every play).
+        event.waitUntil((async () => {
+          try {
+            const c = await caches.open(AUDIO);
+            if (await c.match(url.href)) return;                            // full file already cached
+            let full;
+            try { full = await fetch(url.href); }                          // CORS full 200 (everyayah sends ACAO:*)
+            catch (e) { full = await fetch(url.href, { mode: 'no-cors' }); } // opaque full for non-CORS CDNs
+            if (full && (full.status === 200 || full.type === 'opaque')){
+              await putCapped(AUDIO, new Request(url.href), full.clone(), 200);
+            }
+          } catch (e) {}
+        })());
         return res;
       } catch (e) {
-        const cached = await caches.match(req);
+        const cached = (await caches.match(url.href)) || (await caches.match(req));
         return cached || Response.error();
       }
     })());
