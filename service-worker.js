@@ -14,7 +14,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
 
-const VERSION = 'sabr-engine-v3.109.0';         // ← bump to ship an update (clients auto-drop the old cache)
+const VERSION = 'sabr-engine-v3.110.0';         // ← bump to ship an update (clients auto-drop the old cache)
 const SHELL   = VERSION + '-shell';
 const RUNTIME = VERSION + '-runtime';
 const AUDIO   = VERSION + '-audio';             // reciter audio (offline recitation), bounded + FIFO
@@ -63,6 +63,18 @@ self.addEventListener('install', event => {
     await Promise.all(PRECACHE.map(u => c.add(u).catch(e => console.warn('[sw] skip precache', u, e && e.message))));
     // the full 114-surah Qur'an (large, optional) — cache it so it works offline from install.
     try { await c.add('./data/quran.json'); } catch (e) { /* deployed without data/quran.json — non-fatal */ }
+    // Core recitation: Al-Fatiha (7 ayat) in the DEFAULT reciter (ar.alafasy) so the very FIRST Recite
+    // tap works OFFLINE even before anything has been heard online. Best-effort, never fatal.
+    try {
+      const a = await caches.open(AUDIO);
+      for (const n of ['1','2','3','4','5','6','7']){
+        const u = 'https://cdn.islamic.network/quran/audio/128/ar.alafasy/' + n + '.mp3';
+        try {
+          let full; try { full = await fetch(u); } catch (e) { full = await fetch(u, { mode: 'no-cors' }); }
+          if (full && (full.status === 200 || full.type === 'opaque')) await a.put(new Request(u), full.clone());
+        } catch (e) {}
+      }
+    } catch (e) {}
   }));
   self.skipWaiting();   // activate immediately so a stale old version can never get stuck
 });
@@ -145,15 +157,17 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 1b) reciter audio (cross-origin, ALLOW-LISTED) → network-first so online is unchanged, but
-  //     cache the full file so a previously-heard ayah recites OFFLINE. Recitation can therefore
-  //     never be *worse* than before: online still hits the network first, and any network error
-  //     falls back to the cached copy. We deliberately do NOT cache 206 (partial/range) responses
-  //     — caches.put() rejects them — only full 200s and opaque (no-CORS) media responses; a range
-  //     request offline still matches the cached full file by URL, which players accept.
+  // 1b) reciter audio (cross-origin, ALLOW-LISTED) → CACHE-FIRST: a previously-heard ayah is stored as a
+  //     full file (keyed by bare URL) and served instantly — instant replay, ZERO network, and fully
+  //     OFFLINE. Recitation audio is immutable, so cache-first has no staleness downside. On a cache
+  //     MISS we hit the network and background-cache the full file. We deliberately do NOT cache 206
+  //     (partial/range) responses — caches.put() rejects them — only full 200s and opaque (no-CORS)
+  //     media responses; a range request offline still matches the cached full file by URL.
   if (AUDIO_HOSTS.has(url.hostname)){
     event.respondWith((async () => {
       try {
+        const hit = await caches.match(url.href);
+        if (hit) return hit;                          // instant, offline-safe replay of a heard ayah
         const res = await fetch(req);
         // Cache the WHOLE file (a separate non-range fetch keyed by URL) so a previously-heard ayah
         // recites fully OFFLINE. The media element's own request is usually a partial Range response —

@@ -68,6 +68,10 @@
      SELF-HOSTING NOTE: if you point CLOUD_URL / push at a different server, add that exact origin to
      BOTH connect-src and media-src below, or sync/TTS will be blocked. Keep the list minimal. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://geocoding-api.open-meteo.com https://nominatim.openstreetmap.org https://api.aladhan.com https://api.bigdatacloud.net https://ipwho.is https://get.geojs.io https://sabr-push-server.onrender.com https://api.emailjs.com http://localhost:* http://127.0.0.1:*; media-src 'self' https://everyayah.com https://cdn.islamic.network https://sabr-push-server.onrender.com http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<!-- Warm the reciter-audio CDNs so the FIRST Recite tap doesn't pay DNS+TLS. Resource hints aren't gated
+     by CSP connect-src; the audio itself is allowed by media-src. -->
+<link rel="preconnect" href="https://everyayah.com" crossorigin>
+<link rel="preconnect" href="https://cdn.islamic.network" crossorigin>
 <!-- PWA layer: installable + fully offline. Manifest, icons, and iOS standalone meta. -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
@@ -907,6 +911,11 @@
   .nprayers{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 12px}
   .pchip{padding:8px 14px;border-radius:999px;border:1px solid var(--stroke);background:var(--glass);color:var(--dim);font-family:var(--font);font-weight:700;font-size:.8rem;cursor:pointer}
   .pchip.on{border-color:var(--gold);color:var(--gold-ink);background:var(--gold-soft)}
+  .duasearch{width:100%;box-sizing:border-box;padding:11px 15px;margin:2px 0 6px;border-radius:14px;border:1px solid var(--stroke);background:var(--glass);color:var(--text);font-family:var(--font);font-size:.92rem}
+  .duasearch::placeholder{color:var(--dim)}
+  .duasearch:focus{outline:none;border-color:var(--gold);background:var(--gold-soft)}
+  .duagroup-h{font-size:.78rem;font-weight:800;letter-spacing:.04em;color:var(--gold-ink);margin:14px 0 2px}
+  .duagroup:first-child .duagroup-h{margin-top:6px}
   input[type=range]{accent-color:var(--gold);height:24px}
   .toast.cute{cursor:pointer;background:linear-gradient(135deg,var(--bg2),rgba(217,180,91,.09));border-color:var(--stroke-gold);border-radius:20px}
   .toast.cute .ic{animation:flutter 1.3s ease-in-out infinite}
@@ -938,6 +947,7 @@
   .gchip.on{border-color:var(--gold);color:var(--gold-ink);background:var(--gold-soft)}
   @font-face{font-family:'Hafs';src:url('fonts/Hafs.otf') format('opentype');font-display:swap;unicode-range:U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF}
   .ar,[lang="ar"]{font-family:var(--arabic)}
+
   .bnav{position:fixed;bottom:0;left:0;right:0;z-index:90;display:flex;justify-content:center;background:color-mix(in srgb,var(--bg) 97%,transparent);border-top:1px solid var(--stroke)}
   .bnav .inner{display:flex;width:100%;max-width:560px;padding-bottom:env(safe-area-inset-bottom)}
   .bnav button{position:relative;flex:1;background:none;border:none;cursor:pointer;color:var(--dim);display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 8px;font-family:var(--font);font-size:.6rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;transition:color .22s ease}
@@ -1271,6 +1281,7 @@
   <div id="adhkarCard" class="glass"></div>
   <div id="duasCard" class="glass"></div>
 
+  <!-- ═══ Mood Dua Finder ═══ -->
   <div class="glass" id="growthCard">
     <h2 class="sec">Your growth</h2>
     <div class="skywrap"><svg id="sky" viewBox="0 0 700 190" width="100%" height="190" preserveAspectRatio="none"></svg></div>
@@ -1485,7 +1496,6 @@
       <label class="switch"><input type="checkbox" id="nSalawat" onchange="saveNotif()" aria-label="Salawat audio"><span class="sl"></span></label></div>
     <div class="srow"><div class="lbl"><b>System notifications</b><span>Also show in your phone&rsquo;s tray (needs permission)</span></div>
       <label class="switch"><input type="checkbox" id="nOS" onchange="toggleOSNotif()" aria-label="System notifications"><span class="sl"></span></label></div>
-    <div class="srow"><div class="lbl"><b>Anonymous diagnostics</b><span>Always on — anonymous usage &amp; crash reports that help keep the app working. Never your name, journal, or content.</span></div></div>
   </div>
 
   <div class="glass">
@@ -1639,7 +1649,9 @@ const DEFAULTS = {
   remind:true, notifPre:0, notifPost:0, soundName:'bell', vol:1, vibrate:true,
   quiet:false, quietFrom:22, quietTo:6, hadithPopup:true, progressToasts:true, loveEvery:45,
   gender:null, dhikrVoice:false, adhkarCount:null, voiceDepth:'deep', salawatAudio:true, reciter:'afasy', reciterReminded:false, rot:null, lockEnabled:false, lockFails:null, account:null, emailjs:{service:'',template:'',pubkey:'',privkey:''}, resetCode:null, push:{url:'',key:'',appkey:'',on:false}, methodAuto:true,
-  analytics:false          // anonymous usage sharing — OFF by default; opt-in only
+  analytics:false,         // anonymous usage sharing — OFF by default; opt-in only
+  qada:{fajr:{owed:0,cleared:0},dhuhr:{owed:0,cleared:0},asr:{owed:0,cleared:0},maghrib:{owed:0,cleared:0},isha:{owed:0,cleared:0},witr:{owed:0,cleared:0},source:'logged',plan:{pace:5,order:'rec'},hidden:false,estimate:null},
+  moodLog:[]              // on-device emotion log [{ts,emotion}]
 };
 function isValidTz(tz){
   if (!tz || typeof tz !== 'string') return false;
@@ -2899,21 +2911,92 @@ const DUASIT = [
   {cat:'Entering home', ic:'🏠', duas:[
     {ar:'اللَّهُمَّ إِنِّي أَسْأَلُكَ خَيْرَ الْمَوْلِجِ وَخَيْرَ الْمَخْرَجِ', tr:'"O Allah, I ask You for the best entrance and the best exit."', ref:'Sunan Abi Dawud 5096'} ,{"ar": "لَّيْسَ عَلَى ٱلْأَعْمَىٰ حَرَجٌۭ وَلَا عَلَى ٱلْأَعْرَجِ حَرَجٌۭ وَلَا عَلَى ٱلْمَرِيضِ حَرَجٌۭ وَلَا عَلَىٰٓ أَنفُسِكُمْ أَن تَأْكُلُوا۟ مِنۢ بُيُوتِكُمْ أَوْ بُيُوتِ ءَابَآئِكُمْ أَوْ بُيُوتِ أُمَّهَٰتِكُمْ أَوْ بُيُوتِ إِخْوَٰنِكُمْ أَوْ بُيُوتِ أَخَوَٰتِكُمْ أَوْ بُيُوتِ أَعْمَٰمِكُمْ أَوْ بُيُوتِ عَمَّٰتِكُمْ أَوْ بُيُوتِ أَخْوَٰلِكُمْ أَوْ بُيُوتِ خَٰلَٰتِكُمْ أَوْ مَا مَلَكْتُم مَّفَاتِحَهُۥٓ أَوْ صَدِيقِكُمْ ۚ لَيْسَ عَلَيْكُمْ جُنَاحٌ أَن تَأْكُلُوا۟ جَمِيعًا أَوْ أَشْتَاتًۭا ۚ فَإِذَا دَخَلْتُم بُيُوتًۭا فَسَلِّمُوا۟ عَلَىٰٓ أَنفُسِكُمْ تَحِيَّةًۭ مِّنْ عِندِ ٱللَّهِ مُبَٰرَكَةًۭ طَيِّبَةًۭ ۚ كَذَٰلِكَ يُبَيِّنُ ٱللَّهُ لَكُمُ ٱلْءَايَٰتِ لَعَلَّكُمْ تَعْقِلُونَ", "tr": "\"So when you enter houses, greet one another (say salam) with a greeting from Allah, blessed and good.\"", "ref": "Quran 24:61"}]}
 ];
-let duaCat = 0;
-function setDuaCat(i){ duaCat = i; renderDuas(); }
+let duaQuery = '';
+function setDuaQuery(v){ duaQuery = v; renderDuaResults(); }
+/* Feeling / mood / moment / expression -> which duas relate. 100% offline, local data.
+   Keys are DUASIT indices; values are the words a person might actually type. Kept RICH so ANY
+   feeling or moment surfaces the RELATED dua(s) — and only those. duaSearch does NOT match on the
+   translation text, so a search never drags in an unrelated dua ("no extra one"). */
+const DUAKW = {
+  0:['mosque','masjid','prayer hall','going to pray','entering mosque'],
+  1:['leaving mosque','exit masjid','after prayer','leaving masjid'],
+  2:['market','shopping','shop','mall','buying','bazaar','store','trade','commerce','spending'],
+  3:['rain','raining','rainfall','downpour','wet','shower','drizzle'],
+  4:['wind','windy','gale','breeze','gust','gusty','hurricane','cyclone'],
+  5:['thunder','lightning','thunderstorm','thunderclap','storm'],
+  6:['moon','new moon','crescent','hilal','new month','month begins'],
+  7:['iftar','breaking fast','break fast','fasting','fast','ramadan','roza','sawm','suhoor'],
+  8:['clothes','clothing','new clothes','dress','garment','outfit','wearing','new shoes'],
+  9:['mirror','reflection','appearance','looks','beauty','looking in mirror'],
+  10:['gathering','meeting','majlis','assembly','end of gathering','kaffarah','expiation','leaving a gathering'],
+  11:['knowledge','learning','learn','ilm','wisdom','understanding','understand','seeking knowledge','beneficial knowledge','memorize','hifz','revise'],
+  12:['debt','loan','owe','money','poverty','poor','broke','bills','financial','finances','rent','cant afford','provision','rizq','sustenance'],
+  13:['distress','trouble','calamity','crisis','disaster','emergency','adversity','tribulation','hard time','difficulty','suffering','severe','ordeal'],
+  14:['leaving home','leaving the house','going out','exit house','stepping out','heading out'],
+  15:['anxiety','anxious','worried','worry','worrying','nervous','stress','stressed','panic','panicking','overthinking','uneasy','restless','tense','on edge','dread','cant relax','racing thoughts','angry','anger','mad','furious','rage','frustrated','frustration','irritated','agitated'],
+  16:['sad','sadness','grief','grieving','sorrow','sorrowful','depressed','depression','down','low','heartbroken','broken heart','upset','crying','tears','tearful','despair','hopeless','helpless','misery','miserable','unhappy','lonely','alone','isolated','empty','numb','loss','mourning','heavy heart','hurt','hurting'],
+  17:['forgiveness','forgive','sin','sins','sinned','repent','repentance','repenting','guilt','guilty','remorse','tawbah','istighfar','mercy','regret','regretful','ashamed','shame','mistake','did wrong','sorry','wronged myself'],
+  18:['study','studying','exam','exams','test','tests','school','university','college','revision','results','focus','concentration','concentrate','assignment','deadline'],
+  19:['sleep','sleeping','bed','bedtime','night','goodnight','rest','tired','sleepy','exhausted','weary','insomnia','cant sleep','before sleep','lying down'],
+  20:['morning','wake','waking','woke up','wake up','dawn','sunrise','new day','start of day','fresh start','good morning'],
+  21:['travel','travelling','traveling','journey','trip','flight','flying','plane','driving','drive','road','commute','vacation','holiday','safar','going away','abroad','moving'],
+  22:['gratitude','grateful','thankful','thanks','thank you','blessing','blessings','shukr','appreciate','appreciation','content','contentment','happy','happiness','joy','joyful','glad','cheerful','blessed','good news','relief','relieved','pleased','elated','peaceful','peace','satisfied'],
+  23:['protection','protect','protected','safety','safe','harm','evil','danger','dangerous','refuge','shelter','guard','security','evil eye','ayn','hasad','jealous','jealousy','envy','afraid','scared','fear','fearful','frightened','terrified','threatened','unsafe','nightmare','bad dream','shaytan','waswas','whispers','sick','ill','unwell','illness','disease','pain','healing','recover'],
+  24:['parents','parent','mother','mom','mum','mama','father','dad','papa','abbi','ummi','family','honour parents','missing parents'],
+  25:['guidance','guide','guided','lost','confused','confusion','direction','right path','straight path','decision','decide','choice','choose','uncertain','unsure','undecided','doubt','doubtful','which way','istikhara','crossroads'],
+  26:['home','house','coming home','arriving home','arrive home','return home','entering home','back home','reached home','inside']
+};
+function duaSearch(q){
+  q = (q || '').trim().toLowerCase();
+  if (!q) return DUASIT.map((d,i) => i);            // empty -> whole library (browse), original order
+  const toks = q.split(/\s+/).filter(Boolean);
+  const scored = [];
+  DUASIT.forEach((d,i) => {
+    const cat = d.cat.toLowerCase();
+    const kws = DUAKW[i] || [];
+    let sc = 0;
+    toks.forEach(t => {
+      if (t.length >= 3 && cat.indexOf(t) !== -1) { sc += 3; return; }        // matches the moment's own name
+      const hit = kws.some(k => {
+        if (k === t) return true;                                             // exact keyword
+        if (k.split(/\s+/).indexOf(t) !== -1) return true;                    // token is a word inside a phrase keyword
+        return (t.length >= 3 && (k.indexOf(t) === 0 || t.indexOf(k) === 0)); // prefix either way (travel~travelling, sad~sadness)
+      });
+      if (hit) sc += 2;
+      // Deliberately NO translation-text match — results stay strictly related to the feeling/moment.
+    });
+    if (sc > 0) scored.push([i, sc]);
+  });
+  scored.sort((a,b) => b[1] - a[1]);
+  return scored.map(s => s[0]);
+}
 const QAYAH = {"وَهُوَ ٱلَّذِىٓ أَرْسَلَ ٱلرِّيَٰحَ بُشْرًۢا بَيْنَ يَدَىْ رَحْمَتِهِۦ ۚ وَأَنزَلْنَا مِنَ ٱلسَّمَآءِ مَآءًۭ طَهُورًۭا": [25, 48, 2903], "وَمَا كَانَ قَوْلَهُمْ إِلَّآ أَن قَالُوا۟ رَبَّنَا ٱغْفِرْ لَنَا ذُنُوبَنَا وَإِسْرَافَنَا فِىٓ أَمْرِنَا وَثَبِّتْ أَقْدَامَنَا وَٱنصُرْنَا عَلَى ٱلْقَوْمِ ٱلْكَٰفِرِينَ": [3, 147, 440], "وَذَا ٱلنُّونِ إِذ ذَّهَبَ مُغَٰضِبًۭا فَظَنَّ أَن لَّن نَّقْدِرَ عَلَيْهِ فَنَادَىٰ فِى ٱلظُّلُمَٰتِ أَن لَّآ إِلَٰهَ إِلَّآ أَنتَ سُبْحَٰنَكَ إِنِّى كُنتُ مِنَ ٱلظَّٰلِمِينَ": [21, 87, 2570], "قَالَ رَبِّ إِنِّى ظَلَمْتُ نَفْسِى فَٱغْفِرْ لِى فَغَفَرَ لَهُۥٓ ۚ إِنَّهُۥ هُوَ ٱلْغَفُورُ ٱلرَّحِيمُ": [28, 16, 3268], "قَالَ رَبِّ ٱشْرَحْ لِى صَدْرِى": [20, 25, 2373], "وَقُل رَّبِّ أَدْخِلْنِى مُدْخَلَ صِدْقٍۢ وَأَخْرِجْنِى مُخْرَجَ صِدْقٍۢ وَٱجْعَل لِّى مِن لَّدُنكَ سُلْطَٰنًۭا نَّصِيرًۭا": [17, 80, 2109], "وَقُل رَّبِّ ٱغْفِرْ وَٱرْحَمْ وَأَنتَ خَيْرُ ٱلرَّٰحِمِينَ": [23, 118, 2791], "رَبِّ ٱجْعَلْنِى مُقِيمَ ٱلصَّلَوٰةِ وَمِن ذُرِّيَّتِى ۚ رَبَّنَا وَتَقَبَّلْ دُعَآءِ": [14, 40, 1790], "وَٱخْفِضْ لَهُمَا جَنَاحَ ٱلذُّلِّ مِنَ ٱلرَّحْمَةِ وَقُل رَّبِّ ٱرْحَمْهُمَا كَمَا رَبَّيَانِى صَغِيرًۭا": [17, 24, 2053], "رَبَّنَا ٱغْفِرْ لِى وَلِوَٰلِدَىَّ وَلِلْمُؤْمِنِينَ يَوْمَ يَقُومُ ٱلْحِسَابُ": [14, 41, 1791], "فَتَعَٰلَى ٱللَّهُ ٱلْمَلِكُ ٱلْحَقُّ ۗ وَلَا تَعْجَلْ بِٱلْقُرْءَانِ مِن قَبْلِ أَن يُقْضَىٰٓ إِلَيْكَ وَحْيُهُۥ ۖ وَقُل رَّبِّ زِدْنِى عِلْمًۭا": [20, 114, 2462], "لَّيْسَ عَلَى ٱلْأَعْمَىٰ حَرَجٌۭ وَلَا عَلَى ٱلْأَعْرَجِ حَرَجٌۭ وَلَا عَلَى ٱلْمَرِيضِ حَرَجٌۭ وَلَا عَلَىٰٓ أَنفُسِكُمْ أَن تَأْكُلُوا۟ مِنۢ بُيُوتِكُمْ أَوْ بُيُوتِ ءَابَآئِكُمْ أَوْ بُيُوتِ أُمَّهَٰتِكُمْ أَوْ بُيُوتِ إِخْوَٰنِكُمْ أَوْ بُيُوتِ أَخَوَٰتِكُمْ أَوْ بُيُوتِ أَعْمَٰمِكُمْ أَوْ بُيُوتِ عَمَّٰتِكُمْ أَوْ بُيُوتِ أَخْوَٰلِكُمْ أَوْ بُيُوتِ خَٰلَٰتِكُمْ أَوْ مَا مَلَكْتُم مَّفَاتِحَهُۥٓ أَوْ صَدِيقِكُمْ ۚ لَيْسَ عَلَيْكُمْ جُنَاحٌ أَن تَأْكُلُوا۟ جَمِيعًا أَوْ أَشْتَاتًۭا ۚ فَإِذَا دَخَلْتُم بُيُوتًۭا فَسَلِّمُوا۟ عَلَىٰٓ أَنفُسِكُمْ تَحِيَّةًۭ مِّنْ عِندِ ٱللَّهِ مُبَٰرَكَةًۭ طَيِّبَةًۭ ۚ كَذَٰلِكَ يُبَيِّنُ ٱللَّهُ لَكُمُ ٱلْءَايَٰتِ لَعَلَّكُمْ تَعْقِلُونَ": [24, 61, 2852], "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ": [1, 1, 1], "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ": [1, 2, 2], "ٱلرَّحْمَٰنِ ٱلرَّحِيمِ": [1, 3, 3], "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ": [1, 5, 5], "ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ": [1, 6, 6], "صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ": [1, 7, 7], "ٱللَّهُ لَآ إِلَٰهَ إِلَّا هُوَ ٱلْحَىُّ ٱلْقَيُّومُ ۚ لَا تَأْخُذُهُۥ سِنَةٌ وَلَا نَوْمٌ ۚ لَّهُۥ مَا فِى ٱلسَّمَٰوَٰتِ وَمَا فِى ٱلْأَرْضِ ۗ مَن ذَا ٱلَّذِى يَشْفَعُ عِندَهُۥٓ إِلَّا بِإِذْنِهِۦ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ بِشَىْءٍ مِّنْ عِلْمِهِۦٓ إِلَّا بِمَا شَآءَ ۚ وَسِعَ كُرْسِيُّهُ ٱلسَّمَٰوَٰتِ وَٱلْأَرْضَ ۖ وَلَا يَـُٔودُهُۥ حِفْظُهُمَا ۚ وَهُوَ ٱلْعَلِىُّ ٱلْعَظِيمُ": [2, 255, 262], "إِنَّ ٱلْإِنسَـٰنَ لَفِى خُسْرٍ": [103, 2, 6178], "إِلَّا ٱلَّذِينَ ءَامَنُوا۟ وَعَمِلُوا۟ ٱلصَّـٰلِحَـٰتِ وَتَوَاصَوْا۟ بِٱلْحَقِّ وَتَوَاصَوْا۟ بِٱلصَّبْرِ": [103, 3, 6179], "وَيْلٌ لِّكُلِّ هُمَزَةٍ لُّمَزَةٍ": [104, 1, 6180], "ٱلَّذِى جَمَعَ مَالًا وَعَدَّدَهُۥ": [104, 2, 6181], "يَحْسَبُ أَنَّ مَالَهُۥٓ أَخْلَدَهُۥ": [104, 3, 6182], "كَلَّا ۖ لَيُنۢبَذَنَّ فِى ٱلْحُطَمَةِ": [104, 4, 6183], "وَمَآ أَدْرَىٰكَ مَا ٱلْحُطَمَةُ": [104, 5, 6184], "نَارُ ٱللَّهِ ٱلْمُوقَدَةُ": [104, 6, 6185], "ٱلَّتِى تَطَّلِعُ عَلَى ٱلْأَفْـِٔدَةِ": [104, 7, 6186], "إِنَّهَا عَلَيْهِم مُّؤْصَدَةٌ": [104, 8, 6187], "أَلَمْ تَرَ كَيْفَ فَعَلَ رَبُّكَ بِأَصْحَـٰبِ ٱلْفِيلِ": [105, 1, 6189], "أَلَمْ يَجْعَلْ كَيْدَهُمْ فِى تَضْلِيلٍ": [105, 2, 6190], "وَأَرْسَلَ عَلَيْهِمْ طَيْرًا أَبَابِيلَ": [105, 3, 6191], "تَرْمِيهِم بِحِجَارَةٍ مِّن سِجِّيلٍ": [105, 4, 6192], "فَجَعَلَهُمْ كَعَصْفٍ مَّأْكُولٍۭ": [105, 5, 6193], "إِۦلَـٰفِهِمْ رِحْلَةَ ٱلشِّتَآءِ وَٱلصَّيْفِ": [106, 2, 6195], "فَلْيَعْبُدُوا۟ رَبَّ هَـٰذَا ٱلْبَيْتِ": [106, 3, 6196], "ٱلَّذِىٓ أَطْعَمَهُم مِّن جُوعٍ وَءَامَنَهُم مِّنْ خَوْفٍۭ": [106, 4, 6197], "أَرَءَيْتَ ٱلَّذِى يُكَذِّبُ بِٱلدِّينِ": [107, 1, 6198], "فَذَٰلِكَ ٱلَّذِى يَدُعُّ ٱلْيَتِيمَ": [107, 2, 6199], "وَلَا يَحُضُّ عَلَىٰ طَعَامِ ٱلْمِسْكِينِ": [69, 34, 5357], "ٱلَّذِينَ هُمْ عَن صَلَاتِهِمْ سَاهُونَ": [107, 5, 6202], "ٱلَّذِينَ هُمْ يُرَآءُونَ": [107, 6, 6203], "وَيَمْنَعُونَ ٱلْمَاعُونَ": [107, 7, 6204], "إِنَّآ أَعْطَيْنَـٰكَ ٱلْكَوْثَرَ": [108, 1, 6205], "فَصَلِّ لِرَبِّكَ وَٱنْحَرْ": [108, 2, 6206], "إِنَّ شَانِئَكَ هُوَ ٱلْأَبْتَرُ": [108, 3, 6207], "قُلْ يَـٰٓأَيُّهَا ٱلْكَـٰفِرُونَ": [109, 1, 6208], "لَآ أَعْبُدُ مَا تَعْبُدُونَ": [109, 2, 6209], "وَلَآ أَنتُمْ عَـٰبِدُونَ مَآ أَعْبُدُ": [109, 3, 6210], "وَلَآ أَنَا۠ عَابِدٌ مَّا عَبَدتُّمْ": [109, 4, 6211], "لَكُمْ دِينُكُمْ وَلِىَ دِينِ": [109, 6, 6213], "إِذَا جَآءَ نَصْرُ ٱللَّهِ وَٱلْفَتْحُ": [110, 1, 6214], "وَرَأَيْتَ ٱلنَّاسَ يَدْخُلُونَ فِى دِينِ ٱللَّهِ أَفْوَاجًا": [110, 2, 6215], "فَسَبِّحْ بِحَمْدِ رَبِّكَ وَٱسْتَغْفِرْهُ ۚ إِنَّهُۥ كَانَ تَوَّابًۢا": [110, 3, 6216], "تَبَّتْ يَدَآ أَبِى لَهَبٍ وَتَبَّ": [111, 1, 6217], "مَآ أَغْنَىٰ عَنْهُ مَالُهُۥ وَمَا كَسَبَ": [111, 2, 6218], "سَيَصْلَىٰ نَارًا ذَاتَ لَهَبٍ": [111, 3, 6219], "وَٱمْرَأَتُهُۥ حَمَّالَةَ ٱلْحَطَبِ": [111, 4, 6220], "فِى جِيدِهَا حَبْلٌ مِّن مَّسَدٍۭ": [111, 5, 6221], "لَمْ يَلِدْ وَلَمْ يُولَدْ": [112, 3, 6224], "وَلَمْ يَكُن لَّهُۥ كُفُوًا أَحَدٌۢ": [112, 4, 6225], "قُلْ أَعُوذُ بِرَبِّ ٱلْفَلَقِ": [113, 1, 6226], "وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ": [113, 3, 6228], "وَمِن شَرِّ ٱلنَّفَّٰثَٰتِ فِى ٱلْعُقَدِ": [113, 4, 6229], "وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ": [113, 5, 6230], "قُلْ أَعُوذُ بِرَبِّ ٱلنَّاسِ": [114, 1, 6231], "مِن شَرِّ ٱلْوَسْوَاسِ ٱلْخَنَّاسِ": [114, 4, 6234], "ٱلَّذِى يُوَسْوِسُ فِى صُدُورِ ٱلنَّاسِ": [114, 5, 6235], "مِنَ ٱلْجِنَّةِ وَٱلنَّاسِ": [114, 6, 6236], "ٱلَّذِينَ ءَامَنُوا۟ وَتَطْمَئِنُّ قُلُوبُهُم بِذِكْرِ ٱللَّهِ ۗ أَلَا بِذِكْرِ ٱللَّهِ تَطْمَئِنُّ ٱلْقُلُوبُ": [13, 28, 1735], "فَإِنَّ مَعَ ٱلْعُسْرِ يُسْرًا": [94, 5, 6095], "وَيَرْزُقْهُ مِنْ حَيْثُ لَا يَحْتَسِبُ ۚ وَمَن يَتَوَكَّلْ عَلَى ٱللَّهِ فَهُوَ حَسْبُهُۥٓ ۚ إِنَّ ٱللَّهَ بَٰلِغُ أَمْرِهِۦ ۚ قَدْ جَعَلَ ٱللَّهُ لِكُلِّ شَىْءٍۢ قَدْرًۭا": [65, 3, 5220], "۞ قُلْ يَٰعِبَادِىَ ٱلَّذِينَ أَسْرَفُوا۟ عَلَىٰٓ أَنفُسِهِمْ لَا تَقْنَطُوا۟ مِن رَّحْمَةِ ٱللَّهِ ۚ إِنَّ ٱللَّهَ يَغْفِرُ ٱلذُّنُوبَ جَمِيعًا ۚ إِنَّهُۥ هُوَ ٱلْغَفُورُ ٱلرَّحِيمُ": [39, 53, 4111], "ٱتْلُ مَآ أُوحِىَ إِلَيْكَ مِنَ ٱلْكِتَٰبِ وَأَقِمِ ٱلصَّلَوٰةَ ۖ إِنَّ ٱلصَّلَوٰةَ تَنْهَىٰ عَنِ ٱلْفَحْشَآءِ وَٱلْمُنكَرِ ۗ وَلَذِكْرُ ٱللَّهِ أَكْبَرُ ۗ وَٱللَّهُ يَعْلَمُ مَا تَصْنَعُونَ": [29, 45, 3385], "وَٱسْتَعِينُوا۟ بِٱلصَّبْرِ وَٱلصَّلَوٰةِ ۚ وَإِنَّهَا لَكَبِيرَةٌ إِلَّا عَلَى ٱلْخَٰشِعِينَ": [2, 45, 52], "فَٱذْكُرُونِىٓ أَذْكُرْكُمْ وَٱشْكُرُوا۟ لِى وَلَا تَكْفُرُونِ": [2, 152, 159], "وَلَسَوْفَ يُعْطِيكَ رَبُّكَ فَتَرْضَىٰٓ": [93, 5, 6084], "وَلَقَدْ خَلَقْنَا ٱلْإِنسَٰنَ وَنَعْلَمُ مَا تُوَسْوِسُ بِهِۦ نَفْسُهُۥ ۖ وَنَحْنُ أَقْرَبُ إِلَيْهِ مِنْ حَبْلِ ٱلْوَرِيدِ": [50, 16, 4646], "لَا يُكَلِّفُ ٱللَّهُ نَفْسًا إِلَّا وُسْعَهَا ۚ لَهَا مَا كَسَبَتْ وَعَلَيْهَا مَا ٱكْتَسَبَتْ ۗ رَبَّنَا لَا تُؤَاخِذْنَآ إِن نَّسِينَآ أَوْ أَخْطَأْنَا ۚ رَبَّنَا وَلَا تَحْمِلْ عَلَيْنَآ إِصْرًۭا كَمَا حَمَلْتَهُۥ عَلَى ٱلَّذِينَ مِن قَبْلِنَا ۚ رَبَّنَا وَلَا تُحَمِّلْنَا مَا لَا طَاقَةَ لَنَا بِهِۦ ۖ وَٱعْفُ عَنَّا وَٱغْفِرْ لَنَا وَٱرْحَمْنَآ ۚ أَنتَ مَوْلَىٰنَا فَٱنصُرْنَا عَلَى ٱلْقَوْمِ ٱلْكَٰفِرِينَ": [2, 286, 293]};
 function renderDuas(){
   const el = document.getElementById('duasCard'); if (!el) return;
   el.className = 'glass';
-  const chips = DUASIT.map((d,i) => '<button class="pchip '+(duaCat===i?'on':'')+'" onclick="setDuaCat('+i+')">'+d.ic+' '+esc(d.cat)+'</button>').join('');
-  const duaReciteBtn = (x) => {
-    const g = (typeof QAYAH !== 'undefined') && QAYAH[x.ar];
-    return g ? reciteAyahBtn(g[0], g[1], g[2]) : reciteBtn(x.ar);
-  };
-  const body = (DUASIT[duaCat].duas).map(x =>
-    '<div class="adh"><div class="ar" lang="ar" dir="rtl">'+x.ar+'</div><div class="small muted" style="margin-top:6px">'+esc(x.tr)+'</div>' +
-    '<div style="margin-top:7px"><span class="badge ref">'+esc(fmtRef(x.ref))+'</span></div></div>').join('');
-  el.innerHTML = '<h2 class="sec">Duas for every moment</h2><div class="nprayers">'+chips+'</div>'+body;
+  el.innerHTML =
+    '<h2 class="sec">Duas for every moment</h2>' +
+    '<input id="duaSearch" class="duasearch" type="search" inputmode="search" autocomplete="off" spellcheck="false" ' +
+      'placeholder="How are you feeling? e.g. anxious · rain · thankful · travel" ' +
+      'oninput="setDuaQuery(this.value)" value="' + esc(duaQuery) + '">' +
+    '<div id="duaResults"></div>';
+  renderDuaResults();
+}
+function renderDuaResults(){
+  const box = document.getElementById('duaResults'); if (!box) return;
+  const idxs = duaSearch(duaQuery);
+  if (!idxs.length){
+    box.innerHTML = '<p class="small muted" style="padding:12px 0">No dua matches &ldquo;' + esc(duaQuery) +
+      '&rdquo;. Try a feeling or moment — like &ldquo;sad&rdquo;, &ldquo;travel&rdquo;, or &ldquo;forgiveness&rdquo;.</p>';
+    return;
+  }
+  box.innerHTML = idxs.map(i => {
+    const d = DUASIT[i];
+    const body = d.duas.map(x =>
+      '<div class="adh"><div class="ar" lang="ar" dir="rtl">'+x.ar+'</div><div class="small muted" style="margin-top:6px">'+esc(x.tr)+'</div>' +
+      '<div style="margin-top:7px"><span class="badge ref">'+esc(fmtRef(x.ref))+'</span></div></div>').join('');
+    return '<div class="duagroup"><div class="duagroup-h">' + d.ic + ' ' + esc(d.cat) + '</div>' + body + '</div>';
+  }).join('');
 }
 
 /* ═══════════════════ Islamic calendar — month grid + important days + at-prayer prompt ═══════════════════ */
@@ -3137,6 +3220,17 @@ function ayahAudioUrl(surah, ayah, g){
   return 'https://cdn.islamic.network/quran/audio/128/' + r.ref + '/' + g + '.mp3';
 }
 let _qa = null, _qaSeq = 0;
+/* Prefetch an ayah mp3 via an <audio> element (media-src — allowed by CSP; a fetch() would hit
+   connect-src, which does NOT list the reciter CDNs). Primes the browser + service-worker cache so the
+   real tap plays with no cold DNS+TLS+GET round-trip. De-duped so repeated hovers/taps are free. */
+const _qaPrefetched = new Set();
+function prefetchAyahAudio(surah, ayah, g){
+  try{
+    const u = ayahAudioUrl(surah, ayah, g);
+    if (!u || _qaPrefetched.has(u)) return; _qaPrefetched.add(u);
+    const a = new Audio(); a.preload = 'auto'; a.src = u; try{ a.load(); }catch(e){}
+  }catch(e){}
+}
 /* weight of an Arabic word ≈ how long it takes to recite: base letters + extra for madd (long vowels). */
 function _qWordWeight(w){
   const base = w.replace(/[ً-ٰٟۖ-ۭـ]/g, '');           // strip harakat / marks / tatweel
@@ -3192,6 +3286,13 @@ function stopReciteAudio(){
   document.querySelectorAll('.recitebtn.playing').forEach(b => b.classList.remove('playing'));
   clearRecitingAyah();
 }
+let _reciteOfflineNoted = false;
+function reciteOfflineNotice(btn){
+  try{ if (btn) reciteUnavailable(btn); }catch(e){}
+  if (navigator.onLine !== false) return;          // a transient network blip, not truly offline
+  if (_reciteOfflineNoted) return; _reciteOfflineNoted = true;
+  try{ toast('Offline', 'This ayah hasn’t been played yet, so its recitation isn’t stored on your device. Play it once while online and it recites offline ever after.', '📶'); }catch(e){}
+}
 function reciteAyah(surah, ayah, g, btn){
   const wasThis = btn && btn.classList.contains('playing');
   stopReciteAudio();
@@ -3200,8 +3301,10 @@ function reciteAyah(surah, ayah, g, btn){
   if (btn) btn.classList.add('playing');
   _qa = new Audio(ayahAudioUrl(surah, ayah, g)); _qa.volume = 1;
   setRecitingAyah(surah, ayah, _qa);
-  _qa.onended = _qa.onerror = () => { if (seq === _qaSeq){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); } };
-  const p = _qa.play(); if (p && p.catch) p.catch(() => { if (btn) btn.classList.remove('playing'); clearRecitingAyah(); });
+  try{ prefetchAyahAudio(surah, ayah + 1, g + 1); }catch(e){}   // users read in order — make the next tap instant
+  _qa.onended = () => { if (seq === _qaSeq){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); } };
+  _qa.onerror = () => { if (seq === _qaSeq){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); reciteOfflineNotice(btn); } };
+  const p = _qa.play(); if (p && p.catch) p.catch(() => { if (seq === _qaSeq){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); reciteOfflineNotice(btn); } });
 }
 function reciteSurahAudio(surah, count, firstG, btn){
   const wasThis = btn && btn.classList.contains('playing');
@@ -3251,9 +3354,9 @@ function recitePassage(surah, fromAyah, count, firstG, btn){
   })();
 }
 const SAJDA = {'7:206':'obligatory','13:15':'recommended','16:50':'recommended','17:109':'recommended','19:58':'recommended','22:18':'recommended','25:60':'recommended','27:26':'recommended','32:15':'obligatory','38:24':'recommended','41:38':'obligatory','53:62':'obligatory','84:21':'recommended','96:19':'obligatory'};
-function reciteAyahBtn(surah, ayah, g){ return '<button class="recitebtn" onclick="reciteAyah(' + surah + ', ' + ayah + ', ' + g + ', this)">' + RICON_SVG + '<span class="rlbl">Recite</span></button>'; }
-function recitePassageBtn(surah, from, count, g){ return '<button class="recitebtn" onclick="recitePassage(' + surah + ', ' + from + ', ' + count + ', ' + g + ', this)">' + RICON_SVG + '<span class="rlbl">Recite</span></button>'; }
-function reciteSurahBtn(surah, count, firstG){ return '<button class="recitebtn" onclick="reciteSurahAudio(' + surah + ', ' + count + ', ' + firstG + ', this)">' + RICON_SVG + '<span class="rlbl">Recite surah</span></button>'; }
+function reciteAyahBtn(surah, ayah, g){ return '<button class="recitebtn" onpointerdown="prefetchAyahAudio(' + surah + ', ' + ayah + ', ' + g + ')" onclick="reciteAyah(' + surah + ', ' + ayah + ', ' + g + ', this)">' + RICON_SVG + '<span class="rlbl">Recite</span></button>'; }
+function recitePassageBtn(surah, from, count, g){ return '<button class="recitebtn" onpointerdown="prefetchAyahAudio(' + surah + ', ' + from + ', ' + g + ')" onclick="recitePassage(' + surah + ', ' + from + ', ' + count + ', ' + g + ', this)">' + RICON_SVG + '<span class="rlbl">Recite</span></button>'; }
+function reciteSurahBtn(surah, count, firstG){ return '<button class="recitebtn" onpointerdown="prefetchAyahAudio(1, 1, 1); prefetchAyahAudio(' + surah + ', 1, ' + firstG + ')" onclick="reciteSurahAudio(' + surah + ', ' + count + ', ' + firstG + ', this)">' + RICON_SVG + '<span class="rlbl">Recite surah</span></button>'; }
 let quranSel = 0;
 let QALL = null, QBISM = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ', _qpromise = null;
 function quranList(){ return QALL || QURAN; }
