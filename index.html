@@ -1485,8 +1485,7 @@
       <label class="switch"><input type="checkbox" id="nSalawat" onchange="saveNotif()" aria-label="Salawat audio"><span class="sl"></span></label></div>
     <div class="srow"><div class="lbl"><b>System notifications</b><span>Also show in your phone&rsquo;s tray (needs permission)</span></div>
       <label class="switch"><input type="checkbox" id="nOS" onchange="toggleOSNotif()" aria-label="System notifications"><span class="sl"></span></label></div>
-    <div class="srow"><div class="lbl"><b>Help improve — anonymous</b><span>Share opt-in, anonymous usage only — never your name, journal or content. Off by default.</span></div>
-      <label class="switch"><input type="checkbox" id="setAnalytics" onchange="setAnalytics(this.checked)" aria-label="Share anonymous usage"><span class="sl"></span></label></div>
+    <div class="srow"><div class="lbl"><b>Anonymous diagnostics</b><span>Always on — anonymous usage &amp; crash reports that help keep the app working. Never your name, journal, or content.</span></div></div>
   </div>
 
   <div class="glass">
@@ -3567,7 +3566,8 @@ function _anonCountry(){
   }catch(e){ return 'Unknown'; }
 }
 function _track(path, body){
-  if (!S.analytics) return;                 // opt-in gate — the whole feature hinges on this
+  // Anonymous diagnostics are ALWAYS ON (no opt-out toggle): anonymous usage + crash reports only,
+  // never name/journal/content. This is the owner's telemetry to see that features work in the field.
   const base = cloudUrl(); if (!base) return;
   try{
     const h = {'Content-Type':'application/json'};
@@ -3578,7 +3578,7 @@ function _track(path, body){
 
 let _errCount = 0;
 function _trackError(msg, src, line, col, err){
-  if (!S.analytics || _errCount >= 5) return;
+  if (_errCount >= 5) return;               // always-on; cap per session so a loop can't flood the server
   _errCount++;
   const stack = err && err.stack ? String(err.stack).slice(0, 500) : null;
   _track('/api/track/error', {
@@ -3601,7 +3601,7 @@ window.addEventListener('unhandledrejection', function(e){
 
 let _trackedActive = false;
 function trackVisit(){
-  if (!S.analytics || !cloudUrl()) return;
+  if (!cloudUrl()) return;                  // always-on anonymous diagnostics
   if (!localStorage.getItem('sk_anon_signed')){ _track('/api/track/signup', {device:_anonDevice(), country:_anonCountry()}); try{ localStorage.setItem('sk_anon_signed','1'); }catch(e){} }
   if (!_trackedActive){ _trackedActive = true; _track('/api/track/active', {}); }
 }
