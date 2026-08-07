@@ -5099,7 +5099,7 @@ function logForDate(dk, key){
     for (let i = 0; i <= 2; i++){ if (keyForCivil(addCivilDays(t, -i)) === dk){ within = true; isToday = (i === 0); break; } }
     if (!within) return;
     // Never backfill a FUTURE prayer: a prayer today whose adhan hasn't come yet stays closed.
-    if (isToday){ try{ const tt = engineFor(t).E[key.toLowerCase()]; if (tt && tt > Date.now()) return; }catch(e){} }
+    if (isToday && currentPrayerKey() !== key) return;   // TODAY: only the present running prayer — never today's earlier prayers, never a future one
     const logs = S.logs[dk] || (S.logs[dk] = {});
     if (logs[key]){ delete logs[key]; if (!Object.keys(logs).length) delete S.logs[dk]; }
     else { logs[key] = { t: Date.now(), backfill: (dk !== todayKey()) }; }
@@ -5345,7 +5345,7 @@ function renderCatchup(){
     // Which prayers have ENTERED on this day — past days: all five; today: only those whose adhan has come.
     // A not-yet-entered prayer stays LOCKED so a future prayer can never be backfilled.
     let entered = KEYS;
-    if (i === 0){ let E = null; try{ E = engineFor(t).E; }catch(e){} entered = E ? KEYS.filter(k => { const tt = E[k.toLowerCase()]; return tt && tt <= now; }) : []; }
+    if (i === 0){ const ck = currentPrayerKey(); entered = ck ? [ck] : []; }   // TODAY follows the same rule as the grid: ONLY the present running prayer is markable (today's earlier prayers and any future prayer stay locked)
     const loggedEntered = entered.filter(k => logs[k]).length, n = KEYS.filter(k => logs[k]).length;
     const full = (i === 0) ? (n === 5) : (entered.length > 0 && loggedEntered === entered.length); missing += (entered.length - loggedEntered); if (full) complete++;   // TODAY counts as "whole" only when all 5 are logged, not merely the prayers due so far
     const dots = KEYS.map(k => { const open = entered.indexOf(k) >= 0, on = !!logs[k];
