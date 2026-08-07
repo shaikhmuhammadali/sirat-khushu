@@ -1266,10 +1266,17 @@
   .qsummary div.qbump b{animation:qbump .6s cubic-bezier(.2,1.4,.4,1)}
   @keyframes qbump{0%{transform:scale(1)}35%{transform:scale(1.28);filter:drop-shadow(0 0 10px rgba(217,180,91,.7))}100%{transform:scale(1)}}
   /* progress — calm teal with a live shimmer + smooth fill */
-  .qprog{position:relative;height:10px;border-radius:999px;background:var(--stroke);overflow:hidden;margin-bottom:16px}
-  .qprog i{display:block;height:100%;border-radius:999px;width:0;background:linear-gradient(90deg,var(--teal),#8fe3d6);box-shadow:0 0 14px rgba(90,211,198,.6);transition:width .9s cubic-bezier(.2,.8,.2,1);position:relative;overflow:hidden}
-  .qprog i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);transform:translateX(-100%);animation:qslide 2.4s ease-in-out infinite}
-  @keyframes qslide{to{transform:translateX(200%)}}
+  .qprog{position:relative;height:11px;border-radius:999px;background:var(--stroke);overflow:visible;margin-bottom:16px}
+  /* the "rekindled" line — a slow, smooth, luxurious fill that glides to completion, softly breathing */
+  .qprog i{display:block;height:100%;border-radius:999px;width:0;overflow:hidden;position:relative;
+    background:linear-gradient(90deg,var(--teal),#8fe3d6 86%,#d4f7ee);
+    box-shadow:0 0 12px rgba(90,211,198,.5),0 0 3px rgba(180,244,232,.85);
+    transition:width 2.9s cubic-bezier(.22,.61,.36,1) .3s;         /* slow, smooth, decelerates gently into place */
+    animation:qglowpulse 3.2s ease-in-out infinite}
+  .qprog i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);transform:translateX(-100%);animation:qslide 3.8s cubic-bezier(.4,0,.25,1) .8s infinite}
+  @keyframes qslide{0%{transform:translateX(-100%)}60%,100%{transform:translateX(240%)}}
+  @keyframes qglowpulse{0%,100%{box-shadow:0 0 10px rgba(90,211,198,.42),0 0 2px rgba(180,244,232,.7)}50%{box-shadow:0 0 20px rgba(143,227,214,.7),0 0 5px rgba(212,247,238,.9)}}
+  @media (prefers-reduced-motion:reduce){ .qprog i{animation:none;transition:width .6s ease} .qprog i::after{animation:none;display:none} }
   /* per-prayer ledger rows */
   .qledgers{border-top:1px solid var(--stroke)}
   .qledger{display:flex;align-items:center;gap:12px;padding:12px 2px;border-bottom:1px solid var(--stroke);transition:background .25s,opacity .3s}
@@ -4829,16 +4836,32 @@ function greetUser(){
 }
 
 /* premium toast notifications */
-let toastN = 0;
+// Toasts show ONE AT A TIME (queued) and linger longer. A new toast waits its turn behind the
+// current one, then rises as the previous gracefully dissolves — never a stack of overlapping cards.
+let _toastQ = [];
+let _toastBusy = false;
 function toast(title, sub, icon, sound){
-  const wrap = document.getElementById('toastWrap'); if (!wrap) return;
+  _toastQ.push([title, sub, icon, sound]);
+  if (_toastQ.length > 6) _toastQ.splice(0, _toastQ.length - 6);   // bound the backlog: keep only the 6 most recent
+  _toastPump();
+}
+function _toastPump(){
+  if (_toastBusy || !_toastQ.length) return;
+  const wrap = document.getElementById('toastWrap'); if (!wrap){ _toastQ.length = 0; return; }
+  _toastBusy = true;
+  const item = _toastQ.shift();
+  const title = item[0], sub = item[1], icon = item[2], sound = item[3];
   const t = document.createElement('div'); t.className = 'toast';
-  const life = 4800 + (toastN++ % 3)*300;
+  const life = 6500;                                               // linger noticeably longer before departing
   t.innerHTML = '<span class="ic">' + (icon || '✦') + '</span><span class="tx"><b>' + esc(title) + '</b>' + (sub ? '<span>' + esc(sub) + '</span>' : '') + '</span><i class="tbar" style="animation-duration:' + life + 'ms"></i>';
   wrap.appendChild(t);
   requestAnimationFrame(() => t.classList.add('show'));
   if (sound && S.chime) chime();
-  setTimeout(() => { t.classList.add('leaving'); t.classList.remove('show'); setTimeout(() => t.remove(), 2400); }, life);
+  setTimeout(() => {
+    t.classList.add('leaving'); t.classList.remove('show');
+    setTimeout(() => t.remove(), 2400);                            // full graceful fade, then remove from DOM
+    setTimeout(() => { _toastBusy = false; _toastPump(); }, 1400); // hand off to the next as this one dissolves
+  }, life);
 }
 
 /* 99 Names of Allah — a new one every day */
@@ -5690,6 +5713,7 @@ const QADA_SVG = {
 };
 // QADA_AYAT — tagged view of VERSES (see master library above).
 let _qadaBumpOnce = false;
+let _qadaLastPct = 0;   // remembered so the progress bar glides from its previous value, never a jarring reset
 function qadaAyahToday(){ try{ var d=new Date(); var i=(d.getFullYear()*372 + d.getMonth()*31 + d.getDate()) % QADA_AYAT.length; return QADA_AYAT[i]; }catch(e){ return QADA_AYAT[0]; } }
 function qadaAyahHTML(){ var a=qadaAyahToday(); return '<div class="qverse"><div class="qverse-ar" lang="ar" dir="rtl">'+a.ar+'</div><div class="qverse-tr">'+esc(a.tr)+'</div><span class="badge ref qverse-ref">'+esc(a.ref)+'</span></div>'; }
 
@@ -5917,7 +5941,9 @@ function renderQada(){
   }
   mounts.forEach(el=>{ el.style.display=''; el.className='glass'; el.innerHTML=html; });
   // animate the progress fill (0 → pct) after mount so every render "recharges" the sky
-  try{ requestAnimationFrame(()=>{ mounts.forEach(el=>{ const bar=el.querySelector('.qprog i'); if(bar){ const t=bar.getAttribute('data-pct')||'0'; bar.style.width='0%'; requestAnimationFrame(()=>{ bar.style.width=t+'%'; }); } }); }); }catch(e){}
+  // Luxurious fill: glide from the PREVIOUS percentage to the new one (grand 0→pct on first paint),
+  // so a re-render never yanks the bar back to 0. The slow, smooth easing lives in the CSS transition.
+  try{ var _tgt = pct; requestAnimationFrame(function(){ mounts.forEach(function(el){ var bar=el.querySelector('.qprog i'); if(bar){ bar.style.transition='none'; bar.style.width=(_qadaLastPct||0)+'%'; void bar.offsetWidth; bar.style.transition=''; requestAnimationFrame(function(){ bar.style.width=_tgt+'%'; }); } }); _qadaLastPct=_tgt; }); }catch(e){}
 }
 
 /* ── Lifetime Calculator (modal wizard, live breakdown) ── */
