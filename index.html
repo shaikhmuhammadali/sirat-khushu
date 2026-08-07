@@ -4154,14 +4154,58 @@ function lockNow(){ sessionUnlocked = false; S.staySignedIn = false; try{ save()
 function setLockEachLaunch(on){ S.lockEachLaunch = !!on; if (!on) S.staySignedIn = true; save(); try{ renderLockControls(); }catch(e){} }
 function setAcGender(g){ _acGender = g; const m = document.getElementById('gMale'), f = document.getElementById('gFemale'); if (m) m.classList.toggle('on', g === 'male'); if (f) f.classList.toggle('on', g === 'female'); }
 function acQChange(){ const c = document.getElementById('acQCustom'); if (c) c.style.display = document.getElementById('acQ').value === '__custom' ? 'block' : 'none'; }
-const LOGIN_AYAHS = [
-  {ar:'أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ', tl:'Alā bi-dhikri-llāhi taṭma’innu al-qulūb', tr:'Verily, in the remembrance of Allah do hearts find rest.', ref:'Ar-Ra’d 13:28'},
-  {ar:'وَإِذَا سَأَلَكَ عِبَادِي عَنِّي فَإِنِّي قَرِيبٌ', tl:'Wa idhā sa’alaka ‘ibādī ‘annī fa-innī qarīb', tr:'And when My servants ask you about Me — indeed I am near.', ref:'Al-Baqarah 2:186'},
-  {ar:'وَوَجَدَكَ ضَآلًّا فَهَدَىٰ', tl:'Wa wajadaka ḍāllan fahadā', tr:'And He found you lost and guided you.', ref:'Ad-Duha 93:7'},
-  {ar:'فَاذْكُرُونِي أَذْكُرْكُمْ وَاشْكُرُوا لِي', tl:'Fadhkurūnī adhkurkum wa-shkurū lī', tr:'So remember Me; I will remember you. And be grateful to Me.', ref:'Al-Baqarah 2:152'},
-  {ar:'فَإِنَّ مَعَ الْعُسْرِ يُسْرًا', tl:'Fa-inna ma‘a al-‘usri yusrā', tr:'For indeed, with hardship comes ease.', ref:'Ash-Sharh 94:5'},
-  {ar:'لَقَدْ جَاءَكُمْ رَسُولٌ مِّنْ أَنفُسِكُمْ عَزِيزٌ عَلَيْهِ مَا عَنِتُّمْ حَرِيصٌ عَلَيْكُم بِالْمُؤْمِنِينَ رَءُوفٌ رَّحِيمٌ', tl:'Laqad jā’akum rasūlun min anfusikum…', tr:'There has certainly come to you a Messenger from among yourselves; grievous to him is your suffering, deeply concerned for you, to the believers kind and merciful.', ref:'At-Tawbah 9:128'}
+/* ═══ One master verse library ════════════════════════════════════════════════════
+   Every ayah shown ANYWHERE in Sirat Khushu lives here, exactly once. Edit a verse
+   (or add one with the right tags) and it changes automatically across every surface
+   it appears in. Tags route each verse to its context:
+     daily      → top banner + "Ayah of the day" reflection card (recitable)
+     welcome    → login / welcome hero
+     reflection → Muhasaba (nightly journal)
+     lock       → Prayer-Lock screen
+     prayer     → Qada (missed-prayer) card
+   Below, the old pool names (AYAHS/LOGIN_AYAHS/JAYAHS/LOCK_AYAHS/QADA_AYAT) are just
+   TAGGED VIEWS of this list, shaped exactly as each renderer expects — so nothing else
+   in the app had to change.  (surah/ayah/g on a verse = it can be recited.)
+   ═══════════════════════════════════════════════════════════════════════════════ */
+const VERSES = [
+  {ar:"ٱلَّذِينَ ءَامَنُوا۟ وَتَطْمَئِنُّ قُلُوبُهُم بِذِكْرِ ٱللَّهِ ۗ أَلَا بِذِكْرِ ٱللَّهِ تَطْمَئِنُّ ٱلْقُلُوبُ", tr:"Those who have believed and whose hearts are assured by the remembrance of Allah. Unquestionably, by the remembrance of Allah hearts are assured.", ref:"Ar-Ra’d 13:28", tags:['daily','lock'], surah:13,ayah:28,g:1735},
+  {ar:"فَإِنَّ مَعَ ٱلْعُسْرِ يُسْرًا", tr:"For indeed, with hardship [will be] ease.", ref:"Ash-Sharh 94:5", tags:['daily','welcome'], tl:"Fa-inna ma‘a al-‘usri yusrā", surah:94,ayah:5,g:6095},
+  {ar:"وَيَرْزُقْهُ مِنْ حَيْثُ لَا يَحْتَسِبُ ۚ وَمَن يَتَوَكَّلْ عَلَى ٱللَّهِ فَهُوَ حَسْبُهُۥٓ ۚ إِنَّ ٱللَّهَ بَٰلِغُ أَمْرِهِۦ ۚ قَدْ جَعَلَ ٱللَّهُ لِكُلِّ شَىْءٍۢ قَدْرًۭا", tr:"And will provide for him from where he does not expect. And whoever relies upon Allah - then He is sufficient for him. Indeed, Allah will accomplish His purpose. Allah has already set for everything a [decreed] extent.", ref:"At-Talaq 65:3", tags:['daily'], surah:65,ayah:3,g:5220},
+  {ar:"۞ قُلْ يَٰعِبَادِىَ ٱلَّذِينَ أَسْرَفُوا۟ عَلَىٰٓ أَنفُسِهِمْ لَا تَقْنَطُوا۟ مِن رَّحْمَةِ ٱللَّهِ ۚ إِنَّ ٱللَّهَ يَغْفِرُ ٱلذُّنُوبَ جَمِيعًا ۚ إِنَّهُۥ هُوَ ٱلْغَفُورُ ٱلرَّحِيمُ", tr:"Say, \"O My servants who have transgressed against themselves [by sinning], do not despair of the mercy of Allah. Indeed, Allah forgives all sins. Indeed, it is He who is the Forgiving, the Merciful.", ref:"Az-Zumar 39:53", tags:['daily'], surah:39,ayah:53,g:4111},
+  {ar:"ٱتْلُ مَآ أُوحِىَ إِلَيْكَ مِنَ ٱلْكِتَٰبِ وَأَقِمِ ٱلصَّلَوٰةَ ۖ إِنَّ ٱلصَّلَوٰةَ تَنْهَىٰ عَنِ ٱلْفَحْشَآءِ وَٱلْمُنكَرِ ۗ وَلَذِكْرُ ٱللَّهِ أَكْبَرُ ۗ وَٱللَّهُ يَعْلَمُ مَا تَصْنَعُونَ", tr:"Recite, [O Muhammad], what has been revealed to you of the Book and establish prayer. Indeed, prayer prohibits immorality and wrongdoing, and the remembrance of Allah is greater. And Allah knows that which you do.", ref:"Al-‘Ankabut 29:45", tags:['daily'], surah:29,ayah:45,g:3385},
+  {ar:"وَٱسْتَعِينُوا۟ بِٱلصَّبْرِ وَٱلصَّلَوٰةِ ۚ وَإِنَّهَا لَكَبِيرَةٌ إِلَّا عَلَى ٱلْخَٰشِعِينَ", tr:"And seek help through patience and prayer, and indeed, it is difficult except for the humbly submissive [to Allah]", ref:"Al-Baqarah 2:45", tags:['daily','lock'], surah:2,ayah:45,g:52},
+  {ar:"فَٱذْكُرُونِىٓ أَذْكُرْكُمْ وَٱشْكُرُوا۟ لِى وَلَا تَكْفُرُونِ", tr:"So remember Me; I will remember you. And be grateful to Me, and do not deny Me.", ref:"Al-Baqarah 2:152", tags:['daily','lock'], surah:2,ayah:152,g:159},
+  {ar:"وَلَسَوْفَ يُعْطِيكَ رَبُّكَ فَتَرْضَىٰٓ", tr:"And your Lord is going to give you, and you will be satisfied.", ref:"Ad-Duha 93:5", tags:['daily'], surah:93,ayah:5,g:6084},
+  {ar:"وَلَقَدْ خَلَقْنَا ٱلْإِنسَٰنَ وَنَعْلَمُ مَا تُوَسْوِسُ بِهِۦ نَفْسُهُۥ ۖ وَنَحْنُ أَقْرَبُ إِلَيْهِ مِنْ حَبْلِ ٱلْوَرِيدِ", tr:"And We have already created man and know what his soul whispers to him, and We are closer to him than [his] jugular vein", ref:"Qaf 50:16", tags:['daily'], surah:50,ayah:16,g:4646},
+  {ar:"لَا يُكَلِّفُ ٱللَّهُ نَفْسًا إِلَّا وُسْعَهَا ۚ لَهَا مَا كَسَبَتْ وَعَلَيْهَا مَا ٱكْتَسَبَتْ ۗ رَبَّنَا لَا تُؤَاخِذْنَآ إِن نَّسِينَآ أَوْ أَخْطَأْنَا ۚ رَبَّنَا وَلَا تَحْمِلْ عَلَيْنَآ إِصْرًۭا كَمَا حَمَلْتَهُۥ عَلَى ٱلَّذِينَ مِن قَبْلِنَا ۚ رَبَّنَا وَلَا تُحَمِّلْنَا مَا لَا طَاقَةَ لَنَا بِهِۦ ۖ وَٱعْفُ عَنَّا وَٱغْفِرْ لَنَا وَٱرْحَمْنَآ ۚ أَنتَ مَوْلَىٰنَا فَٱنصُرْنَا عَلَى ٱلْقَوْمِ ٱلْكَٰفِرِينَ", tr:"Allah does not charge a soul except [with that within] its capacity. It will have [the consequence of] what [good] it has gained, and it will bear [the consequence of] what [evil] it has earned. \"Our Lord, do not impose blame upon us if we have forgotten or erred. Our Lord, and lay not upon us a burden like that which You laid upon those before us. Our Lord, and burden us not with that which we have no ability to bear. And pardon us; and forgive us; and have mercy upon us. You are our protector, so give us victory over the disbelieving people.", ref:"Al-Baqarah 2:286", tags:['daily'], surah:2,ayah:286,g:293},
+  {ar:"أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ", tr:"Verily, in the remembrance of Allah do hearts find rest.", ref:"Ar-Ra’d 13:28", tags:['welcome'], tl:"Alā bi-dhikri-llāhi taṭma’innu al-qulūb"},
+  {ar:"وَإِذَا سَأَلَكَ عِبَادِي عَنِّي فَإِنِّي قَرِيبٌ", tr:"And when My servants ask you about Me — indeed I am near.", ref:"Al-Baqarah 2:186", tags:['welcome'], tl:"Wa idhā sa’alaka ‘ibādī ‘annī fa-innī qarīb"},
+  {ar:"وَوَجَدَكَ ضَآلًّا فَهَدَىٰ", tr:"And He found you lost and guided you.", ref:"Ad-Duha 93:7", tags:['welcome'], tl:"Wa wajadaka ḍāllan fahadā"},
+  {ar:"فَاذْكُرُونِي أَذْكُرْكُمْ وَاشْكُرُوا لِي", tr:"So remember Me; I will remember you. And be grateful to Me.", ref:"Al-Baqarah 2:152", tags:['welcome'], tl:"Fadhkurūnī adhkurkum wa-shkurū lī"},
+  {ar:"لَقَدْ جَاءَكُمْ رَسُولٌ مِّنْ أَنفُسِكُمْ عَزِيزٌ عَلَيْهِ مَا عَنِتُّمْ حَرِيصٌ عَلَيْكُم بِالْمُؤْمِنِينَ رَءُوفٌ رَّحِيمٌ", tr:"There has certainly come to you a Messenger from among yourselves; grievous to him is your suffering, deeply concerned for you, to the believers kind and merciful.", ref:"At-Tawbah 9:128", tags:['welcome'], tl:"Laqad jā’akum rasūlun min anfusikum…"},
+  {ar:"وَلَقَدْ خَلَقْنَا الْإِنسَانَ وَنَعْلَمُ مَا تُوَسْوِسُ بِهِ نَفْسُهُ ۖ وَنَحْنُ أَقْرَبُ إِلَيْهِ مِنْ حَبْلِ الْوَرِيدِ", tr:"And We have created man, and We know what his soul whispers to him, and We are closer to him than his jugular vein.", ref:"Qaf 50:16", tags:['reflection']},
+  {ar:"إِنَّمَا أَشْكُو بَثِّي وَحُزْنِي إِلَى اللَّهِ", tr:"I only complain of my grief and my sorrow to Allah.", ref:"Yusuf 12:86", tags:['reflection']},
+  {ar:"وَإِذَا سَأَلَكَ عِبَادِي عَنِّي فَإِنِّي قَرِيبٌ ۖ أُجِيبُ دَعْوَةَ الدَّاعِ إِذَا دَعَانِ", tr:"And when My servants ask you about Me — indeed I am near. I answer the call of the caller when he calls upon Me.", ref:"al-Baqarah 2:186", tags:['reflection']},
+  {ar:"الَّذِينَ آمَنُوا وَتَطْمَئِنُّ قُلُوبُهُم بِذِكْرِ اللَّهِ ۗ أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ", tr:"Those who believe, and whose hearts find rest in the remembrance of Allah. Truly, in the remembrance of Allah do hearts find rest.", ref:"ar-Ra’d 13:28", tags:['reflection']},
+  {ar:"وَقَالَ رَبُّكُمُ ادْعُونِي أَسْتَجِبْ لَكُمْ", tr:"And your Lord says: Call upon Me; I will respond to you.", ref:"Ghafir 40:60", tags:['reflection']},
+  {ar:"إِنَّ ٱلصَّلَاةَ تَنْهَىٰ عَنِ ٱلْفَحْشَاءِ وَٱلْمُنكَرِ ۗ وَلَذِكْرُ ٱللَّهِ أَكْبَرُ", tr:"Indeed, prayer restrains from immorality and wrongdoing, and the remembrance of Allah is greater still.", ref:"al-ʿAnkabut 29:45", tags:['lock']},
+  {ar:"إِنَّنِىٓ أَنَا ٱللَّهُ لَآ إِلَٰهَ إِلَّآ أَنَا۠ فَٱعْبُدْنِى وَأَقِمِ ٱلصَّلَوٰةَ لِذِكْرِىٓ", tr:"Indeed, I am Allah. There is no deity except Me, so worship Me and establish prayer for My remembrance.", ref:"Ta-Ha 20:14", tags:['lock']},
+  {ar:"قَدْ أَفْلَحَ ٱلْمُؤْمِنُونَ ۝ ٱلَّذِينَ هُمْ فِى صَلَاتِهِمْ خَٰشِعُونَ", tr:"Successful indeed are the believers — those who are humble in their prayer.", ref:"al-Muʾminun 23:1–2", tags:['lock']},
+  {ar:"حَٰفِظُوا۟ عَلَى ٱلصَّلَوَٰتِ وَٱلصَّلَوٰةِ ٱلْوُسْطَىٰ وَقُومُوا۟ لِلَّهِ قَٰنِتِينَ", tr:"Guard strictly the prayers, especially the middle prayer, and stand before Allah devoutly obedient.", ref:"al-Baqarah 2:238", tags:['lock']},
+  {ar:"يَٰٓأَيَّتُهَا ٱلنَّفْسُ ٱلْمُطْمَئِنَّةُ ۝ ٱرْجِعِىٓ إِلَىٰ رَبِّكِ رَاضِيَةً مَّرْضِيَّةً", tr:"O reassured soul, return to your Lord, well-pleased and pleasing to Him.", ref:"al-Fajr 89:27–28", tags:['lock']},
+  {ar:"إِنَّ ٱلصَّلَوٰةَ كَانَتْ عَلَى ٱلْمُؤْمِنِينَ كِتَٰبًا مَّوْقُوتًا", tr:"Indeed, prayer has been decreed upon the believers at specified times.", ref:"An-Nisa 4:103", tags:['prayer']},
+  {ar:"وَأَقِمِ ٱلصَّلَوٰةَ لِذِكْرِىٓ", tr:"And establish prayer for My remembrance.", ref:"Ta-Ha 20:14", tags:['prayer']},
+  {ar:"إِنَّ ٱلْحَسَنَٰتِ يُذْهِبْنَ ٱلسَّيِّـَٔاتِ", tr:"Indeed, good deeds do away with misdeeds.", ref:"Hud 11:114", tags:['prayer']},
+  {ar:"لَا تَقْنَطُوا۟ مِن رَّحْمَةِ ٱللَّهِ ۚ إِنَّ ٱللَّهَ يَغْفِرُ ٱلذُّنُوبَ جَمِيعًا", tr:"Do not despair of the mercy of Allah. Indeed, Allah forgives all sins.", ref:"Az-Zumar 39:53", tags:['prayer']},
+  {ar:"وَلَا تَيْـَٔسُوا۟ مِن رَّوْحِ ٱللَّهِ", tr:"And do not despair of the mercy of Allah.", ref:"Yusuf 12:87", tags:['prayer']}
 ];
+function versesByTag(t){ const r = VERSES.filter(v => v.tags && v.tags.indexOf(t) >= 0); return r.length ? r : VERSES; }
+// tagged views — each maps to the precise field-shape its renderer reads (tr quoting, `en`, `tl`, recite fields):
+const AYAHS       = versesByTag('daily').map(v => ({ ar:v.ar, tr:'"'+v.tr+'"', ref:v.ref, surah:v.surah, ayah:v.ayah, g:v.g }));
+const LOGIN_AYAHS = versesByTag('welcome').map(v => ({ ar:v.ar, tl:v.tl||'', tr:v.tr, ref:v.ref }));
+const JAYAHS      = versesByTag('reflection').map(v => ({ ar:v.ar, tr:'"'+v.tr+'"', ref:v.ref }));
+const LOCK_AYAHS  = versesByTag('lock').map(v => ({ ar:v.ar, en:v.tr, ref:v.ref }));
+const QADA_AYAT   = versesByTag('prayer').map(v => ({ ar:v.ar, tr:'"'+v.tr+'"', ref:v.ref }));
 /* ── rotating ayah hero (left panel of the split auth card) ── */
 let _ah = {i:0, timer:null};
 function ahItemHTML(a){
@@ -4965,7 +5009,7 @@ function todayLogs(){ const k = todayKey(); return (k && S.logs[k]) || {}; }
 const cdShort = ms => { const s = Math.max(0, Math.floor(ms/1000)); return pad(Math.floor(s/3600)) + ':' + pad(Math.floor(s/60)%60); };
 const ENCOURAGE = ['May Allah accept it from you.','Your sky just grew a little brighter.','Small, steady, sincere — this is the way.','The angels witnessed this one.','One prayer at a time. You are doing it.','This is what strength looks like.'];
 
-const AYAHS = [{"ar": "ٱلَّذِينَ ءَامَنُوا۟ وَتَطْمَئِنُّ قُلُوبُهُم بِذِكْرِ ٱللَّهِ ۗ أَلَا بِذِكْرِ ٱللَّهِ تَطْمَئِنُّ ٱلْقُلُوبُ", "tr": "\"Those who have believed and whose hearts are assured by the remembrance of Allah. Unquestionably, by the remembrance of Allah hearts are assured.\"", "ref": "Ar-Ra’d 13:28", "surah": 13, "ayah": 28, "g": 1735}, {"ar": "فَإِنَّ مَعَ ٱلْعُسْرِ يُسْرًا", "tr": "\"For indeed, with hardship [will be] ease.\"", "ref": "Ash-Sharh 94:5", "surah": 94, "ayah": 5, "g": 6095}, {"ar": "وَيَرْزُقْهُ مِنْ حَيْثُ لَا يَحْتَسِبُ ۚ وَمَن يَتَوَكَّلْ عَلَى ٱللَّهِ فَهُوَ حَسْبُهُۥٓ ۚ إِنَّ ٱللَّهَ بَٰلِغُ أَمْرِهِۦ ۚ قَدْ جَعَلَ ٱللَّهُ لِكُلِّ شَىْءٍۢ قَدْرًۭا", "tr": "\"And will provide for him from where he does not expect. And whoever relies upon Allah - then He is sufficient for him. Indeed, Allah will accomplish His purpose. Allah has already set for everything a [decreed] extent.\"", "ref": "At-Talaq 65:3", "surah": 65, "ayah": 3, "g": 5220}, {"ar": "۞ قُلْ يَٰعِبَادِىَ ٱلَّذِينَ أَسْرَفُوا۟ عَلَىٰٓ أَنفُسِهِمْ لَا تَقْنَطُوا۟ مِن رَّحْمَةِ ٱللَّهِ ۚ إِنَّ ٱللَّهَ يَغْفِرُ ٱلذُّنُوبَ جَمِيعًا ۚ إِنَّهُۥ هُوَ ٱلْغَفُورُ ٱلرَّحِيمُ", "tr": "\"Say, \"O My servants who have transgressed against themselves [by sinning], do not despair of the mercy of Allah. Indeed, Allah forgives all sins. Indeed, it is He who is the Forgiving, the Merciful.\"", "ref": "Az-Zumar 39:53", "surah": 39, "ayah": 53, "g": 4111}, {"ar": "ٱتْلُ مَآ أُوحِىَ إِلَيْكَ مِنَ ٱلْكِتَٰبِ وَأَقِمِ ٱلصَّلَوٰةَ ۖ إِنَّ ٱلصَّلَوٰةَ تَنْهَىٰ عَنِ ٱلْفَحْشَآءِ وَٱلْمُنكَرِ ۗ وَلَذِكْرُ ٱللَّهِ أَكْبَرُ ۗ وَٱللَّهُ يَعْلَمُ مَا تَصْنَعُونَ", "tr": "\"Recite, [O Muhammad], what has been revealed to you of the Book and establish prayer. Indeed, prayer prohibits immorality and wrongdoing, and the remembrance of Allah is greater. And Allah knows that which you do.\"", "ref": "Al-‘Ankabut 29:45", "surah": 29, "ayah": 45, "g": 3385}, {"ar": "وَٱسْتَعِينُوا۟ بِٱلصَّبْرِ وَٱلصَّلَوٰةِ ۚ وَإِنَّهَا لَكَبِيرَةٌ إِلَّا عَلَى ٱلْخَٰشِعِينَ", "tr": "\"And seek help through patience and prayer, and indeed, it is difficult except for the humbly submissive [to Allah]\"", "ref": "Al-Baqarah 2:45", "surah": 2, "ayah": 45, "g": 52}, {"ar": "فَٱذْكُرُونِىٓ أَذْكُرْكُمْ وَٱشْكُرُوا۟ لِى وَلَا تَكْفُرُونِ", "tr": "\"So remember Me; I will remember you. And be grateful to Me and do not deny Me.\"", "ref": "Al-Baqarah 2:152", "surah": 2, "ayah": 152, "g": 159}, {"ar": "وَلَسَوْفَ يُعْطِيكَ رَبُّكَ فَتَرْضَىٰٓ", "tr": "\"And your Lord is going to give you, and you will be satisfied.\"", "ref": "Ad-Duha 93:5", "surah": 93, "ayah": 5, "g": 6084}, {"ar": "وَلَقَدْ خَلَقْنَا ٱلْإِنسَٰنَ وَنَعْلَمُ مَا تُوَسْوِسُ بِهِۦ نَفْسُهُۥ ۖ وَنَحْنُ أَقْرَبُ إِلَيْهِ مِنْ حَبْلِ ٱلْوَرِيدِ", "tr": "\"And We have already created man and know what his soul whispers to him, and We are closer to him than [his] jugular vein\"", "ref": "Qaf 50:16", "surah": 50, "ayah": 16, "g": 4646}, {"ar": "لَا يُكَلِّفُ ٱللَّهُ نَفْسًا إِلَّا وُسْعَهَا ۚ لَهَا مَا كَسَبَتْ وَعَلَيْهَا مَا ٱكْتَسَبَتْ ۗ رَبَّنَا لَا تُؤَاخِذْنَآ إِن نَّسِينَآ أَوْ أَخْطَأْنَا ۚ رَبَّنَا وَلَا تَحْمِلْ عَلَيْنَآ إِصْرًۭا كَمَا حَمَلْتَهُۥ عَلَى ٱلَّذِينَ مِن قَبْلِنَا ۚ رَبَّنَا وَلَا تُحَمِّلْنَا مَا لَا طَاقَةَ لَنَا بِهِۦ ۖ وَٱعْفُ عَنَّا وَٱغْفِرْ لَنَا وَٱرْحَمْنَآ ۚ أَنتَ مَوْلَىٰنَا فَٱنصُرْنَا عَلَى ٱلْقَوْمِ ٱلْكَٰفِرِينَ", "tr": "\"Allah does not charge a soul except [with that within] its capacity. It will have [the consequence of] what [good] it has gained, and it will bear [the consequence of] what [evil] it has earned. \"Our Lord, do not impose blame upon us if we have forgotten or erred. Our Lord, and lay not upon us a burden like that which You laid upon those before us. Our Lord, and burden us not with that which we have no ability to bear. And pardon us; and forgive us; and have mercy upon us. You are our protector, so give us victory over the disbelieving people.\"", "ref": "Al-Baqarah 2:286", "surah": 2, "ayah": 286, "g": 293}];
+// AYAHS — tagged view of VERSES (see master library above).
 const DUAS = [
   {ar:'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ', tr:'"Our Lord, give us good in this world and good in the Hereafter, and protect us from the punishment of the Fire."', ref:'Al-Baqarah 2:201'},
   {ar:'اللَّهُمَّ أَعِنِّي عَلَى ذِكْرِكَ وَشُكْرِكَ وَحُسْنِ عِبَادَتِكَ', tr:'"O Allah, help me to remember You, to thank You, and to worship You well."', ref:'Sunan Abi Dawud 1522 · sahih'},
@@ -5467,13 +5511,7 @@ function bumpTasbih(){
 
 /* ── journal ── */
 let pickedMood = null;
-const JAYAHS = [
-  {ar:'وَلَقَدْ خَلَقْنَا الْإِنسَانَ وَنَعْلَمُ مَا تُوَسْوِسُ بِهِ نَفْسُهُ ۖ وَنَحْنُ أَقْرَبُ إِلَيْهِ مِنْ حَبْلِ الْوَرِيدِ', tr:'“And We have created man, and We know what his soul whispers to him, and We are closer to him than his jugular vein.”', ref:'Qur’an — Qaf (50), verse 16'},
-  {ar:'إِنَّمَا أَشْكُو بَثِّي وَحُزْنِي إِلَى اللَّهِ', tr:'“I only complain of my grief and my sorrow to Allah.”', ref:'Qur’an — Yusuf (12), verse 86'},
-  {ar:'وَإِذَا سَأَلَكَ عِبَادِي عَنِّي فَإِنِّي قَرِيبٌ ۖ أُجِيبُ دَعْوَةَ الدَّاعِ إِذَا دَعَانِ', tr:'“And when My servants ask you about Me — indeed I am near. I answer the call of the caller when he calls upon Me.”', ref:'Qur’an — al-Baqarah (2), verse 186'},
-  {ar:'الَّذِينَ آمَنُوا وَتَطْمَئِنُّ قُلُوبُهُم بِذِكْرِ اللَّهِ ۗ أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ', tr:'“Those who believe, and whose hearts find rest in the remembrance of Allah. Truly, in the remembrance of Allah do hearts find rest.”', ref:'Qur’an — ar-Ra’d (13), verse 28'},
-  {ar:'وَقَالَ رَبُّكُمُ ادْعُونِي أَسْتَجِبْ لَكُمْ', tr:'“And your Lord says: Call upon Me; I will respond to you.”', ref:'Qur’an — Ghafir (40), verse 60'}
-];
+// JAYAHS — tagged view of VERSES (see master library above).
 let _jAyah = null;
 function paintJournalAyah(){ const el=document.getElementById('jayahRotate'); if(!el) return; if(!_jAyah) _jAyah=JAYAHS[0]; el.innerHTML = '<div class="ar" lang="ar" dir="rtl">'+_jAyah.ar+'</div><div class="jayah-tr">'+esc(_jAyah.tr)+'</div><div class="jayah-ref">'+esc(fmtRef(_jAyah.ref))+'</div>'; }
 function newJournalAyah(){ if (JAYAHS.length < 2){ _jAyah = JAYAHS[0]; } else { let n; do { n = JAYAHS[Math.floor(Math.random()*JAYAHS.length)]; } while (n === _jAyah); _jAyah = n; } paintJournalAyah(); }
@@ -5583,16 +5621,7 @@ const _PL_C = 339.3;   // 2πr for r=54
 /* A pool of ayat shown on the lock — a different one appears each time the lock opens, while the
    two-angels reminder above it stays constant (Kiraman Katibin — Surah al-Infitar 82:11). That
    recording-angels theme is already carried by the constant line, so it is not in this rotating pool. */
-const LOCK_AYAHS = [
-  {ar:'إِنَّ ٱلصَّلَاةَ تَنْهَىٰ عَنِ ٱلْفَحْشَاءِ وَٱلْمُنكَرِ ۗ وَلَذِكْرُ ٱللَّهِ أَكْبَرُ', en:'Indeed, prayer restrains from immorality and wrongdoing, and the remembrance of Allah is greater still.', ref:'Surah al-ʿAnkabut 29:45'},
-  {ar:'إِنَّنِىٓ أَنَا ٱللَّهُ لَآ إِلَٰهَ إِلَّآ أَنَا۠ فَٱعْبُدْنِى وَأَقِمِ ٱلصَّلَوٰةَ لِذِكْرِىٓ', en:'Indeed, I am Allah. There is no deity except Me, so worship Me and establish prayer for My remembrance.', ref:'Surah Ta-Ha 20:14'},
-  {ar:'ٱلَّذِينَ ءَامَنُوا۟ وَتَطْمَئِنُّ قُلُوبُهُم بِذِكْرِ ٱللَّهِ ۗ أَلَا بِذِكْرِ ٱللَّهِ تَطْمَئِنُّ ٱلْقُلُوبُ', en:'Those who believe, and whose hearts find rest in the remembrance of Allah. Truly, in the remembrance of Allah do hearts find rest.', ref:'Surah ar-Raʿd 13:28'},
-  {ar:'قَدْ أَفْلَحَ ٱلْمُؤْمِنُونَ ۝ ٱلَّذِينَ هُمْ فِى صَلَاتِهِمْ خَٰشِعُونَ', en:'Successful indeed are the believers — those who are humble in their prayer.', ref:'Surah al-Muʾminun 23:1–2'},
-  {ar:'وَٱسْتَعِينُوا۟ بِٱلصَّبْرِ وَٱلصَّلَوٰةِ ۚ وَإِنَّهَا لَكَبِيرَةٌ إِلَّا عَلَى ٱلْخَٰشِعِينَ', en:'And seek help through patience and prayer; indeed, it is difficult except for the humble.', ref:'Surah al-Baqarah 2:45'},
-  {ar:'فَٱذْكُرُونِىٓ أَذْكُرْكُمْ وَٱشْكُرُوا۟ لِى وَلَا تَكْفُرُونِ', en:'So remember Me; I will remember you. And be grateful to Me, and do not deny Me.', ref:'Surah al-Baqarah 2:152'},
-  {ar:'حَٰفِظُوا۟ عَلَى ٱلصَّلَوَٰتِ وَٱلصَّلَوٰةِ ٱلْوُسْطَىٰ وَقُومُوا۟ لِلَّهِ قَٰنِتِينَ', en:'Guard strictly the prayers, especially the middle prayer, and stand before Allah devoutly obedient.', ref:'Surah al-Baqarah 2:238'},
-  {ar:'يَٰٓأَيَّتُهَا ٱلنَّفْسُ ٱلْمُطْمَئِنَّةُ ۝ ٱرْجِعِىٓ إِلَىٰ رَبِّكِ رَاضِيَةً مَّرْضِيَّةً', en:'O reassured soul, return to your Lord, well-pleased and pleasing to Him.', ref:'Surah al-Fajr 89:27–28'}
-];
+// LOCK_AYAHS — tagged view of VERSES (see master library above).
 let _plAyah = null;
 function paintLockAyah(){
   if (!_plAyah) _plAyah = LOCK_AYAHS[0];
@@ -5659,13 +5688,7 @@ const QADA_SVG = {
   Isha:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A7.5 7.5 0 1 1 10.2 4.3 6 6 0 0 0 20 14.5z"/><path d="M17.4 4l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5-1.5-.5 1.5-.5z"/></svg>',
   Witr:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3.2l2.3 5.5 5.9.5-4.5 3.9 1.4 5.7L12 15.9 6.9 18.8l1.4-5.7L3.8 9.2l5.9-.5z"/></svg>'
 };
-const QADA_AYAT = [
-  {ar:'إِنَّ ٱلصَّلَوٰةَ كَانَتْ عَلَى ٱلْمُؤْمِنِينَ كِتَٰبًا مَّوْقُوتًا', tr:'"Indeed, prayer has been decreed upon the believers at specified times."', ref:'An-Nisa 4:103'},
-  {ar:'وَأَقِمِ ٱلصَّلَوٰةَ لِذِكْرِىٓ', tr:'"And establish prayer for My remembrance."', ref:'Ta-Ha 20:14'},
-  {ar:'إِنَّ ٱلْحَسَنَٰتِ يُذْهِبْنَ ٱلسَّيِّـَٔاتِ', tr:'"Indeed, good deeds do away with misdeeds."', ref:'Hud 11:114'},
-  {ar:'لَا تَقْنَطُوا۟ مِن رَّحْمَةِ ٱللَّهِ ۚ إِنَّ ٱللَّهَ يَغْفِرُ ٱلذُّنُوبَ جَمِيعًا', tr:'"Do not despair of the mercy of Allah. Indeed, Allah forgives all sins."', ref:'Az-Zumar 39:53'},
-  {ar:'وَلَا تَيْـَٔسُوا۟ مِن رَّوْحِ ٱللَّهِ', tr:'"And do not despair of the mercy of Allah."', ref:'Yusuf 12:87'}
-];
+// QADA_AYAT — tagged view of VERSES (see master library above).
 let _qadaBumpOnce = false;
 function qadaAyahToday(){ try{ var d=new Date(); var i=(d.getFullYear()*372 + d.getMonth()*31 + d.getDate()) % QADA_AYAT.length; return QADA_AYAT[i]; }catch(e){ return QADA_AYAT[0]; } }
 function qadaAyahHTML(){ var a=qadaAyahToday(); return '<div class="qverse"><div class="qverse-ar" lang="ar" dir="rtl">'+a.ar+'</div><div class="qverse-tr">'+esc(a.tr)+'</div><span class="badge ref qverse-ref">'+esc(a.ref)+'</span></div>'; }
