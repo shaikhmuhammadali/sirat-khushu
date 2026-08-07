@@ -1410,8 +1410,6 @@
 
   <div id="calendarCard" class="glass"></div>
 
-  <div class="glass" id="qadaCardCal" data-sec="calendar" style="display:none"></div>
-
   <div id="bookmarksCard"></div>
 
   <div class="glass">
@@ -4098,7 +4096,7 @@ const TOUR_STEPS = [
   {tab:'today',    ic:'🧭', t:'Today · Qibla compass', b:'The precise direction and distance to the Kaaba, shown on a North-up dial. On a phone, tap “Enable live compass” and the gold needle follows the way you face — turn until it points straight up.'},
   {tab:'today',    ic:'🌌', t:'Today · Your growth', b:'Every prayer you log becomes a star in your own night sky, which only ever grows. Below it, “Your streak” tracks consecutive days — with a grace day and retroactive catch-up so one busy day won’t break it.'},
   {tab:'today',    ic:'📿', t:'Today · dhikr & reflection', b:'Authentic morning/evening adhkar from Hisn al-Muslim with one-tap Recite, a daily reflection and hadith, and “Focus Mode” — a calm, distraction-free screen for when you pray.'},
-  {tab:'calendar', ic:'📅', t:'Calendar', b:'The Hijri date, moon phase and upcoming Islamic events. Tap any day to log the prayers you prayed — this is what grows your stars and streak on the Today screen.'},
+  {tab:'calendar', ic:'📅', t:'Calendar', b:'The Hijri date, moon phase and upcoming Islamic events. Tap any day to see its blessed occasions. (Prayers are logged on the Today screen — only the one running right now.)'},
   {tab:'dhikr',    ic:'🔢', t:'Dhikr counter', b:'A beautiful tasbih. Tap anywhere to count SubhanAllah, Alhamdulillah, Allahu Akbar and more, with targets of 33, 99 or 100 and a gentle vibration on each count. Your totals feed your growth.'},
   {tab:'learn',    ic:'📖', t:'Learn · Qur’an, hadith & duas', b:'The complete Qur’an — all 114 surahs in the Uthmani Hafs script with translation and real reciters — plus a daily hadith and a library of authentic duas for every situation. All fully offline.'},
   {tab:'journal',  ic:'📝', t:'Journal', b:'Your private space for one honest line a day — a quiet muhasaba. It stays on your device, and travels safely inside your account when you’re signed in.'},
@@ -5094,17 +5092,16 @@ function toggleLog(key){
   showHadithPop(key);
 }
 function logForDate(dk, key){
+  // Hardened backstop for the "present running prayer ONLY" rule: no past day, no future prayer.
+  // Catch-up backfill is disabled (see renderCatchup); this simply forwards to the same gate as the
+  // grid, so even a stray/deep-link call can only ever toggle today's currently-running prayer.
   try{
     if (!dk || !key) return;
-    // 3-day catch-up window ONLY — today, yesterday, day-before-yesterday. Older days stay closed.
-    const t = currentSet().today; let within = false, isToday = false;
-    for (let i = 0; i <= 2; i++){ if (keyForCivil(addCivilDays(t, -i)) === dk){ within = true; isToday = (i === 0); break; } }
-    if (!within) return;
-    // Never backfill a FUTURE prayer: a prayer today whose adhan hasn't come yet stays closed.
-    if (isToday){ try{ const tt = engineFor(t).E[key.toLowerCase()]; if (tt && tt > Date.now()) return; }catch(e){} }
+    if (dk !== todayKey()) return;               // never a past (or any non-today) day
+    if (currentPrayerKey() !== key) return;      // only the one prayer running right now
     const logs = S.logs[dk] || (S.logs[dk] = {});
     if (logs[key]){ delete logs[key]; if (!Object.keys(logs).length) delete S.logs[dk]; }
-    else { logs[key] = { t: Date.now(), backfill: (dk !== todayKey()) }; }
+    else { logs[key] = { t: Date.now() }; }
     save(); renderAppFeatures();
     try{ if (navigator.vibrate) navigator.vibrate(25); }catch(e){}
   }catch(e){}
@@ -5335,31 +5332,10 @@ function renderStreak(){
     '<p class="small dim" style="margin-top:10px">Your streak updates <b>automatically</b> each time you log a prayer — a day counts the moment you pray even once. Missed a day? Log it below; <b>returning keeps your streak</b>. Mercy, never shame.</p>';
 }
 function renderCatchup(){
+  // Catch-up backfill is DISABLED by design: Sirat Khushu logs ONLY the present running prayer —
+  // never a past day, never a future prayer. (User’s firm rule; do not re-enable without asking.)
   const el = document.getElementById('catchupCard'); if (!el) return;
-  if (!S.loc){ el.className = ''; el.innerHTML = ''; el.style.display = 'none'; return; }
-  el.style.display = '';   // Catch-up re-enabled — 3-day window (today, yesterday, day-before-yesterday)
-  const KEYS = ['Fajr','Dhuhr','Asr','Maghrib','Isha'], t = currentSet().today, now = Date.now(); let rows = '', missing = 0, complete = 0;
-  const C = 2 * Math.PI * 15.5;
-  for (let i = 0; i <= 2; i++){                                            // today, yesterday, day-before-yesterday
-    const c = addCivilDays(t, -i), dk = keyForCivil(c), logs = S.logs[dk] || {};
-    const dateStr = new Date(Date.UTC(c.y,c.m-1,c.d)).toLocaleDateString([], {day:'numeric', month:'short', timeZone:'UTC'});
-    const label = i === 0 ? 'Today' : i === 1 ? 'Yesterday' : new Date(Date.UTC(c.y,c.m-1,c.d)).toLocaleDateString([], {weekday:'long', timeZone:'UTC'});
-    // Which prayers have ENTERED on this day — past days: all five; today: only those whose adhan has come.
-    // A not-yet-entered prayer stays LOCKED so a future prayer can never be backfilled.
-    let entered = KEYS;
-    if (i === 0){ let E = null; try{ E = engineFor(t).E; }catch(e){} entered = E ? KEYS.filter(k => { const tt = E[k.toLowerCase()]; return tt && tt <= now; }) : []; }
-    const loggedEntered = entered.filter(k => logs[k]).length, n = KEYS.filter(k => logs[k]).length;
-    const full = (i === 0) ? (n === 5) : (entered.length > 0 && loggedEntered === entered.length); missing += (entered.length - loggedEntered); if (full) complete++;   // TODAY counts as "whole" only when all 5 are logged, not merely the prayers due so far
-    const dots = KEYS.map(k => { const open = entered.indexOf(k) >= 0, on = !!logs[k];
-      return '<button class="cdot ' + (on?'on':'') + (open?'':' locked') + '"' + (open ? ' onclick="logForDate(&quot;' + dk + '&quot;,&quot;' + k + '&quot;)"' : ' disabled aria-disabled="true"') + ' aria-label="' + k + ' on ' + label + '"><span class="cdi">' + k[0] + '</span><svg class="cdk" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg></button>'; }).join('');
-    const ring = '<span class="cring' + (full?' full':'') + '"><svg viewBox="0 0 36 36" aria-hidden="true"><circle class="crt" cx="18" cy="18" r="15.5"/><circle class="crv" cx="18" cy="18" r="15.5" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + (C * (1 - n/5)).toFixed(1) + '"/></svg><b>' + n + '<i>/5</i></b></span>';
-    rows += '<div class="catchrow' + (full?' done':'') + '"><span class="cd"><b>' + label + '</b><small>' + dateStr + '</small></span><span class="cdots">' + dots + '</span>' + ring + '</div>';
-  }
-  const summary = missing === 0
-    ? '<span class="cdon">✓</span> All three days complete — nothing to catch up.'
-    : '<b>' + missing + '</b> ' + (missing === 1 ? 'prayer' : 'prayers') + ' left to backfill' + (complete ? ' · <b>' + complete + '</b> day' + (complete>1?'s':'') + ' already whole' : '') + '.';
-  el.className = 'glass';
-  el.innerHTML = '<h2 class="sec">Catch up — a lapse is survivable</h2><p class="small dim" style="margin-bottom:10px">Prayed but forgot to log it? Tap to fill it in. The door is always open.</p><div class="catchsum">' + summary + '</div>' + rows + '<div class="hquote hq-sm"><div class="ar" lang="ar" dir="rtl">إِذْ يَتَلَقَّى الْمُتَلَقِّيَانِ عَنِ الْيَمِينِ وَعَنِ الشِّمَالِ قَعِيدٌ ۝ مَّا يَلْفِظُ مِن قَوْلٍ إِلَّا لَدَيْهِ رَقِيبٌ عَتِيدٌ</div><div class="hquote-tr">“When the two receivers receive, seated on the right and on the left. Man does not utter any word except that with him is an observer prepared [to record].”</div><div class="hquote-ref"><span class="badge ref">Surah Qaf 50:17-18</span> <button class="recitebtn" onclick="recitePassage(50, 17, 2, 4647, this)"><svg class="ricon" viewBox="0 0 24 24" aria-hidden="true"><path class="spk" d="M4 9v6h4l5 4V5L8 9H4z"/><path class="wv1" d="M15.6 8.7a3.7 3.7 0 0 1 0 6.6"/><path class="wv2" d="M18.2 6.2a7.2 7.2 0 0 1 0 11.6"/></svg><span class="rlbl">Recite</span></button></div><div class="hquote-note">Even backfilling in private, you were never unwatched — two angels record all. So log it honestly.</div></div>';
+  el.className = ''; el.innerHTML = ''; el.style.display = 'none';
 }
 
 /* ── Ramadan super-mode + escalation ── */
