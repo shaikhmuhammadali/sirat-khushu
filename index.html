@@ -1231,6 +1231,84 @@
     .cring{margin-left:auto}
     .cdots{order:3; flex-basis:100%; justify-content:space-between; margin-top:4px}
   }
+  /* ═══ Qada tracker — premium, waswas-safe (calm gold/teal, no red, no shame) ═══ */
+  #qadaCard .qhidden{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .qreassure{font-family:var(--arabic),Georgia,serif;font-style:italic;color:var(--gold-ink);font-size:.84rem;line-height:1.7;text-align:center;opacity:.92;margin:14px 4px 4px}
+  /* contextual smart-pair banner */
+  .qpair{position:relative;display:flex;align-items:center;gap:11px;background:linear-gradient(135deg,var(--teal-soft),transparent);border:1px solid var(--teal-border);border-radius:16px;padding:12px 12px;margin:12px 0 4px;animation:qfade .4s ease}
+  @keyframes qfade{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+  .qpair .qglow{width:40px;height:40px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:1.2rem;background:radial-gradient(circle at 40% 35%,rgba(90,211,198,.4),transparent 70%)}
+  .qpair .qtx{flex:1;min-width:0}
+  .qpair .qtx b{display:block;font-size:.82rem}
+  .qpair .qtx span{font-size:.72rem;color:var(--muted)}
+  .qpair-yes{flex:none;padding:8px 16px;border-radius:12px;border:1px solid var(--teal-border);background:var(--teal-soft);color:var(--teal-ink);font-family:var(--font);font-weight:800;font-size:.9rem;cursor:pointer;transition:transform .15s,box-shadow .3s}
+  .qpair-yes:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(90,211,198,.28)}
+  .qpair-yes:active{transform:scale(.94)}
+  .qpair-x{flex:none;width:26px;height:26px;border:none;background:none;color:var(--dim);font-size:.9rem;cursor:pointer;border-radius:8px}
+  .qpair-x:hover{color:var(--text);background:rgba(255,255,255,.06)}
+  /* summary stats */
+  .qsummary{display:flex;gap:12px;margin:14px 0 8px}
+  .qsummary div{flex:1;text-align:center;padding:10px 4px;border-radius:14px;background:var(--glass);border:1px solid var(--stroke)}
+  .qsummary b{display:block;font-size:1.32rem;color:var(--gold-ink);font-variant-numeric:tabular-nums;line-height:1.1}
+  .qsummary span{font-size:.56rem;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;font-weight:800;margin-top:3px;display:block}
+  /* calm progress bar (teal, never red) */
+  .qprog{height:9px;border-radius:999px;background:var(--stroke);overflow:hidden;margin-bottom:14px}
+  .qprog i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--teal),#8fe3d6);box-shadow:0 0 12px rgba(90,211,198,.5);transition:width .6s cubic-bezier(.2,.8,.2,1)}
+  /* per-prayer ledger rows */
+  .qledgers{border-top:1px solid var(--stroke)}
+  .qledger{display:flex;align-items:center;gap:11px;padding:11px 2px;border-bottom:1px solid var(--stroke);transition:opacity .3s}
+  .qledger.done{opacity:.55}
+  .qledger .qic{width:38px;height:38px;flex:none;border-radius:12px;display:grid;place-items:center;font-size:1.1rem;background:radial-gradient(circle at 34% 28%,var(--gold-soft),var(--bg2));border:1px solid var(--stroke-gold)}
+  .qledger .qnm{flex:1;min-width:0}
+  .qledger .qnm b{display:flex;align-items:center;gap:6px;font-size:.86rem;font-weight:800}
+  .qledger .qnm b .ar{font-family:var(--arabic);color:var(--dim);font-weight:400;font-size:.9rem}
+  .qledger .qest{font-size:.5rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--teal-ink);background:var(--teal-soft);border:1px solid var(--teal-border);padding:2px 5px;border-radius:5px}
+  .qledger .qmeta{display:block;font-size:.66rem;color:var(--dim);margin-top:2px;font-variant-numeric:tabular-nums}
+  .qadj{display:flex;align-items:center;gap:9px;flex:none}
+  .qbtn{width:34px;height:34px;flex:none;border-radius:11px;border:1px solid var(--teal-border);background:var(--teal-soft);color:var(--teal-ink);font-size:1rem;font-weight:800;cursor:pointer;display:grid;place-items:center;transition:transform .15s,box-shadow .3s,opacity .2s}
+  .qbtn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 5px 14px rgba(90,211,198,.28)}
+  .qbtn:active:not(:disabled){transform:scale(.9)}
+  .qbtn:disabled{opacity:.3;cursor:default}
+  .qbtn.add{border-color:var(--stroke);background:var(--glass);color:var(--dim)}
+  .qbtn.add:hover{color:var(--gold-ink);border-color:var(--stroke-gold);box-shadow:none}
+  .qnum{min-width:34px;text-align:center}
+  .qnum b{display:block;font-size:1.1rem;color:var(--gold-ink);font-variant-numeric:tabular-nums;line-height:1}
+  .qnum span{font-size:.5rem;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:800}
+  .qundo{margin-top:10px;font-size:.74rem;padding:6px 12px}
+  /* calculator wizard fields */
+  .qfield{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+  .qfield>label{font-size:.74rem;font-weight:700;color:var(--muted)}
+  .qfield input[type=date],.qfield input[type=number]{padding:11px 13px;border-radius:12px;border:1px solid var(--stroke);background:var(--glass);color:var(--text);font-family:var(--font);font-size:.9rem;outline:none;transition:border-color .2s,background .2s;color-scheme:dark}
+  .qfield input:focus{border-color:var(--gold);background:var(--gold-soft)}
+  .qseg{display:flex;background:var(--glass);border:1px solid var(--stroke);border-radius:12px;padding:3px;gap:2px}
+  .qseg button{flex:1;border:none;background:none;color:var(--muted);font-family:var(--font);font-weight:700;font-size:.78rem;padding:9px;border-radius:9px;cursor:pointer;transition:.16s}
+  .qseg button:hover{color:var(--text)}
+  .qseg button.on{background:var(--gold-soft);color:var(--gold-ink);box-shadow:inset 0 0 0 1px var(--stroke-gold)}
+  .qstep{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--stroke);border-radius:12px;background:var(--glass);overflow:hidden}
+  .qstep button{width:44px;height:42px;border:none;background:var(--glass2);color:var(--gold-ink);font-size:1.15rem;font-weight:800;cursor:pointer;transition:.15s}
+  .qstep button:hover{background:var(--gold-soft)}
+  .qstep span{flex:1;text-align:center;font-size:.86rem;color:var(--text);font-variant-numeric:tabular-nums}
+  .qstep span b{font-size:1.05rem;color:var(--gold-ink)}
+  .qbirth,.qpartial{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .qbirth input[type=number]{width:78px}
+  .qpartial input[type=date]{flex:1;min-width:120px}
+  .qpfrac{flex-basis:100%;display:flex;flex-direction:column;gap:2px;margin-top:2px}
+  .qpfrac input[type=range]{width:100%;accent-color:var(--gold)}
+  .qx{width:30px;height:30px;flex:none;border:1px solid var(--stroke);background:var(--glass);color:var(--dim);border-radius:9px;cursor:pointer;font-size:.8rem}
+  .qx:hover{color:var(--text);border-color:var(--stroke-gold)}
+  .qsm{font-size:.76rem;padding:8px 12px;margin-top:8px}
+  .qbreakdown{font-size:.8rem;color:var(--muted);line-height:1.75;background:var(--gold-soft);border:1px solid var(--stroke-gold);border-radius:14px;padding:13px 14px;margin:6px 0 4px;font-variant-numeric:tabular-nums}
+  .qbreakdown .qtot{color:var(--gold-ink);font-size:1.05rem}
+  .qapply{width:100%;margin-top:12px;background:var(--teal-soft)!important;border-color:var(--teal-border)!important;color:var(--teal-ink)!important}
+  .qapply:disabled{opacity:.4;cursor:default}
+  /* plan modal */
+  .qplan-dates{display:flex;gap:10px;margin-top:14px}
+  .qplan-dates div{flex:1;padding:12px;border-radius:14px;background:var(--glass);border:1px solid var(--stroke);text-align:center}
+  .qplan-dates span{display:block;font-size:.6rem;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:800;margin-bottom:4px}
+  .qplan-dates b{font-size:.98rem;font-variant-numeric:tabular-nums}
+  .qrowlbl{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text);font-weight:700;cursor:pointer}
+  .qrowlbl input{accent-color:var(--gold)}
+  #qadaCard .btn.on{border-color:var(--teal-border);color:var(--teal-ink);background:var(--teal-soft)}
 </style>
 </head>
 <body>
@@ -1293,6 +1371,11 @@
 
   <div id="streakCard"></div>
   <div id="catchupCard"></div>
+
+  <!-- Qada tracker (Today) -->
+  <div class="glass" id="qadaCard" data-sec="today" style="display:none"></div>
+  <div id="qadaCalcModal" class="modal"><div class="sheet" id="qadaCalcSheet"></div></div>
+  <div id="qadaPlanModal" class="modal"><div class="sheet" id="qadaPlanSheet"></div></div>
 
   <div class="glass">
     <h2 class="sec">Today's reflection</h2>
@@ -4920,6 +5003,7 @@ function toggleLog(key){
   const logs = S.logs[k] || (S.logs[k] = {});
   if (logs[key]){ delete logs[key]; if (!Object.keys(logs).length) delete S.logs[k]; save(); renderAppFeatures(); return; }
   logs[key] = {t: Date.now()}; save();
+  try{ qadaMaybePair(key); }catch(e){}
   renderAppFeatures();
   if (navigator.vibrate) navigator.vibrate([30,40,60]);
   showHadithPop(key);
@@ -4954,7 +5038,7 @@ function renderGarden(){
     dayStars.push({dk, n});
   }
   document.getElementById('skystats').innerHTML =
-    '<div><b>' + total + '</b><span>stars (prayers)</span></div>' +
+    '<div><b>' + (total + ((typeof qadaTotalCleared==='function' && S.qada && S.qada.on) ? qadaTotalCleared() : 0)) + '</b><span>stars (prayers)</span></div>' +
     '<div><b>' + week + '</b><span>this week</span></div>' +
     '<div><b>' + (Number(S.dhikrTotal) || 0) + '</b><span>dhikr counted</span></div>';   // Number() — never let a restored string reach innerHTML
   const rm = fastOn();
@@ -5541,10 +5625,318 @@ function previewPrayerLock(){
 
 function toggleRamadanPreview(){ S.ramadanPreview = document.getElementById('setRamadanPrev').checked; save(); renderRamadan(); if (S.ramadanPreview){ try{ toast('Ramadan mode on', 'Suhoor \u0026 iftar countdowns and Taraweeh tracking now appear at the top of Today.', '\ud83c\udf19'); go('today'); }catch(e){} } }
 
+/* ═══════════════ Qada — missed-prayer tracker (precise · on-device · waswas-safe) ═══════════════
+   Window-based per-prayer detection: a prayer becomes Qada the instant its time window closes
+   unprayed — no guessing, no lump counter. Plus a lifetime-backlog calculator with fiqh-correct
+   menstruation/nifās deductions, and a gentle make-up planner that welds clearing onto the daily
+   habit. Cleared prayers add light to the star-sky. It tracks; it never rules — "consult a scholar." */
+const QADA_PRAYERS = ['Fajr','Dhuhr','Asr','Maghrib','Isha'];
+const QADA_AR = { Fajr:'الفجر', Dhuhr:'الظهر', Asr:'العصر', Maghrib:'المغرب', Isha:'العشاء', Witr:'الوتر' };
+const QADA_IC = { Fajr:'🌅', Dhuhr:'🌞', Asr:'🌇', Maghrib:'🌆', Isha:'🌙', Witr:'🌟' };
+
+function qadaInit(){
+  if (!S.qada) S.qada = {};
+  const q = S.qada;
+  if (q.on == null) q.on = false;
+  if (!q.ledgers) q.ledgers = {};
+  ['Fajr','Dhuhr','Asr','Maghrib','Isha','Witr'].forEach(p => { const l = q.ledgers[p]; if (!l) q.ledgers[p] = { est:0, log:0, cleared:0 }; else { if (l.est==null) l.est=0; if (l.log==null) l.log=0; if (l.cleared==null) l.cleared=0; } });
+  if (!q.resolved) q.resolved = {};
+  if (!q.missedLog) q.missedLog = [];
+  if (q.seq == null) q.seq = 0;
+  if (!q.exempt) q.exempt = {};
+  if (!q.plan) q.plan = { pace:5, order:'none' };
+  if (!q.settings) q.settings = {};
+  if (q.settings.trackWitr == null) q.settings.trackWitr = false;
+  if (q.settings.hidden == null) q.settings.hidden = false;
+  if (!q.settings.ishaEnds) q.settings.ishaEnds = 'nextFajr';
+  if (!q.clearLog) q.clearLog = [];
+  if (q.startedKey === undefined) q.startedKey = null;
+  if (q.lastCheckedKey === undefined) q.lastCheckedKey = null;
+  if (q.estimate === undefined) q.estimate = null;
+  return q;
+}
+function qadaTypes(){ const t = QADA_PRAYERS.slice(); if (S.qada && S.qada.settings.trackWitr) t.push('Witr'); return t; }
+function qadaOwed(p){ const l = S.qada.ledgers[p]; return (l.est||0) + (l.log||0); }
+function qadaRemaining(p){ const l = S.qada.ledgers[p]; return Math.max(0, (l.est||0) + (l.log||0) - (l.cleared||0)); }
+function qadaClearedOf(p){ return Math.min(S.qada.ledgers[p].cleared||0, qadaOwed(p)); }
+function qadaTotalRemaining(){ return qadaTypes().reduce((s,p) => s + qadaRemaining(p), 0); }
+function qadaTotalOwed(){ return qadaTypes().reduce((s,p) => s + qadaOwed(p), 0); }
+function qadaTotalCleared(){ return qadaTypes().reduce((s,p) => s + qadaClearedOf(p), 0); }
+function qadaSource(p){ const l = S.qada.ledgers[p]; return (l.log>0 && l.est>0) ? 'both' : l.log>0 ? 'logged' : l.est>0 ? 'estimated' : null; }
+
+/* date helpers — UTC-safe on YYYY-MM-DD keys */
+function qDaysBetween(k1, k2){ return Math.round((Date.parse(k2+'T00:00:00Z') - Date.parse(k1+'T00:00:00Z'))/86400000); }
+function qCivilFromKey(k){ const p = String(k).split('-'); return { y:+p[0], m:+p[1], d:+p[2] }; }
+function qadaAddDaysKey(k, n){ if (!k) return null; const c = qCivilFromKey(k); const d = new Date(Date.UTC(c.y, c.m-1, c.d)); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); }
+function qadaFmtDate(k){ if (!k) return '—'; try{ const c = qCivilFromKey(k); return new Date(Date.UTC(c.y,c.m-1,c.d)).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric',timeZone:'UTC'}); }catch(e){ return k; } }
+
+/* ── ONGOING DETECTION: resolve every window that has closed, exactly once (idempotent) ── */
+function qadaReconcile(){
+  const q = qadaInit();
+  if (!q.on || !S.loc) return [];
+  const now = Date.now();
+  const todayK = keyForCivil(civilDateInTz(S.loc.tz, new Date()));
+  let c = qCivilFromKey(q.lastCheckedKey || q.startedKey || todayK);
+  const events = []; let guard = 0;
+  while (keyForCivil(c) <= todayK && guard++ < 4000){
+    const dk = keyForCivil(c);
+    let E, nextFajr;
+    try { E = engineFor(c).E; nextFajr = engineFor(addCivilDays(c,1)).E.fajr; }
+    catch(e){ if (dk === todayK) break; c = addCivilDays(c,1); continue; }
+    const ends = { Fajr:E.sunrise, Dhuhr:E.asr, Asr:E.maghrib, Maghrib:E.isha,
+                   Isha: q.settings.ishaEnds==='midnight' ? (E.maghrib + (nextFajr - E.maghrib)/2) : nextFajr };
+    const logs = S.logs[dk] || {}; const exempt = !!q.exempt[dk];
+    for (const p of QADA_PRAYERS){
+      const rk = dk + ':' + p;
+      if (q.resolved[rk]) continue;
+      const end = ends[p];
+      if (end == null || now < end) continue;        // still open (or undefined at polar) — decide later
+      if (exempt){ q.resolved[rk] = 1; continue; }
+      if (logs[p]){ q.resolved[rk] = 1; continue; }   // prayed on time (adā)
+      q.ledgers[p].log += 1; q.resolved[rk] = 1; q.seq += 1;
+      q.missedLog.push({ seq:q.seq, dk, p });
+      events.push({ p, dk });
+    }
+    if (dk === todayK) break;
+    c = addCivilDays(c, 1);
+  }
+  q.lastCheckedKey = todayK;
+  if (events.length) save();
+  return events;
+}
+
+/* ── LIFETIME BACKLOG CALCULATOR (spec §3.2) ── */
+function qadaComputeEstimate(inp){
+  if (!inp.bulughKey || !inp.startKey) return { ok:false, owedPerType:0, breakdown:'Enter both dates to see your estimate.' };
+  const D = qDaysBetween(inp.bulughKey, inp.startKey);
+  if (isNaN(D)) return { ok:false, owedPerType:0, breakdown:'Please enter valid dates.' };
+  if (D <= 0) return { ok:false, owedPerType:0, breakdown:'Your “started praying” date must come after the date prayer became obligatory.' };
+  const months = D / 30.44;
+  const cycle = inp.gender==='female' ? (inp.cycleDays||7) : 0;
+  const menstruationDays = inp.gender==='female' ? Math.round(cycle * months) : 0;
+  const nifasDays = inp.gender==='female' ? (inp.births||[]).reduce((a,b)=>a+Math.max(0,Math.min(40,+b||0)),0) : 0;
+  const exemptDays = menstruationDays + nifasDays;
+  const netObligated = Math.max(0, D - exemptDays);
+  let base = netObligated;
+  (inp.partials||[]).forEach(pr => {
+    const dP = qDaysBetween(pr.fromKey, pr.toKey);
+    if (!(dP > 0)) return;
+    const exemptShareP = exemptDays * (dP / D);
+    const obligatedP = Math.max(0, dP - exemptShareP);
+    base -= obligatedP * Math.max(0, Math.min(1, pr.frac||0));   // round ONCE at the end
+  });
+  const owedPerType = Math.max(0, Math.round(base));
+  const owedWitr = (S.qada && S.qada.settings.trackWitr) ? owedPerType : 0;
+  const yrs = (D/365.25).toFixed(1);
+  let bd = '<b>'+yrs+' yrs</b> ('+D.toLocaleString()+' days)';
+  if (menstruationDays) bd += ' − '+menstruationDays.toLocaleString()+' menstruation';
+  if (nifasDays) bd += ' − '+nifasDays.toLocaleString()+' nifās';
+  if ((inp.partials||[]).some(p=>qDaysBetween(p.fromKey,p.toKey)>0 && p.frac)) bd += ' − partial-practice credit';
+  bd += ' = <b>'+netObligated.toLocaleString()+'</b> obligated days → about <b class="qtot">'+owedPerType.toLocaleString()+'</b> of each prayer'+(owedWitr?' (+ Witr)':'')+'.';
+  return { ok:true, owedPerType, owedWitr, D, months, menstruationDays, nifasDays, exemptDays, netObligated, breakdown: bd };
+}
+
+/* ── ACTIONS ── */
+function qadaSealToday(){
+  const q = S.qada; if (!q || !S.loc) return;
+  try {
+    const c = civilDateInTz(S.loc.tz, new Date()), tk = keyForCivil(c), now = Date.now();
+    const E = engineFor(c).E, nf = engineFor(addCivilDays(c,1)).E.fajr;
+    const ends = { Fajr:E.sunrise, Dhuhr:E.asr, Asr:E.maghrib, Maghrib:E.isha, Isha: q.settings.ishaEnds==='midnight' ? (E.maghrib+(nf-E.maghrib)/2) : nf };
+    // The user has only just begun — don't retroactively judge today's already-passed prayers (they may
+    // well have prayed them, just weren't logging). Seal each closed window so it's never counted missed.
+    QADA_PRAYERS.forEach(p => { if (ends[p] != null && now >= ends[p]) q.resolved[tk+':'+p] = 1; });
+  } catch(e){}
+}
+function qadaBegin(){ const q = qadaInit(); q.on = true; const tk = keyForCivil(civilDateInTz(S.loc?S.loc.tz:'UTC', new Date())); q.startedKey = tk; q.lastCheckedKey = tk; qadaSealToday(); save(); qadaReconcile(); renderAppFeatures(); try{ toast('Qada tracking on','From now on a prayer whose time passes unlogged is gently noted — clear them at your own pace. Not a debt to fear, a sky to rekindle.','🕊️'); }catch(e){} }
+function qadaClear(type){
+  const q = S.qada; if (!q) return;
+  let p = type;
+  if (!p){ p = (q.plan.order !== 'none' && q.missedLog.length) ? q.missedLog[0].p : qadaTypes().find(t => qadaRemaining(t) > 0); }
+  if (!p || qadaRemaining(p) <= 0) return;
+  q.ledgers[p].cleared = Math.min(qadaOwed(p), (q.ledgers[p].cleared||0) + 1);
+  const idx = q.missedLog.findIndex(m => m.p === p); if (idx >= 0) q.missedLog.splice(idx, 1);
+  q.clearLog.push(Date.now()); if (q.clearLog.length > 400) q.clearLog = q.clearLog.slice(-400);
+  q._last = { act:'clear', p }; save(); qadaCelebrate(); renderAppFeatures();
+}
+function qadaLogMiss(type){ const q = S.qada; if (!q || !type) return; q.ledgers[type].log += 1; q.seq += 1; q.missedLog.push({ seq:q.seq, dk: todayKey()||'', p: type }); q._last = { act:'miss', p: type }; save(); renderAppFeatures(); }
+function qadaUndo(){ const q = S.qada; if (!q || !q._last) return; const a = q._last; if (a.act==='clear'){ q.ledgers[a.p].cleared = Math.max(0,(q.ledgers[a.p].cleared||0)-1); if (q.clearLog.length) q.clearLog.pop(); } else if (a.act==='miss' && q.ledgers[a.p].log>0){ q.ledgers[a.p].log -= 1; for (let i=q.missedLog.length-1;i>=0;i--){ if (q.missedLog[i].p===a.p){ q.missedLog.splice(i,1); break; } } } q._last = null; save(); renderAppFeatures(); }
+function qadaExemptToday(){ const q = S.qada; if (!q) return; const tk = todayKey(); if (!tk) return; q.exempt[tk] = q.exempt[tk] ? undefined : 1; if (!q.exempt[tk]) delete q.exempt[tk]; save(); qadaReconcile(); renderAppFeatures(); try{ toast(q.exempt[tk]?'Today marked exempt':'Exemption removed', q.exempt[tk]?'Menstruation days are dropped entirely — never counted, never owed.':'Today counts normally again.', '🌸'); }catch(e){} }
+function qadaToggleHidden(){ const q = qadaInit(); q.settings.hidden = !q.settings.hidden; save(); renderAppFeatures(); }
+function qadaToggleWitr(){ const q = qadaInit(); q.settings.trackWitr = !q.settings.trackWitr; save(); renderAppFeatures(); }
+
+/* smart pairing — welds backlog clearing onto the daily prayer log */
+let _qadaPairFor = null;
+function qadaMaybePair(prayerKey){ const q = S.qada; if (!q || !q.on || q.settings.hidden) return; if (QADA_PRAYERS.indexOf(prayerKey) < 0) return; _qadaPairFor = qadaRemaining(prayerKey) > 0 ? prayerKey : null; }
+function qadaPairClear(){ if (_qadaPairFor){ const p = _qadaPairFor; _qadaPairFor = null; qadaClear(p); } }
+function qadaPairDismiss(){ _qadaPairFor = null; try{ renderQada(); }catch(e){} }
+
+function qadaCelebrate(){ try{ buzz([15,30,15]); }catch(e){} if (qadaTotalRemaining() === 0 && qadaTotalOwed() > 0){ try{ chime(); }catch(e){} try{ toast('Every light rekindled','Your sky is whole again — سُبْحَانَ اللَّه. May Allah accept every one.','🌌', true); }catch(e){} } }
+
+/* make-up projection — a target pace + a realistic (adaptive) date */
+function qadaProjection(){
+  const rem = qadaTotalRemaining(); const pace = Math.max(1, (S.qada.plan.pace)||5);
+  const tk = todayKey();
+  const daysT = rem>0 ? Math.ceil(rem/pace) : 0;
+  const wk = Date.now() - 7*86400000;
+  const recent = (S.qada.clearLog||[]).filter(t => t >= wk).length;
+  const rate = recent/7;
+  const realKey = (rem>0 && rate>0) ? qadaAddDaysKey(tk, Math.ceil(rem/rate)) : null;
+  return { rem, pace, targetKey: rem>0 ? qadaAddDaysKey(tk, daysT) : tk, recent, realKey };
+}
+
+/* ── generic modal helpers (the app has no openModal/closeModal) ── */
+function openModal(id){ const m = document.getElementById(id); if (m) m.classList.add('open'); }
+function closeModal(id){ const m = document.getElementById(id); if (m) m.classList.remove('open'); }
+
+/* ── RENDER: the Qada card (Today tab) ── */
+function renderQada(){
+  const el = document.getElementById('qadaCard'); if (!el) return;
+  const q = qadaInit();
+  qadaReconcile();
+  if (!S.loc){ el.innerHTML=''; el.style.display='none'; return; }
+  el.style.display=''; el.className='glass';
+  if (q.settings.hidden){
+    el.innerHTML = '<div class="qhidden"><span class="small dim">Qada tracker hidden</span><button class="btn ghost" onclick="qadaToggleHidden()">Show</button></div>';
+    return;
+  }
+  if (!q.on){
+    el.innerHTML =
+      '<h2 class="sec">Qada — missed prayers</h2>'+
+      '<p class="small dim" style="line-height:1.7">Gently keep count of prayers whose time has passed, and make them up at your own pace. Not a debt to fear — <b style="color:var(--gold-ink)">a sky to rekindle</b>. Every one you clear adds light.</p>'+
+      '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">'+
+        '<button class="btn" onclick="qadaBegin()">Begin gently</button>'+
+        '<button class="btn ghost" onclick="qadaOpenCalc()">I have a lifetime backlog</button>'+
+      '</div>'+
+      '<p class="qreassure">"An estimate offered in good faith is accepted, in shā’ Allāh — do your best and leave the rest to His mercy."</p>';
+    return;
+  }
+  const rem = qadaTotalRemaining(), owed = qadaTotalOwed(), cleared = qadaTotalCleared();
+  const pct = owed>0 ? Math.round((cleared/owed)*100) : 0;
+  // contextual smart-pair banner
+  let pair = '';
+  if (_qadaPairFor && qadaRemaining(_qadaPairFor) > 0){
+    pair = '<div class="qpair"><div class="qglow">'+QADA_IC[_qadaPairFor]+'</div><div class="qtx"><b>You just prayed '+_qadaPairFor+' ✓</b>'+
+      '<span>Make up one Qada '+_qadaPairFor+' now? '+qadaRemaining(_qadaPairFor)+' left.</span></div>'+
+      '<button class="btn qpair-yes" onclick="qadaPairClear()">+1</button>'+
+      '<button class="qpair-x" onclick="qadaPairDismiss()" aria-label="Not now">✕</button></div>';
+  }
+  const ledgers = qadaTypes().map(p => {
+    const r = qadaRemaining(p), o = qadaOwed(p), c = qadaClearedOf(p), src = qadaSource(p);
+    const est = (src==='estimated'||src==='both');
+    return '<div class="qledger'+(r===0&&o>0?' done':'')+'">'+
+      '<div class="qic">'+QADA_IC[p]+'</div>'+
+      '<div class="qnm"><b>'+p+' <span class="ar" lang="ar" dir="rtl">'+QADA_AR[p]+'</span>'+(est?' <span class="qest">est</span>':'')+'</b>'+
+        '<span class="qmeta">'+(o>0?(c+' of '+o+' made up'):'none owed')+'</span></div>'+
+      '<div class="qadj"><button class="qbtn" onclick="qadaClear(\''+p+'\')"'+(r<=0?' disabled':'')+' aria-label="Made up one '+p+'">✓</button>'+
+        '<div class="qnum"><b>'+r+'</b><span>left</span></div>'+
+        '<button class="qbtn add" onclick="qadaLogMiss(\''+p+'\')" aria-label="Log a missed '+p+'">＋</button></div>'+
+    '</div>';
+  }).join('');
+  const fem = (S.gender === 'female');
+  const tkExempt = todayKey() && S.qada.exempt[todayKey()];
+  el.innerHTML =
+    '<h2 class="sec">Qada — missed prayers</h2>'+
+    '<p class="small dim">Every prayer you clear adds light to your sky. Not a debt to fear — a sky to rekindle.</p>'+
+    pair+
+    '<div class="qsummary">'+
+      '<div><b>'+rem.toLocaleString()+'</b><span>remaining</span></div>'+
+      '<div><b>'+cleared.toLocaleString()+'</b><span>made up</span></div>'+
+      '<div><b>'+pct+'%</b><span>rekindled</span></div>'+
+    '</div>'+
+    '<div class="qprog"><i style="width:'+pct+'%"></i></div>'+
+    '<div class="qledgers">'+ledgers+'</div>'+
+    (q._last ? '<button class="btn ghost qundo" onclick="qadaUndo()">↶ Undo last</button>' : '')+
+    '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">'+
+      '<button class="btn" onclick="qadaOpenCalc()">Lifetime Calculator</button>'+
+      '<button class="btn ghost" onclick="qadaOpenPlan()">Make-up Plan</button>'+
+      (fem ? '<button class="btn ghost'+(tkExempt?' on':'')+'" onclick="qadaExemptToday()" style="flex:none">🌸 '+(tkExempt?'Exempt today ✓':'Exempt today')+'</button>' : '')+
+    '</div>'+
+    '<p class="small dim" style="margin-top:10px">Scholars differ on qada’ details, order, and the wider ruling. This tool tracks whatever position <b>you</b> follow — it issues no rulings. <b style="color:var(--gold-ink)">Consult a qualified scholar.</b></p>'+
+    '<button class="btn ghost" onclick="qadaToggleHidden()" style="margin-top:6px;width:100%">Hide this section</button>';
+}
+
+/* ── Lifetime Calculator (modal wizard, live breakdown) ── */
+let _qadaCalcInp = null;
+function qadaOpenCalc(){
+  const q = qadaInit();
+  _qadaCalcInp = q.estimate ? JSON.parse(JSON.stringify(q.estimate)) : { bulughKey:'', startKey: todayKey()||'', gender: S.gender||'male', cycleDays:7, births:[], partials:[] };
+  if (!_qadaCalcInp.gender) _qadaCalcInp.gender = S.gender||'male';
+  renderQadaCalc(); openModal('qadaCalcModal');
+}
+function qadaCalcSet(field, val){ if (!_qadaCalcInp) return; if (field==='cycleDays') val = Math.max(3, Math.min(10, +val||7)); _qadaCalcInp[field] = val; renderQadaCalc(); }
+function qadaCalcGender(g){ if (!_qadaCalcInp) return; _qadaCalcInp.gender = g; renderQadaCalc(); }
+function qadaCalcAddBirth(){ if (!_qadaCalcInp) return; _qadaCalcInp.births.push(40); renderQadaCalc(); }
+function qadaCalcSetBirth(i, v){ if (!_qadaCalcInp) return; _qadaCalcInp.births[i] = Math.max(0, Math.min(40, +v||0)); renderQadaCalc(); }
+function qadaCalcDelBirth(i){ if (!_qadaCalcInp) return; _qadaCalcInp.births.splice(i,1); renderQadaCalc(); }
+function qadaCalcAddPartial(){ if (!_qadaCalcInp) return; _qadaCalcInp.partials.push({ fromKey:'', toKey:'', frac:0.5 }); renderQadaCalc(); }
+function qadaCalcSetPartial(i, f, v){ if (!_qadaCalcInp) return; if (f==='frac') v = Math.max(0, Math.min(1, +v)); _qadaCalcInp.partials[i][f] = v; renderQadaCalc(); }
+function qadaCalcDelPartial(i){ if (!_qadaCalcInp) return; _qadaCalcInp.partials.splice(i,1); renderQadaCalc(); }
+function renderQadaCalc(){
+  const sheet = document.getElementById('qadaCalcSheet'); if (!sheet || !_qadaCalcInp) return;
+  const I = _qadaCalcInp, res = qadaComputeEstimate(I), fem = I.gender==='female';
+  let h = '<h2 class="sec" style="margin-top:0">Lifetime backlog</h2>'+
+    '<p class="small dim" style="margin:-4px 0 14px">A good-faith <b>estimate</b> — clearly labelled — with the deductions fiqh requires.</p>'+
+    '<div class="qfield"><label>When did prayer become obligatory (bulūgh)?</label><input type="date" value="'+esc(I.bulughKey)+'" oninput="qadaCalcSet(\'bulughKey\', this.value)"></div>'+
+    '<div class="qfield"><label>When did you begin praying the five consistently?</label><input type="date" value="'+esc(I.startKey)+'" oninput="qadaCalcSet(\'startKey\', this.value)"></div>'+
+    '<div class="qfield"><label>Gender — unlocks the correct deductions</label><div class="qseg"><button class="'+(!fem?'on':'')+'" onclick="qadaCalcGender(\'male\')">Man</button><button class="'+(fem?'on':'')+'" onclick="qadaCalcGender(\'female\')">Woman</button></div></div>';
+  if (fem){
+    h += '<div class="qfield"><label>Average cycle length — dropped entirely, never made up</label><div class="qstep"><button onclick="qadaCalcSet(\'cycleDays\','+(( I.cycleDays||7)-1)+')">−</button><span><b>'+(I.cycleDays||7)+'</b> days/mo</span><button onclick="qadaCalcSet(\'cycleDays\','+((I.cycleDays||7)+1)+')">＋</button></div><span class="small dim">Typical 3–10; your best average is fine.</span></div>';
+    h += '<div class="qfield"><label>Postnatal (nifās) periods — up to 40 days each</label>';
+    (I.births||[]).forEach((b,i)=>{ h += '<div class="qbirth"><input type="number" min="0" max="40" value="'+(+b||0)+'" oninput="qadaCalcSetBirth('+i+', this.value)"> <span class="small dim">days</span> <button class="qx" onclick="qadaCalcDelBirth('+i+')">✕</button></div>'; });
+    h += '<button class="btn ghost qsm" onclick="qadaCalcAddBirth()">＋ Add a birth</button></div>';
+  }
+  h += '<div class="qfield"><label>Partial-practice stretches (optional)</label>';
+  (I.partials||[]).forEach((p,i)=>{ h += '<div class="qpartial"><input type="date" value="'+esc(p.fromKey)+'" oninput="qadaCalcSetPartial('+i+',\'fromKey\',this.value)"><span class="small dim">→</span><input type="date" value="'+esc(p.toKey)+'" oninput="qadaCalcSetPartial('+i+',\'toKey\',this.value)"><button class="qx" onclick="qadaCalcDelPartial('+i+')">✕</button><div class="qpfrac"><span class="small dim">prayed ~<b style="color:var(--gold-ink)">'+Math.round((p.frac||0)*100)+'%</b></span><input type="range" min="0" max="100" step="10" value="'+Math.round((p.frac||0)*100)+'" oninput="qadaCalcSetPartial('+i+',\'frac\', this.value/100)"></div></div>'; });
+  h += '<button class="btn ghost qsm" onclick="qadaCalcAddPartial()">＋ I prayed some during a stretch</button></div>';
+  h += '<div class="qbreakdown">'+res.breakdown+'</div>';
+  h += '<button class="btn qapply"'+(res.ok?'':' disabled')+' onclick="qadaCalcApply()">Apply estimate to my ledgers</button>';
+  h += '<p class="qreassure">"An estimate offered in good faith is accepted, in shā’ Allāh."</p>';
+  h += '<button class="btn ghost" style="width:100%" onclick="closeModal(\'qadaCalcModal\')">Close</button>';
+  sheet.innerHTML = h;
+}
+function qadaCalcApply(){
+  const q = qadaInit(); const res = qadaComputeEstimate(_qadaCalcInp); if (!res.ok) return;
+  q.on = true; if (!q.startedKey){ const tk = keyForCivil(civilDateInTz(S.loc?S.loc.tz:'UTC', new Date())); q.startedKey = tk; q.lastCheckedKey = tk; qadaSealToday(); }
+  QADA_PRAYERS.forEach(p => { q.ledgers[p].est = res.owedPerType; });   // replace estimate, PRESERVE log + cleared
+  q.ledgers.Witr.est = res.owedWitr;
+  q.estimate = JSON.parse(JSON.stringify(_qadaCalcInp));
+  save(); closeModal('qadaCalcModal'); qadaReconcile(); renderAppFeatures();
+  try{ toast('Estimate applied','~'+res.owedPerType.toLocaleString()+' of each prayer, in good faith. Clear them gently — every one adds light.','🕊️'); }catch(e){}
+}
+
+/* ── Make-up Plan (modal) ── */
+function qadaOpenPlan(){ renderQadaPlan(); openModal('qadaPlanModal'); }
+function qadaPlanPace(v){ const q = qadaInit(); q.plan.pace = Math.max(1, Math.min(50, +v||5)); save(); renderQadaPlan(); try{ renderQada(); }catch(e){} }
+function qadaPlanOrder(o){ const q = qadaInit(); q.plan.order = o; save(); renderQadaPlan(); }
+function renderQadaPlan(){
+  const sheet = document.getElementById('qadaPlanSheet'); if (!sheet) return; const q = qadaInit();
+  const pr = qadaProjection();
+  const notes = { strict:'Strict tartīb — make up the oldest owed first, in order. Some schools hold this where the number is small.', recommended:'Recommended — oldest owed first, but order isn’t obligatory. A gentle, widely-followed middle path.', none:'No fixed order — clear whichever you like. Held valid where the backlog is large. Follow your own scholar.' };
+  sheet.innerHTML =
+    '<h2 class="sec" style="margin-top:0">Make-up plan</h2>'+
+    '<p class="small dim" style="margin:-4px 0 14px">Set a gentle pace. Fall behind? The finish date quietly recomputes — we never scold.</p>'+
+    '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px"><span class="small muted">Pace: <b style="color:var(--gold-ink)">'+pr.pace+'</b> / day</span><span class="small muted">'+pr.rem.toLocaleString()+' to go</span></div>'+
+    '<input type="range" min="1" max="30" value="'+pr.pace+'" oninput="qadaPlanPace(this.value)" style="width:100%;accent-color:var(--teal)">'+
+    '<div class="qplan-dates">'+
+      '<div><span class="small dim">Target finish</span><b style="color:var(--teal-ink)">'+(pr.rem>0?qadaFmtDate(pr.targetKey):'Done 🎉')+'</b></div>'+
+      '<div><span class="small dim">Realistic (your last 7 days)</span><b style="color:var(--gold-ink)">'+(pr.realKey?qadaFmtDate(pr.realKey):(pr.rem>0?'—':'Done'))+'</b></div>'+
+    '</div>'+
+    (pr.recent>0?'<p class="small dim" style="margin-top:4px">You’ve cleared <b>'+pr.recent+'</b> in the last 7 days, mā shā’ Allāh.</p>':'')+
+    '<div style="margin-top:16px"><label class="small muted" style="font-weight:800">Order (tartīb) — your school, your call</label>'+
+      '<div class="qseg" style="margin-top:6px">'+
+        '<button class="'+(q.plan.order==='strict'?'on':'')+'" onclick="qadaPlanOrder(\'strict\')">Strict</button>'+
+        '<button class="'+(q.plan.order==='recommended'?'on':'')+'" onclick="qadaPlanOrder(\'recommended\')">Recommended</button>'+
+        '<button class="'+(q.plan.order==='none'?'on':'')+'" onclick="qadaPlanOrder(\'none\')">No order</button>'+
+      '</div><p class="small dim" style="margin-top:6px">'+notes[q.plan.order||'none']+'</p></div>'+
+    '<div class="qfield" style="margin-top:12px"><label class="qrowlbl"><input type="checkbox" '+(q.settings.trackWitr?'checked':'')+' onchange="qadaToggleWitr()"> Track Witr as well (Ḥanafī)</label></div>'+
+    '<button class="btn ghost" style="width:100%;margin-top:6px" onclick="closeModal(\'qadaPlanModal\')">Done</button>';
+}
+
 function renderAppFeatures(){
   if (!S.loc) return;
   // Today-page essentials — paint these immediately so the home screen appears instantly.
-  renderRamadan(); renderGarden(); renderStreak(); renderCatchup(); renderCommemToday(); markLogButtons();
+  renderRamadan(); renderGarden(); renderStreak(); renderCatchup(); renderCommemToday(); markLogButtons(); renderQada();
   // The other tabs (Learn / Dhikr / Journal / Calendar / Settings history) are off-screen at boot.
   // Defer building them one macrotask later so it never blocks Today's first paint. A plain
   // setTimeout (not requestIdleCallback) is used deliberately: rIC never fires while the page is
