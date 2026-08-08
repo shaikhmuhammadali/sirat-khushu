@@ -6105,7 +6105,7 @@ function renderThemes(){ const el=document.getElementById('themeRow'); if(!el) r
 function setTheme(name){ S.theme=name; save(); applyTheme(); }
 function assignSections(){
   const wrap = document.querySelector('.wrap'); if (!wrap) return;
-  const idMap = {topAyah:'today',nextstrip:'today',pgrid:'today',ramadanCard:'today',escalationBanner:'today',growthCard:'today',streakCard:'today',catchupCard:'today',xpCard:'today',questCard:'today',dailyCard:'dhikr',adhkarCard:'dhikr',duasCard:'dhikr',bookmarksCard:'learn',calendarCard:'calendar',quranCard:'learn',commemTodayCard:'today',eventsCard:'calendar',reciterCard:'settings',savedCard:'settings'};
+  const idMap = {topAyah:'today',nextstrip:'today',pgrid:'today',ramadanCard:'today',escalationBanner:'today',growthCard:'today',streakCard:'today',catchupCard:'today',xpCard:'today',questCard:'today',dailyCard:'dhikr',adhkarCard:'dhikr',duasCard:'dhikr',bookmarksCard:'learn',calendarCard:'calendar',quranCard:'learn',commemTodayCard:'calendar',eventsCard:'calendar',reciterCard:'settings',savedCard:'settings'};
   Array.from(wrap.children).forEach(el => {
     if (el.dataset && el.dataset.sec) return;
     let s = idMap[el.id] || null;
