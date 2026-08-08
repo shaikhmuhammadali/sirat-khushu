@@ -870,12 +870,12 @@
     -webkit-backdrop-filter:blur(26px) saturate(1.4);backdrop-filter:blur(26px) saturate(1.4);
     box-shadow:0 34px 84px rgba(0,0,0,.32),0 0 64px -18px rgba(217,180,91,.24),0 1px 0 rgba(255,255,255,.16) inset;
     transform:translateY(-42px) scale(.92);opacity:0;
-    transition:transform 1.2s cubic-bezier(.16,1,.3,1),opacity 1s ease}
+    transition:transform .5s cubic-bezier(.16,1,.3,1),opacity .4s ease}
   .toast::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,#fbeeb8,#c9a24b);box-shadow:0 0 12px rgba(217,180,91,.5);opacity:.7}
   .toast.show{transform:translateY(0) scale(1);opacity:1}
-  /* depart: a long, graceful fade — barely drifts, mostly just dissolves into a soft haze */
-  .toast.leaving{transform:translateY(-8px) scale(.985);opacity:0;filter:blur(10px);
-    transition:transform 2.3s cubic-bezier(.33,0,.35,1),opacity 2.2s cubic-bezier(.33,0,.35,1),filter 2.1s ease}
+  /* depart: quick, snappy fade so it never lingers */
+  .toast.leaving{transform:translateY(-10px) scale(.975);opacity:0;filter:blur(6px);
+    transition:transform .45s cubic-bezier(.4,0,.6,1),opacity .4s ease,filter .45s ease}
   .toast.show::after{content:"";position:absolute;top:0;left:-60%;width:55%;height:100%;transform:skewX(-18deg);pointer-events:none;
     background:linear-gradient(100deg,transparent,rgba(255,246,220,.15),transparent);animation:toastsheen 2.2s cubic-bezier(.3,.1,.3,1) .45s}
   @keyframes toastsheen{to{left:140%}}
@@ -4857,7 +4857,7 @@ function greetUser(){
 }
 
 /* premium toast notifications */
-// Toasts show ONE AT A TIME (queued) and linger longer. A new toast waits its turn behind the
+// Toasts show ONE AT A TIME (queued) and disappear quickly. A new toast waits its turn behind the
 // current one, then rises as the previous gracefully dissolves — never a stack of overlapping cards.
 let _toastQ = [];
 let _toastBusy = false;
@@ -4873,15 +4873,15 @@ function _toastPump(){
   const item = _toastQ.shift();
   const title = item[0], sub = item[1], icon = item[2], sound = item[3];
   const t = document.createElement('div'); t.className = 'toast';
-  const life = 6500;                                               // linger noticeably longer before departing
+  const life = 2600;                                               // short & snappy — shows briefly, then leaves (won't bore)
   t.innerHTML = '<span class="ic">' + (icon || '✦') + '</span><span class="tx"><b>' + esc(title) + '</b>' + (sub ? '<span>' + esc(sub) + '</span>' : '') + '</span><i class="tbar" style="animation-duration:' + life + 'ms"></i>';
   wrap.appendChild(t);
   requestAnimationFrame(() => t.classList.add('show'));
   if (sound && S.chime) chime();
   setTimeout(() => {
     t.classList.add('leaving'); t.classList.remove('show');
-    setTimeout(() => t.remove(), 2400);                            // full graceful fade, then remove from DOM
-    setTimeout(() => { _toastBusy = false; _toastPump(); }, 1400); // hand off to the next as this one dissolves
+    setTimeout(() => t.remove(), 600);                             // quick fade-out, then remove from DOM
+    setTimeout(() => { _toastBusy = false; _toastPump(); }, 420);  // hand the queue to the next fast, so a backlog clears quickly
   }, life);
 }
 
