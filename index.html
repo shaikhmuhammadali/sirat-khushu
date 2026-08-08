@@ -733,6 +733,7 @@
   .aform-sub .lk:hover{color:var(--au-gold)}
   /* floating-label field */
   .afield{position:relative;margin-bottom:12px;text-align:left}
+  .afhint{font-size:.72rem;color:var(--au-dim,#8a94a6);margin:-6px 2px 12px;letter-spacing:.01em}
   .afield>input{width:100%;padding:22px 15px 8px;border-radius:14px;border:1px solid var(--au-line);background:var(--au-glass);
     color:var(--au-hi);font-family:var(--font);font-size:1rem;outline:none;transition:border-color .2s,box-shadow .2s,background .2s}
   .afield.pw>input{padding-right:46px}
@@ -4331,9 +4332,21 @@ function afield(id,type,label,opts){
   const auto=opts.auto?' autocomplete="'+opts.auto+'"':'';
   const im=opts.inputmode?' inputmode="'+opts.inputmode+'"':'';
   const ml=opts.maxlength?' maxlength="'+opts.maxlength+'"':'';
+  const oninp=opts.oninput?' oninput="'+opts.oninput+'"':'';
   const onkd=opts.onenter?' onkeydown="if(event.key===\'Enter\')'+opts.onenter+'"':'';
   const sc=(type==='password')?'':' spellcheck="false"';
-  return '<div class="afield"><input id="'+id+'" type="'+type+'" placeholder=" "'+auto+im+ml+onkd+sc+'><label for="'+id+'">'+esc(label)+'</label></div>';
+  return '<div class="afield"><input id="'+id+'" type="'+type+'" placeholder=" "'+auto+im+ml+oninp+onkd+sc+'><label for="'+id+'">'+esc(label)+'</label></div>'
+    + (opts.hint?'<div class="afhint">'+esc(opts.hint)+'</div>':'');
+}
+// Live-restrict a username field to letters, numbers and underscore (3–20), preserving the caret.
+function usernameFilter(el){
+  if(!el) return;
+  const s=el.selectionStart||0, before=el.value;
+  const clean=before.replace(/[^A-Za-z0-9_]/g,'').slice(0,20);
+  if(clean===before) return;
+  const removedBeforeCaret = before.slice(0,s).length - before.slice(0,s).replace(/[^A-Za-z0-9_]/g,'').length;
+  el.value=clean;
+  try{ const p=Math.max(0,s-removedBeforeCaret); el.setSelectionRange(p,p); }catch(e){}
 }
 function apwfield(id,label,opts){
   opts=opts||{};
@@ -4427,7 +4440,7 @@ function showAuth(mode){
   } else if (mode === 'create'){
     html = fh('Create your account', `Already have one? <span class="lk" onclick="showAuth(S.account ? 'lock' : 'restore')">Log in</span>`)
       + afield('acName','text','Your name',{auto:'name',maxlength:40})
-      + afield('acUser','text','Choose a username',{auto:'username',maxlength:40})
+      + afield('acUser','text','Choose a username',{auto:'username',maxlength:20,oninput:'usernameFilter(this)',hint:'Letters, numbers and _ only · 3–20 characters'})
       + afield('acEmail','email','Email',{auto:'email'})
       + `<div class="wgender"><button type="button" class="gchip" id="gMale" onclick="setAcGender('male')">Brother</button><button type="button" class="gchip" id="gFemale" onclick="setAcGender('female')">Sister</button></div>`
       + apwfield('acPass','Create a password',{meter:true})
@@ -4504,14 +4517,14 @@ function showAuth(mode){
 }
 async function createAccount(){
   const err = document.getElementById('acErr');
-  const u = val('acUser').trim().replace(/\s+/g, ' ').slice(0, 40);
+  const u = val('acUser').replace(/[^A-Za-z0-9_]/g, '').slice(0, 20);
   const dn = val('acName').trim().replace(/\s+/g, ' ').slice(0, 40);
   const em = val('acEmail').trim();
   const pw = val('acPass'), pw2 = val('acPass2');
   const termsEl = document.getElementById('acTerms');
   if (termsEl && !termsEl.checked){ err.textContent = 'Please accept the Terms & Privacy to continue.'; return; }
   if (dn.length < 2){ err.textContent = 'Please enter your name (2+ characters).'; return; }
-  if (u.length < 2){ err.textContent = 'Please choose a username (2+ characters).'; return; }
+  if (!/^[A-Za-z0-9_]{3,20}$/.test(u)){ err.textContent = 'Username: letters, numbers and _ only (3–20 characters).'; return; }
   if (!em){ err.textContent = 'Please enter your email — it lets you recover your password later.'; return; }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){ err.textContent = 'That email doesn’t look right — please check it.'; return; }
   if (pw.length < 6){ err.textContent = 'Password should be at least 6 characters.'; return; }
