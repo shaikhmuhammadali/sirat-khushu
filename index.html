@@ -734,6 +734,7 @@
   /* floating-label field */
   .afield{position:relative;margin-bottom:12px;text-align:left}
   .afhint{font-size:.72rem;color:var(--au-dim,#8a94a6);margin:-6px 2px 12px;letter-spacing:.01em}
+  .afhint.ok{color:#4ec98b;font-weight:600} .afhint.bad{color:#e2685f;font-weight:600}
   .afield>input{width:100%;padding:22px 15px 8px;border-radius:14px;border:1px solid var(--au-line);background:var(--au-glass);
     color:var(--au-hi);font-family:var(--font);font-size:1rem;outline:none;transition:border-color .2s,box-shadow .2s,background .2s}
   .afield.pw>input{padding-right:46px}
@@ -4348,6 +4349,32 @@ function usernameFilter(el){
   el.value=clean;
   try{ const p=Math.max(0,s-removedBeforeCaret); el.setSelectionRange(p,p); }catch(e){}
 }
+// Live username availability (Instagram/Snapchat style): filter, then debounce-check the server.
+let _unameTimer=null, _unameTaken=false, _unameSeq=0;
+function unameSetStatus(txt, cls){ const st=document.getElementById('acUserStatus'); if(st){ st.textContent=txt; st.className='afhint'+(cls?(' '+cls):''); } }
+function unameLiveCheck(el){
+  usernameFilter(el);
+  const u = el.value; _unameTaken=false;
+  if(_unameTimer){ clearTimeout(_unameTimer); _unameTimer=null; }
+  if(!/^[A-Za-z0-9_]{3,20}$/.test(u)){ unameSetStatus('Letters, numbers and _ only · 3–20 characters',''); return; }
+  unameSetStatus('Checking availability…','');
+  const seq = ++_unameSeq;
+  _unameTimer = setTimeout(function(){ unameCheckNow(u, seq); }, 500);
+}
+async function unameCheckNow(u, seq){
+  const base = (typeof cloudUrl==='function') ? cloudUrl() : '';
+  if(!base || !navigator.onLine){ unameSetStatus('Letters, numbers and _ only · 3–20 characters',''); return; }
+  try{
+    const ctrl = new AbortController(); const to = setTimeout(function(){ try{ctrl.abort();}catch(e){} }, 7000);
+    const r = await fetch(base + '/auth/username-available?u=' + encodeURIComponent(u), { signal: ctrl.signal });
+    clearTimeout(to);
+    const j = await r.json();
+    const cur = document.getElementById('acUser');
+    if(seq !== _unameSeq || !cur || cur.value !== u) return;   // superseded by newer keystroke
+    if(j && j.available){ _unameTaken=false; unameSetStatus('✓ Username available','ok'); }
+    else { _unameTaken=true; unameSetStatus('✗ Username already taken','bad'); }
+  }catch(e){ if(seq===_unameSeq) unameSetStatus('Letters, numbers and _ only · 3–20 characters',''); }
+}
 function apwfield(id,label,opts){
   opts=opts||{};
   const auto=' autocomplete="'+(opts.auto||'new-password')+'"';
@@ -4440,7 +4467,8 @@ function showAuth(mode){
   } else if (mode === 'create'){
     html = fh('Create your account', `Already have one? <span class="lk" onclick="showAuth(S.account ? 'lock' : 'restore')">Log in</span>`)
       + afield('acName','text','Your name',{auto:'name',maxlength:40})
-      + afield('acUser','text','Choose a username',{auto:'username',maxlength:20,oninput:'usernameFilter(this)',hint:'Letters, numbers and _ only · 3–20 characters'})
+      + afield('acUser','text','Choose a username',{auto:'username',maxlength:20,oninput:'unameLiveCheck(this)'})
+      + '<div class="afhint" id="acUserStatus">Letters, numbers and _ only · 3–20 characters</div>'
       + afield('acEmail','email','Email',{auto:'email'})
       + `<div class="wgender"><button type="button" class="gchip" id="gMale" onclick="setAcGender('male')">Brother</button><button type="button" class="gchip" id="gFemale" onclick="setAcGender('female')">Sister</button></div>`
       + apwfield('acPass','Create a password',{meter:true})
@@ -4525,6 +4553,7 @@ async function createAccount(){
   if (termsEl && !termsEl.checked){ err.textContent = 'Please accept the Terms & Privacy to continue.'; return; }
   if (dn.length < 2){ err.textContent = 'Please enter your name (2+ characters).'; return; }
   if (!/^[A-Za-z0-9_]{3,20}$/.test(u)){ err.textContent = 'Username: letters, numbers and _ only (3–20 characters).'; return; }
+  if (_unameTaken){ err.textContent = 'That username is already taken — please choose another.'; return; }
   if (!em){ err.textContent = 'Please enter your email — it lets you recover your password later.'; return; }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){ err.textContent = 'That email doesn’t look right — please check it.'; return; }
   if (pw.length < 6){ err.textContent = 'Password should be at least 6 characters.'; return; }
