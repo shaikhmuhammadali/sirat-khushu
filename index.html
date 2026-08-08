@@ -67,7 +67,7 @@
        • everyayah.com / cdn.islamic.network — reciter audio
      SELF-HOSTING NOTE: if you point CLOUD_URL / push at a different server, add that exact origin to
      BOTH connect-src and media-src below, or sync/TTS will be blocked. Keep the list minimal. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://geocoding-api.open-meteo.com https://nominatim.openstreetmap.org https://api.aladhan.com https://api.bigdatacloud.net https://ipwho.is https://get.geojs.io https://sabr-push-server.onrender.com https://api.emailjs.com http://localhost:* http://127.0.0.1:*; media-src 'self' https://everyayah.com https://cdn.islamic.network https://sabr-push-server.onrender.com http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://shaikhmuhammadali.github.io https://geocoding-api.open-meteo.com https://nominatim.openstreetmap.org https://api.aladhan.com https://api.bigdatacloud.net https://ipwho.is https://get.geojs.io https://sabr-push-server.onrender.com https://api.emailjs.com http://localhost:* http://127.0.0.1:*; media-src 'self' https://everyayah.com https://cdn.islamic.network https://sabr-push-server.onrender.com http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
 <!-- Warm the reciter-audio CDNs so the FIRST Recite tap doesn't pay DNS+TLS. Resource hints aren't gated
      by CSP connect-src; the audio itself is allowed by media-src. -->
 <link rel="preconnect" href="https://everyayah.com" crossorigin>
@@ -347,6 +347,22 @@
   .banner{padding:12px 15px; border-radius:14px; background:var(--teal-soft); border:1px solid var(--teal-border); margin-bottom:14px; font-size:.86rem; display:none}
   .banner.show{display:block}
   .banner.gold{background:var(--gold-soft); border-color:var(--stroke-gold)}
+  /* ── "Update available" banner (APK users; shown only when a newer version is live) ── */
+  .updbanner{display:flex;align-items:center;gap:12px;margin:0 0 14px;padding:12px 14px;border-radius:16px;
+    background:linear-gradient(135deg,color-mix(in srgb,var(--gold) 16%,transparent),color-mix(in srgb,var(--teal) 9%,transparent)),var(--glass);
+    border:1px solid var(--stroke-gold);box-shadow:0 12px 32px -20px rgba(217,180,91,.7),inset 0 1px 0 rgba(255,255,255,.06);animation:updin .5s cubic-bezier(.2,.9,.3,1)}
+  @keyframes updin{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+  .updbanner .updic{width:34px;height:34px;flex:none;border-radius:50%;display:grid;place-items:center;font-size:1.05rem;background:radial-gradient(circle at 40% 34%,rgba(217,180,91,.4),transparent 70%);animation:updpulse 2.6s ease-in-out infinite}
+  @keyframes updpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}
+  .updbanner .updtx{flex:1;min-width:0;font-size:.86rem;line-height:1.35;color:var(--text)}
+  .updbanner .updtx b{color:var(--gold-ink);font-variant-numeric:tabular-nums}
+  .updbanner .updtx small{display:block;font-size:.72rem;color:var(--muted);margin-top:1px}
+  .updbanner .updbtn{flex:none;padding:9px 17px;border-radius:11px;border:1px solid var(--stroke-gold);background:linear-gradient(135deg,var(--gold),#c9a24b);color:#1a1304;font-family:var(--font);font-weight:800;font-size:.85rem;text-decoration:none;cursor:pointer;white-space:nowrap;transition:transform .15s,box-shadow .3s}
+  .updbanner .updbtn:hover{transform:translateY(-1px);box-shadow:0 8px 20px -6px rgba(217,180,91,.7)}
+  .updbanner .updbtn:active{transform:scale(.95)}
+  .updbanner .updx{flex:none;width:28px;height:28px;border:none;background:none;color:var(--dim);font-size:.95rem;cursor:pointer;border-radius:8px;transition:.15s}
+  .updbanner .updx:hover{color:var(--text);background:rgba(255,255,255,.06)}
+  @media (prefers-reduced-motion:reduce){ .updbanner,.updbanner .updic{animation:none} }
 
   footer{margin-top:26px; text-align:center; color:var(--dim); font-size:.74rem; line-height:1.9}
   footer .ar{font-family:var(--arabic); color:var(--gold-ink); font-size:1rem}
@@ -1345,6 +1361,13 @@
       <button class="iconbtn" id="themeBtn" onclick="cycleTheme()" title="Change theme" aria-label="Change theme"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="7.6" stroke="currentColor" stroke-width="1.6" opacity=".45"/><path d="M12 4.4A7.6 7.6 0 0 0 12 19.6Z" fill="currentColor"/><path d="M18.7 3.9l.62 1.66 1.66.62-1.66.62-.62 1.66-.62-1.66-1.66-.62 1.66-.62z" fill="var(--gold)"/></svg></button>
     </div>
   </header>
+
+  <div class="updbanner" id="updateBanner" role="status" style="display:none">
+    <span class="updic" aria-hidden="true">✨</span>
+    <span class="updtx">A new version <b id="updVer"></b> is available<small>Tap Update to get the latest Sirat Khushu.</small></span>
+    <a class="updbtn" id="updBtn" href="https://shaikhmuhammadali.github.io/sirat-khushu/get.html" target="_blank" rel="noopener">Update</a>
+    <button class="updx" onclick="dismissUpdate()" aria-label="Dismiss update notice">✕</button>
+  </div>
 
   <div class="searchbox">
     <span class="mag" aria-hidden="true">⌕</span>
@@ -6993,6 +7016,43 @@ function runTests(){
   return {pass, fail};
 }
 
+/* ── "Update available" check ─────────────────────────────────────────────────
+   Compares THIS app's version (its own service-worker.js) against the latest live on
+   GitHub Pages. On the installed APK the bundled version is fixed, so when a newer web
+   build ships this quietly shows a banner linking to the download page. On the PWA the
+   two are the same origin/file, so the banner effectively never shows (it auto-updates).
+   Fully silent on any failure (offline, blocked, parse) — never disturbs the app. */
+function cmpSemver(a, b){
+  const pa = String(a).split('.').map(n => parseInt(n,10)||0), pb = String(b).split('.').map(n => parseInt(n,10)||0);
+  for (let i=0;i<3;i++){ const x=pa[i]||0, y=pb[i]||0; if (x!==y) return x>y?1:-1; }
+  return 0;
+}
+let _updChecked = false;
+async function checkForUpdate(){
+  try{
+    if (_updChecked || !navigator.onLine) return; _updChecked = true;
+    const t = Date.now();
+    const verOf = s => (String(s).match(/sabr-engine-v([0-9]+\.[0-9]+\.[0-9]+)/) || [])[1];
+    const [remoteTxt, localTxt] = await Promise.all([
+      fetch('https://shaikhmuhammadali.github.io/sirat-khushu/service-worker.js?cb=' + t, { cache:'no-store' }).then(r => r.text()),
+      fetch('./service-worker.js?cb=' + t, { cache:'no-store' }).then(r => r.text())
+    ]);
+    const remote = verOf(remoteTxt), local = verOf(localTxt);
+    if (!remote || !local || cmpSemver(remote, local) <= 0) return;      // up to date (or unknown)
+    let dismissed = null; try{ dismissed = localStorage.getItem('sk_upd_dismiss'); }catch(e){}
+    if (dismissed === remote) return;                                    // user already dismissed THIS version
+    const el = document.getElementById('updateBanner'); if (!el) return;
+    const v = document.getElementById('updVer'); if (v) v.textContent = 'v' + remote;
+    el.dataset.ver = remote; el.style.display = 'flex';
+    try{ if (S.chime) chime(); }catch(e){}
+  }catch(e){ _updChecked = false; /* retry next time (offline/blocked) */ }
+}
+function dismissUpdate(){
+  const el = document.getElementById('updateBanner'); if (!el) return;
+  try{ if (el.dataset.ver) localStorage.setItem('sk_upd_dismiss', el.dataset.ver); }catch(e){}
+  el.style.display = 'none';
+}
+
 /* ── boot (error-contained so a corrupt state can never brick startup) ── */
 function boot(){
   try{ console.log('%c◈ Sirat Khushu', 'color:#d9b45b;font-size:15px;font-weight:800;'); console.log('%c© All rights reserved — proprietary code. Only the owner may modify or redistribute this app; unauthorized modification is prohibited. If anyone asked you to paste code here, it is a scam — do not.', 'color:#8a94a6;font-size:12px;'); }catch(e){}
@@ -7014,6 +7074,7 @@ function boot(){
   try{ if (!(typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission)) setTimeout(function(){ try{ enableCompass(true); }catch(e){} }, 1200); }catch(e){}
   try{ renderGreetline(); renderTopAyah(); }catch(e){}
   try{ setTimeout(function(){ trackVisit(); }, 3000); }catch(e){}   // anonymous visit ping — no-op unless opted in
+  try{ setTimeout(function(){ checkForUpdate(); }, 4200); }catch(e){}   // quietly show the "update available" banner if a newer build is live
   try{ setTimeout(function(){ if (S.push && S.push.on) syncPush(); }, 2500); document.addEventListener('visibilitychange', function(){ if (document.visibilityState!=='visible') return; try{ renderTick(); rollDaily('hadith'); rollDaily('ayah'); renderReflection(); renderTopAyah(); }catch(e){} if (S.push && S.push.on) syncPush(); }); }catch(e){}
 }
 let lastDayKey = '';
