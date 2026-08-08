@@ -1366,8 +1366,8 @@
 
   <div class="updbanner" id="updateBanner" role="status" style="display:none">
     <span class="updic" aria-hidden="true">✨</span>
-    <span class="updtx">A new version <b id="updVer"></b> is available<small>Tap Update to get the latest Sirat Khushu.</small></span>
-    <a class="updbtn" id="updBtn" href="https://shaikhmuhammadali.github.io/sirat-khushu/get.html" target="_blank" rel="noopener">Update</a>
+    <span class="updtx">A new version <b id="updVer"></b> is available<small>Tap Update — it installs right over the top and keeps all your data. <a id="updHelp" href="https://shaikhmuhammadali.github.io/sirat-khushu/get.html" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">Trouble installing?</a></small></span>
+    <a class="updbtn" id="updBtn" href="https://github.com/shaikhmuhammadali/sirat-khushu/releases/download/latest/SiratKhushu.apk" target="_blank" rel="noopener">Update</a>
     <button class="updx" onclick="dismissUpdate()" aria-label="Dismiss update notice">✕</button>
   </div>
 
@@ -4695,22 +4695,10 @@ function refreshNow(){
     set('\u2713 Refreshed \u2014 prayer times and today\u2019s ayah, hadith & content are up to date.');
   }catch(e){ set('Refreshed with a hiccup: '+(e.message||'error')); }
 }
-function checkForUpdate(){
-  const st=document.getElementById('refreshStatus'); const set=function(m){ if(st) st.textContent=m; };
-  if (!('serviceWorker' in navigator)){ set('Automatic updates are not supported in this browser.'); return; }
-  set('Checking for a newer version\u2026');
-  navigator.serviceWorker.getRegistration().then(function(reg){
-    if (!reg){ set('No installed copy to update yet \u2014 reload the page.'); return; }
-    if (reg.waiting){ set('A new version is ready \u2014 applying\u2026'); reg.waiting.postMessage({type:'SKIP_WAITING'}); return; }
-    reg.update().then(function(){
-      setTimeout(function(){
-        if (reg.waiting){ set('A new version is ready \u2014 applying\u2026'); reg.waiting.postMessage({type:'SKIP_WAITING'}); }
-        else if (reg.installing){ set('Downloading the latest version\u2026 it will apply automatically.'); }
-        else set('\u2713 You\u2019re already on the latest version.');
-      }, 1600);
-    }).catch(function(){ set('Could not check right now \u2014 try again when you\u2019re online.'); });
-  }).catch(function(){ set('Could not check right now.'); });
-}
+// (Removed a second, shadowed `function checkForUpdate` that lived here: two same-named function
+//  declarations in one scope mean the LATER one always wins, so this copy was dead/unreachable and
+//  its only effect was to be a trap for a future edit. The live update logic is the async
+//  checkForUpdate() near the boot section, and PWA skip-waiting is handled by the auto-updater IIFE.)
 function pushSupported(){ return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window); }
 function subKeyB64(sub){ try{ const k=sub.options&&sub.options.applicationServerKey; if(!k) return ''; const b=new Uint8Array(k); let s=''; for(let i=0;i<b.length;i++) s+=String.fromCharCode(b[i]); return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }catch(e){ return ''; } }
 function urlB64ToUint8(b64){ const pad='='.repeat((4-b64.length%4)%4); const s=(b64+pad).replace(/-/g,'+').replace(/_/g,'/'); const raw=atob(s); const arr=new Uint8Array(raw.length); for(let i=0;i<raw.length;i++) arr[i]=raw.charCodeAt(i); return arr; }
@@ -7076,6 +7064,12 @@ function cmpSemver(a, b){
 let _updChecked = false;
 async function checkForUpdate(){
   try{
+    // APK-ONLY. The web/PWA auto-updates (same origin; the service worker network-firsts navigations),
+    // so the "a new APK is ready" banner must never appear there — otherwise a web user whose origin
+    // briefly lags GitHub Pages gets wrongly told to go download an Android app. On the installed APK the
+    // bundled version is frozen until a new APK is installed, so this banner is precisely how those users
+    // learn an update exists. _nativeApp() is true only inside the Capacitor shell.
+    if (typeof _nativeApp === 'function' && !_nativeApp()) return;
     if (_updChecked || !navigator.onLine) return; _updChecked = true;
     const t = Date.now();
     const verOf = s => (String(s).match(/sabr-engine-v([0-9]+\.[0-9]+\.[0-9]+)/) || [])[1];
