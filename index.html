@@ -4368,10 +4368,14 @@ async function unameCheckNow(u, seq){
     const ctrl = new AbortController(); const to = setTimeout(function(){ try{ctrl.abort();}catch(e){} }, 7000);
     const r = await fetch(base + '/auth/username-available?u=' + encodeURIComponent(u), { signal: ctrl.signal });
     clearTimeout(to);
-    const j = await r.json();
+    const j = r.ok ? await r.json().catch(function(){ return null; }) : null;
     const cur = document.getElementById('acUser');
     if(seq !== _unameSeq || !cur || cur.value !== u) return;   // superseded by newer keystroke
-    if(j && j.available){ _unameTaken=false; unameSetStatus('✓ Username available','ok'); }
+    // Only trust an explicit boolean verdict. Anything else (endpoint not deployed → 404 {error},
+    // offline, malformed) degrades to the neutral hint and NEVER blocks — the app is local-first, so
+    // a missing cloud must not stop account creation or falsely cry "taken".
+    if(!j || typeof j.available !== 'boolean'){ _unameTaken=false; unameSetStatus('Letters, numbers and _ only · 3–20 characters',''); return; }
+    if(j.available){ _unameTaken=false; unameSetStatus('✓ Username available','ok'); }
     else { _unameTaken=true; unameSetStatus('✗ Username already taken','bad'); }
   }catch(e){ if(seq===_unameSeq) unameSetStatus('Letters, numbers and _ only · 3–20 characters',''); }
 }
