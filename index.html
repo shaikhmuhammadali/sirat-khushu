@@ -67,7 +67,7 @@
        • everyayah.com / cdn.islamic.network — reciter audio
      SELF-HOSTING NOTE: if you point CLOUD_URL / push at a different server, add that exact origin to
      BOTH connect-src and media-src below, or sync/TTS will be blocked. Keep the list minimal. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://shaikhmuhammadali.github.io https://geocoding-api.open-meteo.com https://nominatim.openstreetmap.org https://api.aladhan.com https://api.bigdatacloud.net https://ipwho.is https://get.geojs.io https://sabr-push-server.onrender.com https://api.emailjs.com http://localhost:* http://127.0.0.1:*; media-src 'self' https://everyayah.com https://cdn.islamic.network https://sabr-push-server.onrender.com http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://shaikhmuhammadali.github.io https://geocoding-api.open-meteo.com https://nominatim.openstreetmap.org https://api.aladhan.com https://api.bigdatacloud.net https://ipwho.is https://get.geojs.io https://sabr-push-server.onrender.com https://api.emailjs.com http://localhost:* http://127.0.0.1:*; media-src 'self' https://everyayah.com https://cdn.islamic.network https://sabr-push-server.onrender.com http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <!-- Warm the reciter-audio CDNs so the FIRST Recite tap doesn't pay DNS+TLS. Resource hints aren't gated
      by CSP connect-src; the audio itself is allowed by media-src. -->
 <link rel="preconnect" href="https://everyayah.com" crossorigin>
@@ -2837,7 +2837,12 @@ function renderStatic(){
   if (compassHeading == null){ document.getElementById('qNeedle').style.transform = `rotate(${b}deg)`; try{ document.getElementById('qKaaba').style.transform = `rotate(${b}deg)`; }catch(e){} }
   // Devices with no magnetometer (most desktops, some phones) can never rotate the needle live. Once that's
   // confirmed, stop offering a live compass that can only fail — point to the exact bearing shown above instead.
-  try{ if (localStorage.getItem('sk_nocompass') && compassHeading == null) _showStaticQibla(); }catch(e){}
+  // Honor a remembered "no compass" ONLY where the reading can't be re-requested. On iOS the live compass
+  // needs a user gesture (DeviceOrientationEvent.requestPermission) and is never auto-armed at boot, so a
+  // single slow cold-start once wrote sk_nocompass and then hid the button forever with no way back. Keep
+  // the "Enable live compass" button visible on permission-gated devices so a retry can clear the flag.
+  try{ if (localStorage.getItem('sk_nocompass') && compassHeading == null &&
+        !(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function')) _showStaticQibla(); }catch(e){}
   const km = distanceToMakkahKm(S.loc.lat, S.loc.lng);
   document.getElementById('qDist').textContent = Math.round(km).toLocaleString() + ' km · ' + Math.round(km*0.621371).toLocaleString() + ' mi';
   lastClock = ''; eventCacheKey = ''; cardsSig = '';
@@ -3309,7 +3314,7 @@ function renderDuas(){
     '<h2 class="sec">Duas for every moment</h2>' +
     '<input id="duaSearch" class="duasearch" type="search" inputmode="search" autocomplete="off" spellcheck="false" ' +
       'placeholder="How are you feeling? e.g. anxious · rain · thankful · travel" ' +
-      'oninput="setDuaQuery(this.value)" value="' + esc(duaQuery) + '">' +
+      'oninput="setDuaQuery(this.value)" value="' + esc(duaQuery).replace(/"/g, '&#34;') + '">' +
     '<div id="duaResults"></div>';
   renderDuaResults();
 }
@@ -4126,7 +4131,7 @@ const TOUR_STEPS = [
   {tab:'learn',    ic:'📖', t:'Learn · Qur’an, hadith & duas', b:'The complete Qur’an — all 114 surahs in the Uthmani Hafs script with translation and real reciters — plus a daily hadith and a library of authentic duas for every situation. All fully offline.'},
   {tab:'journal',  ic:'📝', t:'Journal', b:'Your private space for one honest line a day — a quiet muhasaba. It stays on your device, and travels safely inside your account when you’re signed in.'},
   {tab:'settings', ic:'📍', t:'Settings · location & prayer', b:'Set your location by search or GPS, choose your calculation method and Asr school, and fine-tune high-latitude rules. Set up reminders that arrive even when the app is closed.'},
-  {tab:'settings', ic:'🎨', t:'Settings · make it yours', b:'Pick from 12 themes, choose your favourite reciter, and manage your account: log out, turn cloud login on or off, and change your password. Forgot it? Recover by security question or an emailed code.'},
+  {tab:'settings', ic:'🎨', t:'Settings · make it yours', b:'Pick from 12 themes, choose your favourite reciter, and manage your account — log out, or turn cloud login on and off. With cloud login you can reset a forgotten password by email; and a saved backup file restores you on any device.'},
   {tab:'today',    ic:'🤲', t:'You’re all set', b:'That’s the whole app. Tap any tab along the bottom to begin. May Allah accept your prayers and make this a source of khushūʿ. You can replay this tour anytime from Settings.'},
 ];
 let _tourI = 0;
@@ -4443,8 +4448,8 @@ function astep(n, total){ total = total || 3; let h='<div class="astep" aria-lab
 function maskEmailC(em){ em=String(em||''); const at=em.indexOf('@'); if(at<1) return em; const u=em.slice(0,at), d=em.slice(at+1); const uu=u.length<=2?u[0]+'•':u[0]+'•••'+u[u.length-1]; return uu+'@'+d; }
 function rememberTog(on){ S.lockEachLaunch=!on; if(on) S.staySignedIn=true; try{ save(); }catch(e){} }
 function privacyNote(e){ if(e&&e.preventDefault) e.preventDefault();
-  try{ toast('Your privacy','Everything stays on this device. With cloud login it syncs only to the server you deploy — never sold or shared.','🔒'); }
-  catch(_){ try{ alert('Everything stays on your device. With cloud login it syncs only to the server you deploy. Your data is never sold or shared.'); }catch(__){} } }
+  try{ toast('Your privacy','Your prayers, journal and streaks stay on this device. Only anonymous, non-identifying usage & crash diagnostics are sent to the app’s own server to keep it reliable — never your name or content, never sold or shared. Optional cloud login syncs your data only to the server you deploy.','🔒'); }
+  catch(_){ try{ alert('Your prayers, journal and streaks stay on your device. Only anonymous, non-identifying usage and crash diagnostics are sent to the app’s own server to keep it reliable — never your name or content, never sold or shared. Optional cloud login syncs your data only to the server you deploy.'); }catch(__){} } }
 let _resendTimer=null;
 function startResend(){
   clearInterval(_resendTimer);
@@ -4786,8 +4791,12 @@ function buildPushSchedule(){
       const k=p[0], t=map[k];
       if (!t) return;
       if (S.notif && S.notif[k]===false) return;
-      if (t>now) out.push({ts:t, title:'\ud83d\udd4c '+k+' \u00b7 '+p[1], body:k+' has entered in '+place+' \u2014 time to pray.', tag:'p'+k+d});
-      if (S.notifPre>0){ const pre=t-S.notifPre*60000; if (pre>now) out.push({ts:pre, title:'\u23f3 '+k+' in '+S.notifPre+' min', body:'Wind down and prepare for '+k+'.', tag:'r'+k+d}); }
+      // Honor the master "Prayer reminders" switch here too \u2014 the background push schedule used to keep
+      // firing prayer + heads-up pushes after the user turned it off (only the in-app path checked it).
+      if (S.remind!==false){
+        if (t>now) out.push({ts:t, title:'\ud83d\udd4c '+k+' \u00b7 '+p[1], body:k+' has entered in '+place+' \u2014 time to pray.', tag:'p'+k+d});
+        if (S.notifPre>0){ const pre=t-S.notifPre*60000; if (pre>now) out.push({ts:pre, title:'\u23f3 '+k+' in '+S.notifPre+' min', body:'Wind down and prepare for '+k+'.', tag:'r'+k+d}); }
+      }
     });
     if (E.fajr){ const at=E.fajr+40*60000; if (at>now && typeof AYAHS!=='undefined'){ const a=AYAHS[d%AYAHS.length]; out.push({ts:at, title:'\ud83d\udcd6 Ayah of the day \u00b7 '+a.ref, body:String(a.tr).replace(/^"|"$/g,'').slice(0,200), tag:'ay'+d}); } }
     if (E.asr){ const at=E.asr+30*60000; if (at>now && typeof HADITH!=='undefined' && HADITH.length){ const hi=((typeof todaysHadithIndex==='function'?todaysHadithIndex():0)+d)%HADITH.length; const hd=HADITH[hi]; if (hd) out.push({ts:at, title:'\ud83d\udcdc Hadith of the day', body:String(hd.english).slice(0,200), tag:'hd'+d}); } }
@@ -5158,10 +5167,34 @@ function logForDate(dk, key){
     // Never backfill a FUTURE prayer: a prayer today whose adhan hasn't come yet stays closed.
     if (isToday && currentPrayerKey() !== key) return;   // TODAY: only the present running prayer — never today's earlier prayers, never a future one
     const logs = S.logs[dk] || (S.logs[dk] = {});
-    if (logs[key]){ delete logs[key]; if (!Object.keys(logs).length) delete S.logs[dk]; }
+    const removing = !!logs[key];
+    if (removing){ delete logs[key]; if (!Object.keys(logs).length) delete S.logs[dk]; }
     else { logs[key] = { t: Date.now(), backfill: (dk !== todayKey()) }; }
+    // Keep the Qada ledger in sync with a PAST-day catch-up: without this, backfilling yesterday's Fajr
+    // leaves it counted as BOTH prayed (a garden star) AND still owed (a qada) — the two tiers never
+    // reconciled. Today's current window is still open (reconcile never counted it), so only past days apply.
+    qadaSyncBackfill(dk, key, !removing);
     save(); renderAppFeatures();
     try{ if (navigator.vibrate) navigator.vibrate(25); }catch(e){}
+  }catch(e){}
+}
+// Reconcile the Qada ledger when a CLOSED past-day prayer is caught-up (logged) or un-logged, using
+// missedLog as the per-window source of truth so counts never double. No-op for today (window still open),
+// non-fard prayers, exempt days, or when Qada tracking is off.
+function qadaSyncBackfill(dk, key, logged){
+  try{
+    const q = S.qada;
+    if (!q || !q.on || dk === todayKey() || QADA_PRAYERS.indexOf(key) < 0) return;
+    if (q.exempt && q.exempt[dk]) return;
+    if (!q.ledgers || !q.ledgers[key]) return;
+    const rk = dk + ':' + key;
+    const mi = q.missedLog.findIndex(m => m.dk === dk && m.p === key);
+    if (logged){
+      if (mi >= 0){ q.missedLog.splice(mi, 1); if (q.ledgers[key].log > 0) q.ledgers[key].log -= 1; }
+      q.resolved[rk] = 1;                                       // now prayed (adā) → no longer owed
+    } else {
+      if (mi < 0){ q.seq += 1; q.missedLog.push({ seq:q.seq, dk, p:key }); q.ledgers[key].log += 1; q.resolved[rk] = 1; }  // un-logged a closed day → owed again, once
+    }
   }catch(e){}
 }
 function markLogButtons(){ if (cardRefs) cardRefs.forEach(r => { if (r.logBtn) r.logBtn.classList.toggle('done', !!todayLogs()[r.w.k]); }); }
@@ -5899,7 +5932,26 @@ function qadaClear(type){
 }
 function qadaLogMiss(type){ const q = S.qada; if (!q || !type) return; q.ledgers[type].log += 1; q.seq += 1; q.missedLog.push({ seq:q.seq, dk: todayKey()||'', p: type }); q._last = { act:'miss', p: type }; save(); renderAppFeatures(); }
 function qadaUndo(){ const q = S.qada; if (!q || !q._last) return; const a = q._last; if (a.act==='clear'){ q.ledgers[a.p].cleared = Math.max(0,(q.ledgers[a.p].cleared||0)-1); if (q.clearLog.length) q.clearLog.pop(); } else if (a.act==='miss' && q.ledgers[a.p].log>0){ q.ledgers[a.p].log -= 1; for (let i=q.missedLog.length-1;i>=0;i--){ if (q.missedLog[i].p===a.p){ q.missedLog.splice(i,1); break; } } } q._last = null; save(); renderAppFeatures(); }
-function qadaExemptToday(){ const q = S.qada; if (!q) return; const tk = todayKey(); if (!tk) return; q.exempt[tk] = q.exempt[tk] ? undefined : 1; if (!q.exempt[tk]) delete q.exempt[tk]; save(); qadaReconcile(); renderAppFeatures(); try{ toast(q.exempt[tk]?'Today marked exempt':'Exemption removed', q.exempt[tk]?'Menstruation days are dropped entirely — never counted, never owed.':'Today counts normally again.', '🌸'); }catch(e){} }
+function qadaExemptToday(){
+  const q = S.qada; if (!q) return; const tk = todayKey(); if (!tk) return;
+  const turningOn = !q.exempt[tk];
+  if (turningOn){
+    q.exempt[tk] = 1;
+    // Retroactively drop any of today's windows reconcile ALREADY auto-counted as missed earlier today —
+    // otherwise "never counted, never owed" is a lie (reconcile's exempt branch can't reach a window it
+    // already resolved-as-miss). missedLog targets only counted misses, never a prayed-on-time window.
+    QADA_PRAYERS.forEach(p => {
+      const mi = q.missedLog.findIndex(m => m.dk === tk && m.p === p);
+      if (mi >= 0){ q.missedLog.splice(mi, 1); if (q.ledgers[p] && q.ledgers[p].log > 0) q.ledgers[p].log -= 1; }
+      q.resolved[tk + ':' + p] = 1;                      // resolved by exemption
+    });
+  } else {
+    delete q.exempt[tk];
+    QADA_PRAYERS.forEach(p => { delete q.resolved[tk + ':' + p]; });   // reconcile re-judges today (it always re-processes todayK)
+  }
+  save(); qadaReconcile(); renderAppFeatures();
+  try{ toast(q.exempt[tk]?'Today marked exempt':'Exemption removed', q.exempt[tk]?'Menstruation days are dropped entirely — never counted, never owed.':'Today counts normally again.', '🌸'); }catch(e){}
+}
 function qadaToggleHidden(){ const q = qadaInit(); q.settings.hidden = !q.settings.hidden; save(); renderAppFeatures(); }
 function qadaToggleWitr(){ const q = qadaInit(); q.settings.trackWitr = !q.settings.trackWitr; save(); renderAppFeatures(); }
 
@@ -6080,8 +6132,11 @@ function renderQadaPlan(){
 
 function renderAppFeatures(){
   if (!S.loc) return;
-  // Today-page essentials — paint these immediately so the home screen appears instantly.
-  renderRamadan(); renderGarden(); renderStreak(); renderCatchup(); renderCommemToday(); markLogButtons(); renderQada();
+  // Today-page essentials — paint these immediately so the home screen appears instantly. Each is
+  // isolated so one card throwing on odd data can never abort the render and bubble up to boot()'s
+  // recovery catch (which used to wipe the saved location as a side effect).
+  try{ renderRamadan(); }catch(e){} try{ renderGarden(); }catch(e){} try{ renderStreak(); }catch(e){}
+  try{ renderCatchup(); }catch(e){} try{ renderCommemToday(); }catch(e){} try{ markLogButtons(); }catch(e){} try{ renderQada(); }catch(e){}
   // The other tabs (Learn / Dhikr / Journal / Calendar / Settings history) are off-screen at boot.
   // Defer building them one macrotask later so it never blocks Today's first paint. A plain
   // setTimeout (not requestIdleCallback) is used deliberately: rIC never fires while the page is
@@ -6392,10 +6447,15 @@ async function cloudSignup(pw, recovery){
       // device's username would target the wrong account, so don't. Report it honestly.
       try{ toast('Email already registered', 'That email is linked to a different account. Log in to that account, or use a different email — your data stays safe on this device.', '⚠️'); }catch(_){}
     } else if (st === 409){
-      // The name already exists on the server. If this password opens it, it's the same person —
-      // restore THEIR data onto this device instead of overwriting it with this fresh signup.
+      // The name already exists on the server. If this password opens it, it's the same person — but
+      // restoring the cloud copy REPLACES whatever is on THIS device, so guard the overwrite with a
+      // confirm (mirroring cloudLogin) and only claim "restored" after the user agrees.
       try{
         const j = await cloudFetch('/auth/login', {username:S.account.username, password:pw}, null, 30000);
+        if (localHasData() && !confirm('An account named “' + (S.account.username || '') + '” already exists in the cloud.\n\nLog in and REPLACE the data on THIS device with the cloud copy? Any unsynced changes here will be lost.')){
+          try{ toast('Kept this device’s data', 'Nothing was replaced. Log in later to pull the cloud copy, or choose another name to sync this device.', 'ℹ️'); }catch(__){}
+          return;
+        }
         try{ toast('Welcome back ✓', 'We found your account and restored your data on this device.', '☁️'); }catch(_){}
         await applyCloudRestore(j, pw, cloudUrl());
         return;
@@ -6666,12 +6726,18 @@ function closeResults(){
 function highlight(){
   const rows = document.querySelectorAll('#results .r');
   rows.forEach((el, i) => { el.classList.toggle('hi', i === activeIdx); el.setAttribute('aria-selected', i === activeIdx); });
-  if (activeIdx >= 0){ qInput.setAttribute('aria-activedescendant', 'opt-' + activeIdx); rows[activeIdx].scrollIntoView({block:'nearest'}); }
+  const t = rows[activeIdx];
+  if (activeIdx >= 0 && t){ qInput.setAttribute('aria-activedescendant', 'opt-' + activeIdx); t.scrollIntoView({block:'nearest'}); }
+  else qInput.removeAttribute('aria-activedescendant');   // never point at a row that isn't there
 }
 function showMsg(msg){
   const r = document.getElementById('results');
   r.innerHTML = `<div class="msg">${esc(msg)}</div>`;
   r.classList.add('open'); qInput.setAttribute('aria-expanded', 'true');
+  // While a "Searching…"/message state is shown there are NO selectable rows. Clear the selection so a
+  // keypress can neither deref a missing row (TypeError) nor let Enter pick a STALE city from the prior
+  // search — the keydown guard (`!searchResults.length`) now early-returns until fresh results arrive.
+  searchResults = []; activeIdx = -1; qInput.removeAttribute('aria-activedescendant');
 }
 async function doSearch(q){
   const my = ++searchSeq;
@@ -6902,6 +6968,10 @@ function enableCompass(auto){
   // Skip only when we're genuinely already live (locked onto true north) or this is an auto re-arm;
   // a manual tap may always (re)start, so the button is never a dead no-op after the auto-start.
   if (window._compassOn && (auto || window._compassGotAbs)) return; window._compassOn = true;
+  // Remove any handler bound by a previous enableCompass() call before binding a new one — otherwise a
+  // relative-only device (which never sets _compassGotAbs) stacks a listener on every manual re-tap; they
+  // leak for the page's life and each re-applies the low-pass to the same reading, compounding jitter.
+  if (window._compassHandler){ try{ ['deviceorientation','deviceorientationabsolute'].forEach(function(ev){ window.removeEventListener(ev, window._compassHandler, true); }); }catch(e){} }
   _csx = _csy = null; window._compassGotEvent = false; window._compassGotAbs = false;
   const btn0 = document.getElementById('qCompassBtn'), note0 = document.getElementById('qCompassNote');
   const noSensor = (msg, hard) => {
@@ -6953,6 +7023,7 @@ function enableCompass(auto){
       : 'Turn gently until the gold needle points straight up (▲).' + (acc ? '' : ' If it drifts, trace a slow figure-8 to calibrate.');
     const btn = document.getElementById('qCompassBtn'); if (btn) btn.textContent = 'Live compass active';
   };
+  window._compassHandler = handler;   // remember the live handler so the next call can unbind exactly it
   const NOSENS = 'This device has no compass sensor, so the needle can’t turn as you move — but the dial is North-up and the gold needle already points exactly to the Kaaba. Face North, then turn toward the needle. May Allah make it easy and accept your prayer.';
   const listen = (evt) => {
     window.addEventListener(evt, handler, true);
@@ -7100,7 +7171,11 @@ function boot(){
   try{ initSettings(); renderStatic(); }
   catch(e){
     console.warn('Sirat Khushu: recovering from bad state —', e);
-    S.loc = null; save(); try{ initSettings(); renderLoc(); }catch(_){}
+    // Only DROP the saved location if its timezone is actually invalid (the one thing that can make
+    // Intl throw during render). For any other render failure, keep the user's city — nuking it here
+    // used to silently replace a hand-typed place with an IP guess on an unrelated card bug.
+    if (!(S.loc && isValidTz(S.loc.tz))){ S.loc = null; save(); }
+    try{ initSettings(); renderLoc(); }catch(_){}
   }
   if (!navigator.onLine && S.loc) document.getElementById('offlineBanner').classList.add('show');
   window.addEventListener('online', () => document.getElementById('offlineBanner').classList.remove('show'));
