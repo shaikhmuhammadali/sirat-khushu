@@ -204,7 +204,9 @@
     position:absolute; right:8px; top:50%; transform:translateY(-50%);
     border:1px solid var(--stroke-gold); background:var(--gold-soft); color:var(--gold-ink); border-radius:12px;
     padding:9px 14px; font-family:var(--font); font-weight:800; font-size:.74rem; cursor:pointer; letter-spacing:.06em;
+    transition:transform .12s ease;
   }
+  .searchbox .gps:active{transform:translateY(-50%) scale(.94)}   /* press feedback that preserves vertical centering */
   .results{
     position:absolute; top:calc(100% + 8px); left:0; right:0; z-index:40;
     background:var(--bg2); border:1px solid var(--stroke); border-radius:18px; overflow:hidden;
@@ -337,7 +339,8 @@
   .srow .lbl b{display:block; font-size:.9rem} .srow .lbl span{font-size:.74rem; color:var(--dim)}
   select,input[type=number]{background:var(--bg2); border:1px solid var(--stroke); border-radius:12px; color:var(--text); font-family:var(--font); font-size:.84rem; padding:9px 12px; min-width:150px}
   .switch{position:relative; width:48px; height:27px; flex:none}
-  .switch input{position:absolute; inset:0; width:100%; height:100%; opacity:0; margin:0; cursor:pointer; z-index:2}
+  .switch input{position:absolute; inset:-9px; width:auto; height:auto; opacity:0; margin:0; cursor:pointer; z-index:2}   /* slider visual unchanged; ~45px tall touch target */
+  @media(max-width:420px){.srow.stack{flex-direction:column;align-items:stretch}.srow.stack select{width:100%;min-width:0}}   /* long calc-method names no longer clip */
   .switch .sl{position:absolute; inset:0; background:var(--glass2); border:1px solid var(--stroke); border-radius:999px; transition:.2s; pointer-events:none}
   .switch .sl::after{content:""; position:absolute; top:3px; left:3px; width:19px; height:19px; border-radius:50%; background:var(--dim); transition:.2s}
   .switch input:checked + .sl{background:var(--gold-soft); border-color:var(--gold)}
@@ -345,7 +348,7 @@
   .switch input:focus-visible + .sl{outline:2px solid var(--gold-ink); outline-offset:2px}
 
   .banner{padding:12px 15px; border-radius:14px; background:var(--teal-soft); border:1px solid var(--teal-border); margin-bottom:14px; font-size:.86rem; display:none}
-  .banner.show{display:block}
+  .banner.show{display:block;animation:updin .4s ease}
   .banner.gold{background:var(--gold-soft); border-color:var(--stroke-gold)}
   /* ── "Update available" banner (APK users; shown only when a newer version is live) ── */
   .updbanner{display:flex;align-items:center;gap:12px;margin:0 0 14px;padding:12px 14px;border-radius:16px;
@@ -409,7 +412,9 @@
   /* ── Fast mode: maximum speed on low-end devices ── */
   @media (prefers-reduced-motion: reduce){*{transition:none !important; animation:none !important}}
   /* ── app features ── */
-  .logbtn{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--stroke);background:transparent;cursor:pointer;display:grid;place-items:center;flex:none;transition:all .2s}
+  .logbtn{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--stroke);background:transparent;cursor:pointer;display:grid;place-items:center;flex:none;position:relative;transition:all .2s}
+  .logbtn::after{content:"";position:absolute;inset:-6px}   /* 34px visual circle, ~46px touch target */
+  .logbtn:not(.locked):active{transform:scale(.92)}          /* press feedback, matching the app's small controls */
   .logbtn svg{width:16px;height:16px;stroke:var(--dim);fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
   .logbtn.done{background:var(--gold-soft);border-color:var(--gold)}
   .logbtn.done svg{stroke:var(--gold-ink)}
@@ -484,7 +489,8 @@
   .jh-text{margin-top:5px;color:var(--text);font-size:.9rem;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
   .jh-nomood{color:var(--dim);font-style:italic}
   .jh-empty{color:var(--dim);font-size:.86rem;padding:8px 2px;line-height:1.5}
-  .jh-del{flex:none;background:none;border:none;color:var(--dim);cursor:pointer;padding:5px;border-radius:8px;line-height:0}
+  .jh-del{flex:none;background:none;border:none;color:var(--dim);cursor:pointer;padding:10px;border-radius:8px;line-height:0;position:relative}
+  .jh-del::after{content:"";position:absolute;inset:-5px}   /* ~45px touch target for a destructive action */
   .jh-del:hover{color:var(--rose)}
   .jh-del svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   .jh-more{display:inline-block;margin-top:12px;background:none;border:none;color:var(--gold-ink);font-family:var(--font);font-size:.8rem;font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
@@ -525,7 +531,7 @@
   .pophadith .tr{color:var(--muted);font-size:.94rem;margin-top:10px}
   @keyframes pop{from{transform:scale(0) rotate(-25deg)}to{transform:scale(1) rotate(0)}}
   @keyframes fade{from{opacity:0}to{opacity:1}}
-  .focus{position:fixed;inset:0;z-index:130;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px;background:radial-gradient(100% 100% at 50% 0%,#101a28 0%,#05080d 80%)}
+  .focus{position:fixed;inset:0;z-index:130;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:max(32px,env(safe-area-inset-top)) 32px max(32px,env(safe-area-inset-bottom));background:radial-gradient(100% 100% at 50% 0%,#101a28 0%,#05080d 80%)}
   .focus.open{display:flex;animation:fade .4s ease}
   .focus .flabel{font-size:.7rem;letter-spacing:.4em;text-transform:uppercase;color:var(--teal-ink);font-weight:800}
   .focus .fname{font-size:2.4rem;font-weight:800;margin:6px 0;color:#ecebe4}
@@ -535,7 +541,7 @@
   .breath{width:120px;height:120px;border-radius:50%;margin:24px auto;background:radial-gradient(circle,rgba(90,211,198,.18),rgba(90,211,198,.03) 70%);border:1px solid rgba(90,211,198,.3);animation:breathe 8s ease-in-out infinite}
   @keyframes breathe{0%,100%{transform:scale(.82);opacity:.7}50%{transform:scale(1.12);opacity:1}}
   /* ── prayer lock: full-screen, reverent, azan + ayah + focus timer ── */
-  .plock{position:fixed;inset:0;z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;justify-content:safe center;text-align:center;padding:26px;overflow-y:auto;background:radial-gradient(120% 100% at 50% 0%,#1a1305 0%,#0a0805 58%,#04030a 100%)}
+  .plock{position:fixed;inset:0;z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;justify-content:safe center;text-align:center;padding:max(26px,env(safe-area-inset-top)) 26px max(26px,env(safe-area-inset-bottom));overflow-y:auto;background:radial-gradient(120% 100% at 50% 0%,#1a1305 0%,#0a0805 58%,#04030a 100%)}
   /* the lock is always dark, so pin gold/dim/border to their light values regardless of the active theme */
   .plock{--gold-ink:#e6c169;--dim:#9aa2af;--stroke-gold:rgba(217,180,91,.3)}
   .plock.open{display:flex;animation:fade .5s ease}
@@ -1085,8 +1091,8 @@
   .pillbtn .pbi{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
   .pb-bm.on{background:linear-gradient(135deg,var(--gold),#b8933f);color:#171204;border-color:var(--gold)}
   .pb-bm.on .pbi{fill:currentColor}
-  .pprompt{position:fixed;inset:0;z-index:120;display:none;align-items:center;justify-content:center;padding:24px;background:color-mix(in srgb,var(--bg) 93%,#000);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
-  .pprompt.open{display:flex}
+  .pprompt{position:fixed;inset:0;z-index:120;display:none;align-items:center;justify-content:center;padding:max(24px,env(safe-area-inset-top)) 24px max(24px,env(safe-area-inset-bottom));background:color-mix(in srgb,var(--bg) 93%,#000);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
+  .pprompt.open{display:flex;animation:fade .3s ease}
   .pp-card{max-width:440px;width:100%;text-align:center}
   .pp-label{font-size:.68rem;font-weight:800;letter-spacing:.24em;text-transform:uppercase;color:var(--gold-ink)}
   .pp-name{font-family:var(--serif,var(--font));font-size:2.6rem;font-weight:800;color:var(--ink);margin-top:6px;line-height:1.1}
@@ -1359,7 +1365,7 @@
   <header>
     <div class="brand"><span class="brand-mark" id="brandMark" aria-hidden="true"></span><span class="ar">صراط</span></div>
     <div class="row">
-      <button class="iconbtn" id="notifBtn" onclick="toggleMasterNotif()" title="Prayer notifications" aria-label="Toggle prayer notifications">🔔</button>
+      <button class="iconbtn" id="notifBtn" onclick="toggleMasterNotif()" title="Prayer notifications" aria-label="Toggle prayer notifications"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" aria-hidden="true"><path d="M18 8.4a6 6 0 1 0-12 0c0 6-2.4 7.2-2.4 7.2h16.8S18 14.4 18 8.4Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.7 19.2a2 2 0 0 1-3.4 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <button class="iconbtn" id="themeBtn" onclick="cycleTheme()" title="Change theme" aria-label="Change theme"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="7.6" stroke="currentColor" stroke-width="1.6" opacity=".45"/><path d="M12 4.4A7.6 7.6 0 0 0 12 19.6Z" fill="currentColor"/><path d="M18.7 3.9l.62 1.66 1.66.62-1.66.62-.62 1.66-.62-1.66-1.66-.62 1.66-.62z" fill="var(--gold)"/></svg></button>
     </div>
   </header>
@@ -1426,7 +1432,7 @@
   <div id="qadaPlanModal" class="modal"><div class="sheet" id="qadaPlanSheet"></div></div>
 
   <div class="glass">
-    <h2 class="sec">Today's reflection</h2>
+    <h2 class="sec">Today&rsquo;s reflection</h2>
     <div id="ayahCard" class="rcard"></div>
     <div id="hadithInline" class="rcard" style="margin-top:12px"></div>
   </div>
@@ -1446,7 +1452,7 @@
   </div>
 
   <div class="glass" id="journalCard">
-    <div class="jhead"><h2 class="sec" style="margin:0">Muhasaba — tonight's check-in</h2></div>
+    <div class="jhead"><h2 class="sec" style="margin:0">Muhasaba — tonight&rsquo;s check-in</h2></div>
     <div class="jayah">
       <div class="jayah-lead">No one hears the whispers of your heart, the voice behind your tears, or the pain hidden in your cry — no one but Allah <span lang="ar" dir="rtl">سُبْحَانَهُ وَتَعَالَىٰ</span>.</div>
       <div class="jayah-one" id="jayahRotate"></div>
@@ -1519,7 +1525,7 @@
     </div>
   </div>
 
-  <div class="glass">
+  <div class="glass" id="qiblaCard">
     <h2 class="sec">Qibla &amp; Makkah</h2>
     <div class="qrow">
       <div class="qdial">
@@ -1551,7 +1557,7 @@
 
   <div class="glass">
     <h2 class="sec">Calculation settings</h2>
-    <div class="srow">
+    <div class="srow stack">
       <div class="lbl"><b>Method</b><span>Match your local masjid or authority</span></div>
       <select id="setMethod" onchange="S.methodAuto=false;onSettings()" aria-label="Calculation method"></select>
     </div>
@@ -1655,6 +1661,10 @@
       <div class="lbl"><b>Preview the lock</b><span>See how the Prayer Lock looks</span></div>
       <button class="btn ghost" onclick="previewPrayerLock()">Preview</button>
     </div>
+    <div class="srow">
+      <div class="lbl"><b>Guided tour</b><span>Walk through every section of the app again</span></div>
+      <button class="btn ghost" onclick="startTour(true)">Replay</button>
+    </div>
   </div>
 
   <div class="glass" id="reciterCard">
@@ -1704,7 +1714,7 @@
 <div id="hadithPop" class="modal"><div class="sheet"><div id="hadithPopBody"></div><button class="btn ghost modal-x" onclick="closeHadithPop()">Close</button></div></div>
 <div id="featuresModal" class="modal"><div class="sheet">
   <h2 class="sec" style="margin-top:0">Enable app features</h2>
-  <p class="small dim" style="margin:-8px 0 8px">Allow each below to unlock its feature. Everything is optional and private — nothing is shared without your say-so, in shaa Allah.</p>
+  <p class="small dim" style="margin:-8px 0 8px">Allow each below to unlock its feature. Everything is optional and private — nothing is shared without your say-so, in shā’ Allah.</p>
   <div id="featuresList"></div>
   <button class="btn ghost modal-x" onclick="closeFeaturesSetup()">Done</button>
 </div></div>
@@ -3439,7 +3449,7 @@ function renderCalDetail(){
         const p = it.person;
         return '<div class="cd-item cd-commem"><div class="cd-ihead"><span class="cd-t">' + esc(it.ev.t) + ' · ' + esc(p.english) + '</span><span class="commem-cat ' + p.cat + '">' + (p.cat === 'ahlbayt' ? 'Ahl al-Bayt' : 'Beloved Wali') + '</span></div>'
           + '<p class="small dim" style="margin:6px 0 0">' + esc(p.aka) + '</p>'
-          + '<div class="commem-quote"><div class="commem-qlabel">' + (p.reftype === 'hadith' ? 'Hadith' : 'Qur\'an') + '</div><div class="ar" lang="ar" dir="rtl">' + p.ar + '</div>'
+          + '<div class="commem-quote"><div class="commem-qlabel">' + (p.reftype === 'hadith' ? 'Hadith' : 'Qur&rsquo;an') + '</div><div class="ar" lang="ar" dir="rtl">' + p.ar + '</div>'
           + '<div class="small muted" style="margin-top:6px">' + esc(p.tr) + '</div>'
           + '<div style="margin-top:8px"><span class="badge ref">' + esc(fmtRef(p.ref)) + '</span>' + (p.grade ? ' <span class="badge grade">' + esc(p.grade) + '</span>' : '') + ' ' + reciteBtn(p.ar) + '</div></div></div>';
       }
@@ -3756,7 +3766,7 @@ async function renderQuran(){
   const s = list[quranSel] || list[0];
   const full = s.ayahs.map(a => a.ar).join('  ');
   const showBism = QALL && s.bismillah !== false && s.n !== 1 && s.n !== 9;
-  const opts = list.map((x,i) => '<option value="' + i + '"' + (i===quranSel?' selected':'') + '>' + esc((x.n || (i+1)) + ' · ' + surahLabel(x) + (x.meaning ? ' — ' + x.meaning : '') + ' · ' + x.ayahs.length + ' ayahs') + '</option>').join('');
+  const opts = list.map((x,i) => '<option value="' + i + '"' + (i===quranSel?' selected':'') + '>' + esc((x.n || (i+1)) + ' · ' + surahLabel(x) + (x.meaning ? ' — ' + x.meaning : '') + ' · ' + x.ayahs.length + ' ayah' + (x.ayahs.length>1?'s':'')) + '</option>').join('');
   const body = s.ayahs.map(a =>
     '<div class="qayah' + (SAJDA[s.n + ':' + a.n] ? ' sajda' : '') + '" data-sn="' + s.n + '" data-an="' + a.n + '"><div class="qnum">' + a.n + '</div><div class="qbody">'
     + '<div class="ar qar" lang="ar" dir="rtl">' + a.ar + '</div>'
@@ -3883,7 +3893,7 @@ function renderCommemToday(){
   el.innerHTML = m.map(({p, e}) =>
     '<div class="commem-todayhead">Today · ' + esc(e.t) + ' of ' + esc(p.english) + '</div>'
     + '<div class="commem-todaysub">' + esc(e.label) + ' — commonly observed today · ' + esc(p.aka) + '</div>'
-    + '<div class="commem-quote"><div class="commem-qlabel">' + (p.reftype === 'hadith' ? 'Hadith' : 'Qur\'an') + '</div>'
+    + '<div class="commem-quote"><div class="commem-qlabel">' + (p.reftype === 'hadith' ? 'Hadith' : 'Qur&rsquo;an') + '</div>'
     + '<div class="ar" lang="ar" dir="rtl">' + p.ar + '</div>'
     + '<div class="small muted" style="margin-top:6px">' + esc(p.tr) + '</div>'
     + '<div style="margin-top:8px"><span class="badge ref">' + esc(fmtRef(p.ref)) + '</span>'
@@ -3907,7 +3917,7 @@ function renderCommem(){
       + '<span class="commem-cat ' + p.cat + '">' + catName + '</span></div>'
       + '<div class="commem-events">' + evs + '</div>'
       + '<p class="commem-bio">' + esc(p.bio) + '</p>'
-      + '<div class="commem-quote"><div class="commem-qlabel">' + (p.reftype === 'hadith' ? 'Hadith' : 'Qur\'an') + '</div>'
+      + '<div class="commem-quote"><div class="commem-qlabel">' + (p.reftype === 'hadith' ? 'Hadith' : 'Qur&rsquo;an') + '</div>'
       + '<div class="ar" lang="ar" dir="rtl">' + p.ar + '</div>'
       + '<div class="small muted" style="margin-top:6px">' + esc(p.tr) + '</div>'
       + '<div style="margin-top:8px"><span class="badge ref">' + esc(fmtRef(p.ref)) + '</span>'
@@ -4122,10 +4132,10 @@ function afterAuth(){
 /* ── first-run guided tour: a friendly walk through each section after the first login ── */
 const TOUR_STEPS = [
   {tab:null,       ic:'🌙', t:'Welcome to Sirat Khushu', b:'A calm home for your prayers, dhikr and reflection — every prayer time, Qibla and calendar is computed on your own device. Let’s walk through each section and what’s inside it.'},
-  {tab:'today',    ic:'🕰️', t:'Today · prayer times', b:'The five daily prayers with exact times for your location, and a big live countdown to the next prayer. The current prayer is highlighted, and a progress bar shows how much of its window remains.'},
-  {tab:'today',    ic:'🧭', t:'Today · Qibla compass', b:'The precise direction and distance to the Kaaba, shown on a North-up dial. On a phone, tap “Enable live compass” and the gold needle follows the way you face — turn until it points straight up.'},
-  {tab:'today',    ic:'🌌', t:'Today · Your growth', b:'Every prayer you log becomes a star in your own night sky, which only ever grows. Below it, “Your streak” tracks consecutive days — with a grace day and retroactive catch-up so one busy day won’t break it.'},
-  {tab:'today',    ic:'📿', t:'Today · dhikr & reflection', b:'Authentic morning/evening adhkar from Hisn al-Muslim with one-tap Recite, a daily reflection and hadith, and “Focus Mode” — a calm, distraction-free screen for when you pray.'},
+  {tab:'today',    ic:'🕰️', sel:'#pgrid', t:'Today · prayer times', b:'The five daily prayers with exact times for your location, and a big live countdown to the next prayer. The current prayer is highlighted, and a progress bar shows how much of its window remains.'},
+  {tab:'today',    ic:'🧭', sel:'#qiblaCard', t:'Today · Qibla compass', b:'The precise direction and distance to the Kaaba, shown on a North-up dial. On a phone, tap “Enable live compass” and the gold needle follows the way you face — turn until it points straight up.'},
+  {tab:'today',    ic:'🌌', sel:'#growthCard', t:'Today · Your growth', b:'Every prayer you log becomes a star in your own night sky, which only ever grows. Below it, “Your streak” tracks consecutive days — with a grace day and retroactive catch-up so one busy day won’t break it.'},
+  {tab:'today',    ic:'📿', sel:'#adhkarCard', t:'Today · dhikr & reflection', b:'Authentic morning/evening adhkar from Hisn al-Muslim with one-tap Recite, a daily reflection and hadith, and “Focus Mode” — a calm, distraction-free screen for when you pray.'},
   {tab:'calendar', ic:'📅', t:'Calendar', b:'The Hijri date, moon phase and upcoming Islamic events. Tap any day to see its blessed occasions. (Prayers are logged on the Today screen — only the one running right now.)'},
   {tab:'dhikr',    ic:'🔢', t:'Dhikr counter', b:'A beautiful tasbih. Tap anywhere to count SubhanAllah, Alhamdulillah, Allahu Akbar and more, with targets of 33, 99 or 100 and a gentle vibration on each count. Your totals feed your growth.'},
   {tab:'learn',    ic:'📖', t:'Learn · Qur’an, hadith & duas', b:'The complete Qur’an — all 114 surahs in the Uthmani Hafs script with translation and real reciters — plus a daily hadith and a library of authentic duas for every situation. All fully offline.'},
@@ -4140,6 +4150,10 @@ function tourEl(){ let el = document.getElementById('tourOverlay'); if (!el){ el
 function renderTourStep(){
   const s = TOUR_STEPS[_tourI]; if (!s){ endTour(true); return; }
   if (s.tab){ try{ go(s.tab); }catch(e){} }
+  // Bring the described section into view — go() scrolls to top, so a step pointing at an off-screen
+  // card (Qibla, growth, dhikr) would otherwise talk about something the user can't see. Deferred so the
+  // go()-triggered scroll/re-render settles first; the if(t) guard makes a missing target a harmless no-op.
+  if (s.sel){ try{ const _t = document.querySelector(s.sel); if (_t) setTimeout(function(){ try{ _t.scrollIntoView({behavior:'smooth', block:'center'}); }catch(e){} }, 60); }catch(e){} }
   const last = _tourI === TOUR_STEPS.length - 1;
   const dots = TOUR_STEPS.map((_,i) => '<i class="'+(i===_tourI?'on':'')+'"></i>').join('');
   const el = tourEl();
@@ -4151,7 +4165,7 @@ function renderTourStep(){
   el.classList.add('open');
 }
 function tourNav(d){ _tourI += d; if (_tourI >= TOUR_STEPS.length){ endTour(true); return; } if (_tourI < 0) _tourI = 0; renderTourStep(); }
-function endTour(mark){ const el = document.getElementById('tourOverlay'); if (el) el.classList.remove('open'); if (mark){ S.tourSeen = true; save(); } setTimeout(function(){ try{ maybeOfferFeatures(); }catch(e){} }, 700); }
+function endTour(mark){ const el = document.getElementById('tourOverlay'); if (el) el.classList.remove('open'); if (mark){ S.tourSeen = true; save(); } setTimeout(function(){ try{ maybeOfferFeatures(); }catch(e){} if (S.account){ try{ onboardNotifications(); }catch(e){} } }, 700); }   // new signups get the OS notification prompt ~700ms after the tour ends (Skip also routes here)
 function cancelAuth(){ document.getElementById('welcome').classList.remove('open'); document.documentElement.classList.remove('locked'); if (_pendingPrompt){ const p = _pendingPrompt; _pendingPrompt = null; if (!todayLogs()[p.k]) setTimeout(() => p.lock ? openPrayerLock(p.k, p.e, p.tz) : showPrayerPrompt(p.k, p.e, p.tz), 500); } }
 function continueAsGuest(){ S.guestMode = true; save(); afterAuth(); try{ renderLockControls(); }catch(e){} }
 function sessionUnlock(){ sessionUnlocked = true; try{ sessionStorage.setItem('sabr-unlocked', '1'); }catch(e){} }
@@ -4581,7 +4595,7 @@ async function createAccount(){
   if (!acct.passHash){ setBtnLoading(_btn, false); err.textContent = 'Could not secure the password on this device — please open over https:// and try again.'; return; }
   S.account = acct;
   S.gender = _acGender; S.profile = {name:dn, since: todayKey() || ''}; S.lockEnabled = true; S.guestMode = false; S.staySignedIn = true;
-  save(); sessionUnlock(); afterAuth(); try{ renderLockControls(); }catch(e){} try{ onboardNotifications(); }catch(e){}
+  save(); sessionUnlock(); afterAuth(); try{ renderLockControls(); }catch(e){}   // notification prompt is deferred to endTour() so it lands AFTER the tour, not the instant Sign up is tapped
   // PRIVACY — cloud sync is OPT-IN. We deliberately do NOT auto-upload on sign-up: a new account stays
   // on THIS device only and nothing leaves it ("data between them and Allah" by default). The user can
   // later enable cross-device sync + emailed password reset from Settings → "Turn on cloud login"
@@ -4923,8 +4937,7 @@ function _toastPump(){
   if (sound && S.chime) chime();
   setTimeout(() => {
     t.classList.add('leaving'); t.classList.remove('show');
-    setTimeout(() => t.remove(), 600);                             // quick fade-out, then remove from DOM
-    setTimeout(() => { _toastBusy = false; _toastPump(); }, 420);  // hand the queue to the next fast, so a backlog clears quickly
+    setTimeout(() => { t.remove(); _toastBusy = false; _toastPump(); }, 600);   // remove the leaving toast, THEN show the next — never two in the column at once (no upward jump)
   }, life);
 }
 
@@ -5154,7 +5167,7 @@ function toggleLog(key){
   logs[key] = {t: Date.now()}; save();
   try{ qadaMaybePair(key); }catch(e){}
   renderAppFeatures();
-  if (navigator.vibrate) navigator.vibrate([30,40,60]);
+  buzz([30,40,60]);   // via buzz() so the vibrate setting + quiet hours are respected
   showHadithPop(key);
 }
 function logForDate(dk, key){
@@ -5175,7 +5188,7 @@ function logForDate(dk, key){
     // reconciled. Today's current window is still open (reconcile never counted it), so only past days apply.
     qadaSyncBackfill(dk, key, !removing);
     save(); renderAppFeatures();
-    try{ if (navigator.vibrate) navigator.vibrate(25); }catch(e){}
+    buzz(25);   // via buzz() so the vibrate setting + quiet hours are respected
   }catch(e){}
 }
 // Reconcile the Qada ledger when a CLOSED past-day prayer is caught-up (logged) or un-logged, using
@@ -5998,7 +6011,7 @@ function renderQada(){
         '<button class="btn" onclick="qadaBegin()">Begin gently</button>'+
         '<button class="btn ghost" onclick="qadaOpenCalc()">I have a lifetime backlog</button>'+
       '</div>'+
-      '<p class="qreassure">"An estimate offered in good faith is accepted, in shā’ Allāh — do your best and leave the rest to His mercy."</p>';
+      '<p class="qreassure">"An estimate offered in good faith is accepted, in shā’ Allah — do your best and leave the rest to His mercy."</p>';
   } else {
     const rem = qadaTotalRemaining(), owed = qadaTotalOwed(), cleared = qadaTotalCleared();
     pct = owed>0 ? Math.round((cleared/owed)*100) : 0;
@@ -6088,7 +6101,7 @@ function renderQadaCalc(){
   h += '<button class="btn ghost qsm" onclick="qadaCalcAddPartial()">＋ I prayed some during a stretch</button></div>';
   h += '<div class="qbreakdown">'+res.breakdown+'</div>';
   h += '<button class="btn qapply"'+(res.ok?'':' disabled')+' onclick="qadaCalcApply()">Apply estimate to my ledgers</button>';
-  h += '<p class="qreassure">"An estimate offered in good faith is accepted, in shā’ Allāh."</p>';
+  h += '<p class="qreassure">"An estimate offered in good faith is accepted, in shā’ Allah."</p>';
   h += '<button class="btn ghost" style="width:100%" onclick="closeModal(\'qadaCalcModal\')">Close</button>';
   sheet.innerHTML = h;
 }
@@ -6263,6 +6276,9 @@ function applyTheme(){
   if (THEMES.indexOf(S.theme) < 0 && S.theme !== 'amoled') S.theme = 'dark';
   document.documentElement.dataset.theme = S.theme;
   document.getElementById('themeColorMeta').setAttribute('content', THEME_COLORS[S.theme] || '#0a0e14');
+  // Native Android status bar: the theme-color meta is inert inside a WebView, so drive @capacitor/status-bar
+  // directly. Match its background to the theme and pick icon contrast from the colour's luminance.
+  try { var _SB = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.StatusBar; if (_SB) { var _c = THEME_COLORS[S.theme] || '#0a0e14'; _SB.setBackgroundColor({ color: _c }); var _n = parseInt(_c.slice(1),16), _lum = 0.299*((_n>>16)&255) + 0.587*((_n>>8)&255) + 0.114*(_n&255); _SB.setStyle({ style: _lum > 150 ? 'LIGHT' : 'DARK' }); } } catch(e){}
   { const _tb = document.getElementById('themeBtn'); if (_tb) _tb.innerHTML = '<svg viewBox="0 0 24 24" width="21" height="21" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="7.6" stroke="currentColor" stroke-width="1.6" opacity=".45"/><path d="M12 4.4A7.6 7.6 0 0 0 12 19.6Z" fill="currentColor"/><path d="M18.7 3.9l.62 1.66 1.66.62-1.66.62-.62 1.66-.62-1.66-1.66-.62 1.66-.62z" fill="var(--gold)"/></svg>'; }
   renderThemes();
 }
@@ -7141,6 +7157,9 @@ async function checkForUpdate(){
     // bundled version is frozen until a new APK is installed, so this banner is precisely how those users
     // learn an update exists. _nativeApp() is true only inside the Capacitor shell.
     if (typeof _nativeApp === 'function' && !_nativeApp()) return;
+    // The banner links to the Android APK, so it is Android-ONLY. On iOS the App Store handles updates,
+    // and an .apk link is meaningless there — never show it.
+    try{ if (window.Capacitor && typeof window.Capacitor.getPlatform === 'function' && window.Capacitor.getPlatform() !== 'android') return; }catch(e){}
     if (_updChecked || !navigator.onLine) return; _updChecked = true;
     const t = Date.now();
     const verOf = s => (String(s).match(/sabr-engine-v([0-9]+\.[0-9]+\.[0-9]+)/) || [])[1];
@@ -7191,6 +7210,9 @@ function boot(){
   try{ setTimeout(function(){ trackVisit(); }, 3000); }catch(e){}   // anonymous visit ping — no-op unless opted in
   try{ setTimeout(function(){ checkForUpdate(); }, 4200); }catch(e){}   // quietly show the "update available" banner if a newer build is live
   try{ setTimeout(function(){ if (S.push && S.push.on) syncPush(); }, 2500); document.addEventListener('visibilitychange', function(){ if (document.visibilityState!=='visible') return; try{ renderTick(); rollDaily('hadith'); rollDaily('ayah'); renderReflection(); renderTopAyah(); }catch(e){} if (S.push && S.push.on) syncPush(); }); }catch(e){}
+  // Native Android splash: hide it now that the app has actually painted (config sets launchAutoHide:false),
+  // with a 3s idempotent failsafe so a stalled boot can never strand the user on the splash.
+  try { var _SS = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SplashScreen; if (_SS) { _SS.hide({ fadeOutDuration: 200 }); setTimeout(function(){ try{ _SS.hide(); }catch(e){} }, 3000); } } catch(e){}
 }
 let lastDayKey = '';
 setInterval(() => {
