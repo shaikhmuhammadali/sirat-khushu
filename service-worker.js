@@ -14,10 +14,14 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
 
-const VERSION = 'sabr-engine-v3.124.0';         // ← bump to ship an update (clients auto-drop the old cache)
+const VERSION = 'sabr-engine-v3.125.0';         // ← bump to ship an update (clients auto-drop the old cache)
 const SHELL   = VERSION + '-shell';
 const RUNTIME = VERSION + '-runtime';
-const AUDIO   = VERSION + '-audio';             // reciter audio (offline recitation), bounded + FIFO
+// Reciter audio (offline recitation) is bounded + FIFO. Its name is DELIBERATELY version-independent so a
+// VERSION bump never wipes ayat the user already heard — recitation audio is immutable, so there is nothing
+// to invalidate, and the FIFO cap (200) keeps it bounded. Bump the -vN suffix only if the URL/bitrate scheme
+// ever changes. (The activate purge below explicitly exempts this cache.)
+const AUDIO   = 'sabr-engine-audio-v1';
 
 const API_HOSTS = new Set([
   'geocoding-api.open-meteo.com',
@@ -82,7 +86,9 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter(k => !k.startsWith(VERSION)).map(k => caches.delete(k)));
+    // Purge every OLD versioned cache (shell/runtime/audio of prior versions) but KEEP the persistent,
+    // version-independent reciter-audio cache — otherwise each update silently wiped offline recitation.
+    await Promise.all(keys.filter(k => k !== AUDIO && !k.startsWith(VERSION)).map(k => caches.delete(k)));
     // Navigation Preload: let the browser start the page request in parallel with this worker
     // booting, so a network-first navigation isn't blocked on SW startup. Feature-detected —
     // silently skipped where unsupported.
