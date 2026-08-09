@@ -281,7 +281,7 @@
 
   .events .e{display:flex; align-items:center; gap:13px; padding:12px 4px; border-bottom:1px solid var(--stroke)}
   .events .e:last-child{border:none}
-  .events .e .ic{font-size:1.25rem; flex:none; width:42px; height:42px; display:grid; place-items:center; border-radius:13px; color:#e6c874; background:radial-gradient(circle at 34% 28%, var(--gold-soft), var(--bg2)); border:1px solid var(--stroke-gold); box-shadow:inset 0 0 12px -4px var(--gold), 0 2px 8px -5px rgba(0,0,0,.45)}
+  .events .e .ic{font-size:1.25rem; flex:none; width:42px; height:42px; display:grid; place-items:center; border-radius:13px; color:var(--gold-ink); background:radial-gradient(circle at 34% 28%, var(--gold-soft), var(--bg2)); border:1px solid var(--stroke-gold); box-shadow:inset 0 0 12px -4px var(--gold), 0 2px 8px -5px rgba(0,0,0,.45)}
   .events .e .ic svg{width:23px; height:23px; filter:drop-shadow(0 1px 3px rgba(217,180,91,.35))}
   .events .e .b{flex:1; min-width:0}
   .events .e .b .t{font-weight:800}
@@ -609,7 +609,12 @@
     padding:0 12px calc(84px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(4,7,12,0) 30%,rgba(4,7,12,.35) 100%)}
   .tour.open{display:flex;animation:fade .3s ease}
   .tourcard{position:relative;max-width:440px;width:100%;border-radius:24px;padding:20px 20px 18px;text-align:center;
-    background:linear-gradient(180deg,rgba(38,52,78,.55),rgba(13,19,31,.60));border:1px solid rgba(217,180,91,.45);
+    /* Opaque dark glass in EVERY theme: the tour card's body text (.tour-b) is fixed light and its
+       accents are var-driven, so on a light theme a translucent card composited to gray hid all of it.
+       Commit to dark and pin the accent vars to their dark-theme values so title/skip/active-dot stay
+       readable on all 8 themes (dark themes already used these exact values — no visual change there). */
+    background:linear-gradient(180deg,#26344e,#0d131f);border:1px solid rgba(217,180,91,.45);
+    --gold-ink:#e6c169;--gold:#d9b45b;--teal-ink:#7fe0d5;
     -webkit-backdrop-filter:blur(22px) saturate(1.3);backdrop-filter:blur(22px) saturate(1.3);
     box-shadow:0 24px 70px rgba(0,0,0,.5),0 1px 0 rgba(255,255,255,.10) inset;animation:wrise .45s cubic-bezier(.2,.9,.3,1)}
   .tour-ic{font-size:2rem;line-height:1;margin-bottom:8px}
@@ -903,8 +908,14 @@
   .toast .tx{display:flex;flex-direction:column;min-width:0;gap:2px}
   .toast .tx b{font-size:.95rem;font-weight:800;color:var(--text);letter-spacing:.004em}
   .toast .tx span{font-size:.8rem;color:var(--muted);line-height:1.4}
-  /* the standard toast is an always-dark glass, so keep its text light in every theme (cute/ayah toasts use a theme-tinted bg and keep var-driven text) */
-  .toast:not(.cute):not(.k-ayah):not(.k-hadith){--text:#f4efe4;--muted:#c7ccd6}
+  /* The standard toast forces LIGHT text in every theme — so it MUST carry a genuinely dark background
+     in every theme too, else on the six light themes its light text lands on an effectively-light glass
+     and vanishes. The base .toast background (line above) is only ~10% opaque, which reads light on a
+     light theme; here we give the standard toast an opaque dark glass so the forced light text is always
+     readable. Scoped with :not(...) so Ayah/Hadith/cute toasts (theme-tinted bg + theme-aware text) are
+     untouched — turning THEM dark would hide their dark-on-light-theme text. */
+  .toast:not(.cute):not(.k-ayah):not(.k-hadith){--text:#f4efe4;--muted:#c7ccd6;
+    background:radial-gradient(130% 150% at 0% 0%,rgba(217,180,91,.12),transparent 64%),linear-gradient(180deg,rgba(30,41,61,.97),rgba(9,13,23,.98))}
   /* a slim gold line that depletes over the toast's lifetime */
   .toast .tbar{position:absolute;left:0;bottom:0;height:2.5px;width:100%;transform-origin:left;border-radius:0 2px 2px 0;
     background:linear-gradient(90deg,#fbeeb8,#c9a24b);box-shadow:0 0 8px rgba(217,180,91,.55);transform:scaleX(1);animation:toastbar linear forwards}
@@ -1179,7 +1190,7 @@
   /* word-by-word "lafẓ" glow: the current word lights up, recited words dim, upcoming stay full */
   .qar .qw{transition:color .35s ease, text-shadow .35s ease, opacity .35s ease}
   .qar .qw.rw-done{color:var(--gold-ink); opacity:.7}
-  .qar .qw.rw{color:#fff6d8; text-shadow:0 0 22px rgba(217,180,91,1), 0 0 8px rgba(255,244,214,.9)}
+  .qar .qw.rw{color:var(--gold-ink); text-shadow:0 0 22px rgba(217,180,91,1), 0 0 8px rgba(255,244,214,.9)}
   @media (prefers-reduced-motion:reduce){ .qar .qw{transition:color .12s ease} }
   @keyframes reciteGlow{0%,100%{box-shadow:0 0 0 1px color-mix(in srgb,var(--gold-ink) 26%,transparent),0 8px 26px -14px color-mix(in srgb,var(--gold-ink) 45%,transparent)}50%{box-shadow:0 0 0 1px color-mix(in srgb,var(--gold-ink) 50%,transparent),0 15px 42px -10px color-mix(in srgb,var(--gold-ink) 72%,transparent)}}
   @keyframes reciteBar{0%,100%{opacity:.5;transform:scaleY(.78)}50%{opacity:1;transform:scaleY(1)}}
@@ -1306,7 +1317,7 @@
   .qledger{display:flex;align-items:center;gap:12px;padding:12px 2px;border-bottom:1px solid var(--stroke);transition:background .25s,opacity .3s}
   .qledger:hover{background:linear-gradient(90deg,rgba(217,180,91,.05),transparent)}
   .qledger.done{opacity:.5}
-  .qledger .qic{width:40px;height:40px;flex:none;border-radius:13px;display:grid;place-items:center;color:var(--gold-3,#fff0c4);
+  .qledger .qic{width:40px;height:40px;flex:none;border-radius:13px;display:grid;place-items:center;color:var(--gold-ink);
     background:radial-gradient(circle at 34% 26%,rgba(217,180,91,.28),var(--bg2) 82%);border:1px solid var(--stroke-gold);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 4px 14px -8px rgba(217,180,91,.6)}
   .qledger .qic svg{width:23px;height:23px;filter:drop-shadow(0 0 6px rgba(217,180,91,.45))}
@@ -3544,17 +3555,25 @@ function reciteBtn(ar, label){
 }
 /* ── Qur'an recited by a real Qari (user-selectable in Settings) — works with no device voice ── */
 const RICON_SVG = '<svg class="ricon" viewBox="0 0 24 24" aria-hidden="true"><path class="spk" d="M4 9v6h4l5 4V5L8 9H4z"/><path class="wv1" d="M15.6 8.7a3.7 3.7 0 0 1 0 6.6"/><path class="wv2" d="M18.2 6.2a7.2 7.2 0 0 1 0 11.6"/></svg>';
+// Every reciter carries an ORDERED list of verified audio sources across BOTH allow-listed CDNs.
+// If the primary CDN is unreachable on the user's network (blocked, geo-restricted, rate-limited, or
+// simply down), playback self-heals to the next source instead of dying silently — the recitation
+// "always works" as long as ANY one source is reachable. Each source is [kind, ref, bitrate?]:
+//   'isn' → cdn.islamic.network/quran/audio/<bitrate|128>/<edition>/<globalAyah>.mp3
+//   'ey'  → everyayah.com/data/<folder>/<surah3><ayah3>.mp3
+// Every URL below was live-verified (HTTP 206 audio/mpeg). Order = primary first (unchanged behaviour
+// for users it already works for), verified fallback second where one exists.
 const RECITERS = [
-  {id:'afasy',    name:'Mishary Rashid Al-Afasy',    src:'isn', ref:'ar.alafasy'},
-  {id:'husary',   name:'Mahmoud Khalil Al-Husary',   src:'isn', ref:'ar.husary'},
-  {id:'basit',    name:'Abdul Basit Abdul Samad',    src:'ey',  ref:'Abdul_Basit_Murattal_192kbps'},
-  {id:'minshawi', name:'Mohamed Siddiq El-Minshawi', src:'ey',  ref:'Minshawy_Murattal_128kbps'},
-  {id:'sudais',   name:'Abdul Rahman Al-Sudais',     src:'ey',  ref:'Abdurrahmaan_As-Sudais_192kbps'},
-  {id:'shuraim',  name:'Saud Al-Shuraim',            src:'ey',  ref:'Saood_ash-Shuraym_128kbps'},
-  {id:'maher',    name:'Maher Al-Muaiqly',           src:'isn', ref:'ar.mahermuaiqly'},
-  {id:'ghamdi',   name:'Saad Al-Ghamdi',             src:'ey',  ref:'Ghamadi_40kbps'},
-  {id:'ajmi',     name:'Ahmad Al-Ajmi',              src:'isn', ref:'ar.ahmedajamy'},
-  {id:'dosari',   name:'Yasser Al-Dosari',           src:'ey',  ref:'Yasser_Ad-Dussary_128kbps'}
+  {id:'afasy',    name:'Mishary Rashid Al-Afasy',    srcs:[['isn','ar.alafasy'],                  ['ey','Alafasy_128kbps']]},
+  {id:'husary',   name:'Mahmoud Khalil Al-Husary',   srcs:[['isn','ar.husary'],                   ['ey','Husary_128kbps']]},
+  {id:'basit',    name:'Abdul Basit Abdul Samad',    srcs:[['ey','Abdul_Basit_Murattal_192kbps'], ['isn','ar.abdulbasitmurattal',64]]},
+  {id:'minshawi', name:'Mohamed Siddiq El-Minshawi', srcs:[['ey','Minshawy_Murattal_128kbps'],    ['isn','ar.minshawi']]},
+  {id:'sudais',   name:'Abdul Rahman Al-Sudais',     srcs:[['ey','Abdurrahmaan_As-Sudais_192kbps'],['isn','ar.abdurrahmaansudais',64]]},
+  {id:'shuraim',  name:'Saud Al-Shuraim',            srcs:[['ey','Saood_ash-Shuraym_128kbps']]},
+  {id:'maher',    name:'Maher Al-Muaiqly',           srcs:[['isn','ar.mahermuaiqly'],             ['ey','MaherAlMuaiqly128kbps']]},
+  {id:'ghamdi',   name:'Saad Al-Ghamdi',             srcs:[['ey','Ghamadi_40kbps']]},
+  {id:'ajmi',     name:'Ahmad Al-Ajmi',              srcs:[['isn','ar.ahmedajamy'],               ['ey','ahmed_ibn_ali_al_ajamy_128kbps']]},
+  {id:'dosari',   name:'Yasser Al-Dosari',           srcs:[['ey','Yasser_Ad-Dussary_128kbps']]}
 ];
 function currentReciter(){ return RECITERS.find(r => r.id === S.reciter) || RECITERS[0]; }
 function setReciter(id){ S.reciter = id; save(); stopReciteAudio(); try{ toast('Reciter set', currentReciter().name, '🎧'); }catch(e){} }
@@ -3563,10 +3582,45 @@ function renderReciter(){
   const cur = currentReciter().id;
   sel.innerHTML = RECITERS.map(r => '<option value="' + r.id + '"' + (r.id===cur?' selected':'') + '>' + esc(r.name) + '</option>').join('');
 }
-function ayahAudioUrl(surah, ayah, g){
-  const r = currentReciter();
-  if (r.src === 'ey'){ return 'https://everyayah.com/data/' + r.ref + '/' + ('00'+surah).slice(-3) + ('00'+ayah).slice(-3) + '.mp3'; }
-  return 'https://cdn.islamic.network/quran/audio/128/' + r.ref + '/' + g + '.mp3';
+// Ordered candidate URLs for one ayah in the current reciter — primary first, verified fallback(s) after.
+function ayahAudioUrls(surah, ayah, g){
+  const r = currentReciter(), s3 = ('00'+surah).slice(-3), a3 = ('00'+ayah).slice(-3);
+  return (r.srcs || []).map(s => s[0] === 'ey'
+    ? 'https://everyayah.com/data/' + s[1] + '/' + s3 + a3 + '.mp3'
+    : 'https://cdn.islamic.network/quran/audio/' + (s[2] || 128) + '/' + s[1] + '/' + g + '.mp3');
+}
+// Back-compat: the single primary URL (used for prefetch warming).
+function ayahAudioUrl(surah, ayah, g){ return ayahAudioUrls(surah, ayah, g)[0] || ''; }
+/* A reciter <audio> that SELF-HEALS across every verified CDN source for its ayah. Callers just wire
+   .onended and call .playFallback(onAllSourcesFailed): it plays the primary source and, on any load/
+   play error, transparently advances to the next candidate URL, only surfacing onAllSourcesFailed once
+   EVERY source is exhausted. A stop()/new recite bumps _qaSeq, which this captures — so a superseded
+   element can never resurrect audio. Preloaded (not-yet-started) elements ignore errors until it is
+   actually their turn, so gapless surah/passage preloading is unaffected. */
+function reciteAudio(surah, ayah, g){
+  const urls = ayahAudioUrls(surah, ayah, g);
+  const seq = _qaSeq;                                    // liveness token
+  const a = new Audio(); a.volume = 1; a.preload = 'auto';
+  let i = 0, busy = false, started = false, onFail = null;
+  const setSrc = () => { a.src = urls[i++]; try{ a.load(); }catch(e){} };
+  if (urls.length) setSrc();                             // prime + preload the first source
+  const advance = () => {
+    if (seq !== _qaSeq || busy) return; busy = true;     // one advance per failed source (dedupes error+reject)
+    if (i >= urls.length){ busy = false; if (onFail) onFail(); return; }
+    setSrc();
+    const p = a.play();
+    if (p && p.then) p.then(() => { busy = false; }, () => { busy = false; advance(); });
+    else busy = false;
+  };
+  a.addEventListener('error', () => { if (started && seq === _qaSeq) advance(); });
+  a.playFallback = function(fail){
+    onFail = fail || onFail; started = true;
+    if (seq !== _qaSeq) return a;
+    const p = a.play();
+    if (p && p.then) p.then(() => {}, () => { if (seq === _qaSeq) advance(); });
+    return a;
+  };
+  return a;
 }
 let _qa = null, _qaSeq = 0;
 /* Prefetch an ayah mp3 via an <audio> element (media-src — allowed by CSP; a fetch() would hit
@@ -3648,12 +3702,11 @@ function reciteAyah(surah, ayah, g, btn){
   if (wasThis || !g) return;                       // tapping a playing button stops it
   const seq = _qaSeq;
   if (btn) btn.classList.add('playing');
-  _qa = new Audio(ayahAudioUrl(surah, ayah, g)); _qa.volume = 1;
-  setRecitingAyah(surah, ayah, _qa);
+  const a = _qa = reciteAudio(surah, ayah, g);     // self-heals across every CDN source
+  setRecitingAyah(surah, ayah, a);
   try{ prefetchAyahAudio(surah, ayah + 1, g + 1); }catch(e){}   // users read in order — make the next tap instant
-  _qa.onended = () => { if (seq === _qaSeq){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); } };
-  _qa.onerror = () => { if (seq === _qaSeq){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); reciteOfflineNotice(btn); } };
-  const p = _qa.play(); if (p && p.catch) p.catch(() => { if (seq === _qaSeq){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); reciteOfflineNotice(btn); } });
+  a.onended = () => { if (seq === _qaSeq){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); } };
+  a.playFallback(() => { if (seq === _qaSeq){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); reciteOfflineNotice(btn); } });
 }
 function reciteSurahAudio(surah, count, firstG, btn){
   const wasThis = btn && btn.classList.contains('playing');
@@ -3665,22 +3718,22 @@ function reciteSurahAudio(surah, count, firstG, btn){
   // Al-Fatiha (1) already carries it as its first ayah. We prepend the reciter's own
   // recorded Bismillah (= Al-Fatiha 1:1), which resolves for every reciter/source.
   const hasBism = (surah !== 1 && surah !== 9);
-  const urls = [];
-  if (hasBism) urls.push(ayahAudioUrl(1, 1, 1));
-  for (let ai = 1; ai <= count; ai++) urls.push(ayahAudioUrl(surah, ai, firstG + ai - 1));
-  // Gapless playback: each ayah is a separate mp3, so PRE-LOAD the next while the current
-  // is still playing — the moment one ends, the next is already buffered and starts instantly.
-  const mk = (k) => { const a = new Audio(urls[k]); a.preload = 'auto'; a.volume = 1; try{ a.load(); }catch(e){} return a; };
-  let i = 0, cur = mk(0), nxt = (urls.length > 1) ? mk(1) : null;
+  const items = [];
+  if (hasBism) items.push([1, 1, 1]);
+  for (let ai = 1; ai <= count; ai++) items.push([surah, ai, firstG + ai - 1]);
+  // Gapless playback: each ayah is a separate mp3, so PRE-LOAD the next while the current is still
+  // playing — the moment one ends, the next is already buffered and starts instantly. Each element
+  // self-heals across CDN sources, so a blocked host can't silently kill the surah mid-recitation.
+  const mk = (k) => { const it = items[k]; return reciteAudio(it[0], it[1], it[2]); };
+  let i = 0, cur = mk(0), nxt = (items.length > 1) ? mk(1) : null;
   (function play(){
     if (seq !== _qaSeq) return;                     // superseded/stopped
-    if (i >= urls.length || !cur){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); return; }
+    if (i >= items.length || !cur){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); return; }
     _qa = cur;
     const _an = hasBism ? i : i + 1; if (_an >= 1) setRecitingAyah(surah, _an, cur); else clearRecitingAyah();
-    const advance = () => { if (seq !== _qaSeq) return; i++; cur = nxt; nxt = (i + 1 < urls.length) ? mk(i + 1) : null; play(); };
-    _qa.onended = advance;
-    _qa.onerror = advance;
-    const p = _qa.play(); if (p && p.catch) p.catch(() => { if (seq === _qaSeq && btn) btn.classList.remove('playing'); });
+    const advance = () => { if (seq !== _qaSeq) return; i++; cur = nxt; nxt = (i + 1 < items.length) ? mk(i + 1) : null; play(); };
+    cur.onended = advance;
+    cur.playFallback(advance);                      // every source failed for this ayah → skip to next
   })();
 }
 function recitePassage(surah, fromAyah, count, firstG, btn){
@@ -3689,8 +3742,9 @@ function recitePassage(surah, fromAyah, count, firstG, btn){
   if (wasThis || !count) return;
   const seq = _qaSeq;
   if (btn) btn.classList.add('playing');
-  // each ayah is a separate mp3 — preload the next while the current plays (gapless), correct URL per reciter
-  const mk = (k) => { const a = new Audio(ayahAudioUrl(surah, fromAyah + k, firstG + k)); a.preload = 'auto'; a.volume = 1; try{ a.load(); }catch(e){} return a; };
+  // each ayah is a separate mp3 — preload the next while the current plays (gapless); each element
+  // self-heals across CDN sources so one blocked host can't silently kill the passage mid-recitation.
+  const mk = (k) => reciteAudio(surah, fromAyah + k, firstG + k);
   let i = 0, cur = mk(0), nxt = (count >= 2) ? mk(1) : null;
   (function play(){
     if (seq !== _qaSeq) return;
@@ -3698,8 +3752,8 @@ function recitePassage(surah, fromAyah, count, firstG, btn){
     _qa = cur;
     setRecitingAyah(surah, fromAyah + i, cur);
     const advance = () => { if (seq !== _qaSeq) return; i++; cur = nxt; nxt = (i + 1 < count) ? mk(i + 1) : null; play(); };
-    _qa.onended = advance; _qa.onerror = advance;
-    const p = _qa.play(); if (p && p.catch) p.catch(() => { if (seq === _qaSeq && btn) btn.classList.remove('playing'); });
+    cur.onended = advance;
+    cur.playFallback(advance);                      // every source failed for this ayah → skip to next
   })();
 }
 const SAJDA = {'7:206':'obligatory','13:15':'recommended','16:50':'recommended','17:109':'recommended','19:58':'recommended','22:18':'recommended','25:60':'recommended','27:26':'recommended','32:15':'obligatory','38:24':'recommended','41:38':'obligatory','53:62':'obligatory','84:21':'recommended','96:19':'obligatory'};
