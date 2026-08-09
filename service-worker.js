@@ -14,7 +14,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
 
-const VERSION = 'sabr-engine-v3.126.1';         // ← bump to ship an update (clients auto-drop the old cache)
+const VERSION = 'sabr-engine-v3.127.0';         // ← bump to ship an update (clients auto-drop the old cache)
 const SHELL   = VERSION + '-shell';
 const RUNTIME = VERSION + '-runtime';
 // Reciter audio (offline recitation) is bounded + FIFO. Its name is DELIBERATELY version-independent so a
@@ -141,6 +141,23 @@ async function putCapped(cacheName, req, res, max){
   for (let i = 0; i < keys.length - max; i++) await c.delete(keys[i]);
 }
 
+// Background-cache the WHOLE reciter-audio file (a separate, non-range fetch keyed by bare URL) so a
+// heard ayah recites fully OFFLINE later. Playback itself never waits on this. Tries a CORS full 200
+// first (everyayah sends ACAO:*), then an opaque no-CORS full for CDNs that don't. The FIFO cap keeps
+// it bounded. Swallows the QuotaExceededError opaque-audio padding can raise. No-op if already cached.
+async function warmAudio(href){
+  try {
+    const c = await caches.open(AUDIO);
+    if (await c.match(href)) return;                                   // full file already cached
+    let full;
+    try { full = await fetch(href); }                                 // CORS full 200
+    catch (e) { full = await fetch(href, { mode: 'no-cors' }); }       // opaque full for non-CORS CDNs
+    if (full && (full.status === 200 || full.type === 'opaque')){
+      await putCapped(AUDIO, new Request(href), full.clone(), 200);
+    }
+  } catch (e) {}
+}
+
 self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;                 // never cache mutations
@@ -170,34 +187,21 @@ self.addEventListener('fetch', event => {
   //     (partial/range) responses — caches.put() rejects them — only full 200s and opaque (no-CORS)
   //     media responses; a range request offline still matches the cached full file by URL.
   if (AUDIO_HOSTS.has(url.hostname)){
+    const online = !(self.navigator && self.navigator.onLine === false);
+    // ── ONLINE → hand the request ENTIRELY to the browser's native media stack (do NOT respondWith). ──
+    // A service-worker-mediated cross-origin / opaque / range media response is a known way to break
+    // <audio> playback in the Android System WebView (it stalls, or never fires 'canplay'). By simply
+    // returning — never calling respondWith — the media element fetches the ayah itself over the
+    // network exactly as it would with no service worker at all: bulletproof on the WebView, identical
+    // on the desktop. We still warm the full-file cache in the background so it recites offline later.
+    // This is the core reason recitation now "just plays". (Online we always go to network; the tiny
+    // cost of not serving a cached replay is worth guaranteed playback.)
+    if (online){ event.waitUntil(warmAudio(url.href)); return; }
+    // ── OFFLINE → cache-first: a heard-once ayah recites forever (a range request still matches the
+    //    cached full file by URL). Nothing heard yet → a clean error the client explains kindly. ──
     event.respondWith((async () => {
-      try {
-        const hit = await caches.match(url.href);
-        if (hit) return hit;                          // instant, offline-safe replay of a heard ayah
-        const res = await fetch(req);
-        // Cache the WHOLE file (a separate non-range fetch keyed by URL) so a previously-heard ayah
-        // recites fully OFFLINE. The media element's own request is usually a partial Range response —
-        // not replayable, and caches.put() rejects a 206. This is BACKGROUND only: playback still gets
-        // the live `res` immediately, so online recitation is never affected. The inner try/catch also
-        // swallows the QuotaExceededError that opaque-audio padding can raise (previously an unhandled
-        // rejection on every play).
-        event.waitUntil((async () => {
-          try {
-            const c = await caches.open(AUDIO);
-            if (await c.match(url.href)) return;                            // full file already cached
-            let full;
-            try { full = await fetch(url.href); }                          // CORS full 200 (everyayah sends ACAO:*)
-            catch (e) { full = await fetch(url.href, { mode: 'no-cors' }); } // opaque full for non-CORS CDNs
-            if (full && (full.status === 200 || full.type === 'opaque')){
-              await putCapped(AUDIO, new Request(url.href), full.clone(), 200);
-            }
-          } catch (e) {}
-        })());
-        return res;
-      } catch (e) {
-        const cached = (await caches.match(url.href)) || (await caches.match(req));
-        return cached || Response.error();
-      }
+      const cached = (await caches.match(url.href)) || (await caches.match(req));
+      return cached || Response.error();
     })());
     return;
   }
