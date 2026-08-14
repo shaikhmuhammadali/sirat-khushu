@@ -5650,28 +5650,85 @@ function wrapText(ctx, text, x, y, maxW, lh, font, maxLines){
   for (let i = 0; i < lines.length; i++) ctx.fillText(lines[i], x, y + i*lh);
   return y + lines.length*lh;
 }
-function shareHadithImage(idx){
-  const h = HADITH[idx], c = document.getElementById('shareCanvas'); if (!c) return;
-  const ctx = c.getContext('2d'), W = 1080, H = 1080;
-  const g = ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#0e141c'); g.addColorStop(1,'#0a0e14');
-  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
-  ctx.strokeStyle = 'rgba(217,180,91,.45)'; ctx.lineWidth = 3; ctx.strokeRect(46,46,W-92,H-92);
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#d9b45b'; ctx.font = '700 34px system-ui, sans-serif';
-  ctx.fillText('صِرَاط · Hadith of the Day', W/2, 150);
-  ctx.fillStyle = '#eae7de';
-  const y1 = wrapText(ctx, h.arabic, W/2, 300, W-180, 66, '400 46px "Amiri", serif', 5);
-  ctx.fillStyle = '#c9d2de';
-  const y2 = wrapText(ctx, h.english, W/2, Math.max(560, y1+50), W-200, 46, '400 31px system-ui, sans-serif', 9);
-  ctx.fillStyle = '#d9b45b'; ctx.font = '700 27px system-ui, sans-serif';
-  ctx.fillText(h.reference + '   ·   ' + h.grade, W/2, Math.min(H-150, y2+56));
-  ctx.fillStyle = '#5d6b7d'; ctx.font = '400 22px system-ui, sans-serif';
-  ctx.fillText('Sirat Khushu', W/2, H-96);
+/* ── Premium Hadith share card ──────────────────────────────────────────────
+   Renders the hadith onto the ivory hand-carved frame (img/hadith-frame.jpg,
+   same-origin so the canvas never taints → toBlob works). Auto-picks orientation
+   by length — a short hadith → LANDSCAPE (relief fitted wide, Bismillah re-drawn
+   in Hafs + a matching carved-gold border); anything longer → PORTRAIT (the full
+   frame, with its own baked Bismillah). Shows ONLY the hadith, its reference (with
+   grade) and the app name, on a frosted plate for perfect legibility, with a
+   dynamic collision-proof layout that fits 49→945-char hadith without overlap.
+   The frame is precached by the service worker + bundled in the APK → works offline. */
+let _hadithFrame = null, _hadithFrameP = null;
+function loadHadithFrame(){
+  if (_hadithFrame) return Promise.resolve(_hadithFrame);
+  if (_hadithFrameP) return _hadithFrameP;
+  _hadithFrameP = new Promise(function(res){ const im = new Image(); im.decoding = 'async';
+    im.onload = function(){ _hadithFrame = im; res(im); }; im.onerror = function(){ res(null); };
+    im.src = 'img/hadith-frame.jpg'; });
+  return _hadithFrameP;
+}
+try{ (window.requestIdleCallback || function(f){ setTimeout(f, 2500); })(function(){ try{ loadHadithFrame(); }catch(e){} }); }catch(e){}
+function drawHadithShareCard(ctx, W, H, h, bg, mode){
+  const CX = W/2;
+  const gold = (x0,y0,x1,y1)=>{ const g=ctx.createLinearGradient(x0,y0,x1,y1); g.addColorStop(0,'#6d5316'); g.addColorStop(.3,'#a5822f'); g.addColorStop(.55,'#caa24a'); g.addColorStop(.8,'#8f6d25'); g.addColorStop(1,'#6d5316'); return g; };
+  const rr = (x,y,w,hh,r)=>{ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+hh,r); ctx.arcTo(x+w,y+hh,x,y+hh,r); ctx.arcTo(x,y+hh,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); };
+  const star8 = (cx,cy,rO,rI,rot)=>{ ctx.beginPath(); for(let i=0;i<16;i++){ const a=(rot||0)+i*Math.PI/8; const r=(i%2===0)?rO:rI; const x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r; i?ctx.lineTo(x,y):ctx.moveTo(x,y);} ctx.closePath(); };
+  const wrap = (t,mw,f)=>{ ctx.font=f; const ws=String(t).split(/\s+/); let ln='',L=[]; for(const w of ws){ const tt=ln?ln+' '+w:w; if(ctx.measureText(tt).width>mw&&ln){L.push(ln);ln=w;}else ln=tt;} if(ln)L.push(ln); return L; };
+  const fitH = (t,mw,hi,lo,lhM,maxH,fam,wt)=>{ let s=hi,L=[]; for(;s>=lo;s-=2){ L=wrap(t,mw,(wt?wt+' ':'')+s+'px '+fam); if(L.length*Math.round(s*lhM)<=maxH)break; } const lh=Math.round(s*lhM); const mL=Math.max(1,Math.floor(maxH/lh)); if(L.length>mL){ L=L.slice(0,mL); L[mL-1]=L[mL-1].replace(/[…\s]+$/,'')+' …'; } return {lines:L,size:s,lh,font:(wt?wt+' ':'')+s+'px '+fam,h:L.length*lh}; };
+  const block = (b,cx,by,fill)=>{ ctx.font=b.font; ctx.textAlign='center'; ctx.textBaseline='alphabetic'; ctx.fillStyle=fill; for(let i=0;i<b.lines.length;i++) ctx.fillText(b.lines[i],cx,by+i*b.lh); };
+  const INK='#1b160d', INK2='#332d23';
+  // background — the ivory carved frame (PORTRAIT ONLY); cream + drawn Bismillah fallback if not yet loaded
+  if (bg){ const ir=bg.width/bg.height, cr=W/H; let dw,dh,dx,dy; if(ir>cr){dh=H;dw=H*ir;dx=(W-dw)/2;dy=0;}else{dw=W;dh=W/ir;dx=0;dy=(H-dh)/2;} ctx.drawImage(bg,dx,dy,dw,dh); }
+  else { const cg=ctx.createLinearGradient(0,0,0,H); cg.addColorStop(0,'#f7f3ea'); cg.addColorStop(1,'#efe9db'); ctx.fillStyle=cg; ctx.fillRect(0,0,W,H); ctx.save(); ctx.direction='rtl'; ctx.textAlign='center'; ctx.fillStyle=INK; ctx.font='400 60px Hafs'; ctx.fillText('بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',CX,470); ctx.restore(); ctx.direction='ltr'; }
+  const plateX=112, plateW=W-224, zoneTop=600, zoneBot=1640;
+  // Height-BUDGET fit so the hadith ALWAYS fits the portrait plate — it shrinks first, then truncates with …,
+  // no matter how long the text is. Arabic & English share the vertical budget so neither overflows the frame.
+  const gADiv=54, divH=6, gDivEn=54, gEnRef=52, refH=34, gRefName=34, nameH=96;
+  const budget=(zoneBot-zoneTop)-(gADiv+divH+gDivEn+gEnRef+refH+gRefName+nameH);
+  const arBudget=Math.round(budget*0.54), enBudget=budget-arBudget;
+  const arB=fitH(h.arabic||'', plateW-150, 66, 30, 1.92, arBudget, 'Hafs','400');
+  const enB=fitH('“'+(h.english||'')+'”', plateW-170, 37, 22, 1.5, enBudget, 'serif','400');
+  const contentH = arB.h+gADiv+divH+gDivEn+enB.h+gEnRef+refH+gRefName+nameH;
+  let top = zoneTop + Math.max(0, ((zoneBot-zoneTop)-contentH)/2);
+  const padTop=46, padBot=46, pY=top-padTop, pH=contentH+padTop+padBot;
+  ctx.save(); ctx.shadowColor='rgba(70,52,18,.20)'; ctx.shadowBlur=32; ctx.shadowOffsetY=10;
+  const pg=ctx.createLinearGradient(0,pY,0,pY+pH); pg.addColorStop(0,'rgba(255,255,253,.82)'); pg.addColorStop(1,'rgba(251,248,241,.85)');
+  ctx.fillStyle=pg; rr(plateX,pY,plateW,pH,32); ctx.fill(); ctx.restore();
+  ctx.strokeStyle='rgba(140,110,45,.5)'; ctx.lineWidth=1.5; rr(plateX,pY,plateW,pH,32); ctx.stroke();
+  ctx.strokeStyle='rgba(140,110,45,.22)'; ctx.lineWidth=1; rr(plateX+9,pY+9,plateW-18,pH-18,25); ctx.stroke();
+  let y=top;
+  ctx.direction='rtl'; block(arB,CX,y+arB.size,INK); ctx.direction='ltr'; y+=arB.h+gADiv*0.5;
+  ctx.strokeStyle=gold(CX-170,0,CX+170,0); ctx.lineWidth=1.7; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(CX-160,y); ctx.lineTo(CX-28,y); ctx.moveTo(CX+28,y); ctx.lineTo(CX+160,y); ctx.stroke();
+  ctx.fillStyle=gold(CX-13,y-13,CX+13,y+13); star8(CX,y,13,5,0); ctx.fill();
+  y+=gDivEn*0.5;
+  block(enB,CX,y+enB.size,INK2); y+=enB.h+gEnRef;
+  // reference ONLY (no grade)
+  ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  let refT=(h.reference||''); const rl=wrap(refT, plateW-140, '600 27px system-ui, sans-serif'); if(rl.length>1) refT=rl[0].replace(/[\s]+$/,'')+'…';
+  ctx.fillStyle=gold(CX-240,0,CX+240,0); ctx.font='600 27px system-ui, sans-serif'; ctx.fillText(refT,CX,y+refH*0.7); y+=refH+gRefName;
+  ctx.strokeStyle='rgba(140,110,45,.34)'; ctx.lineWidth=1.1; ctx.beginPath(); ctx.moveTo(CX-105,y-10); ctx.lineTo(CX+105,y-10); ctx.stroke();
+  // app name — STACKED: Arabic wordmark صِرَاط on top, English "Sirat Khushu" directly below
+  ctx.direction='rtl'; ctx.fillStyle=gold(CX-95,0,CX+95,0); ctx.font='700 46px Hafs'; ctx.fillText('صِرَاط',CX,y+42); ctx.direction='ltr';
+  ctx.fillStyle='#181209'; ctx.font='700 33px system-ui, sans-serif'; ctx.fillText('Sirat Khushu',CX,y+88);
+}
+async function shareHadithImage(idx){
+  const h = HADITH[idx], c = document.getElementById('shareCanvas'); if (!c || !h) return;
+  let bg = null; try{ bg = await loadHadithFrame(); }catch(e){}
+  const W = 1080, H = 1920;   // PORTRAIT ONLY — text auto-fits & truncates so it always fits
+  c.width = W; c.height = H; const ctx = c.getContext('2d'); ctx.clearRect(0,0,W,H);
+  try{ drawHadithShareCard(ctx, W, H, h, bg); }catch(e){ try{ ctx.fillStyle='#f3ede0'; ctx.fillRect(0,0,W,H); }catch(_){ } }
+  const dl = function(blob){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='hadith.png'; a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000); };
   c.toBlob(function(blob){
     if (!blob) return;
     const file = new File([blob], 'hadith.png', {type:'image/png'});
-    if (navigator.canShare && navigator.canShare({files:[file]})){ navigator.share({files:[file], text:'Hadith of the Day'}).catch(function(){}); }
-    else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'hadith.png'; a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000); }
+    const txt = '“' + (h.english||'') + '”\n\n— ' + (h.reference||'') + '\n\nصِرَاط · Sirat Khushu\nhttps://shaikhmuhammadali.github.io/sirat-khushu/get.html';
+    try{
+      if (navigator.canShare && navigator.canShare({files:[file]})) navigator.share({files:[file], title:'Hadith of the Day — Sirat Khushu', text:txt}).catch(function(){});
+      else if (navigator.share) navigator.share({title:'Hadith of the Day — Sirat Khushu', text:txt}).catch(function(){ dl(blob); });
+      else dl(blob);
+    }catch(e){ dl(blob); }
   }, 'image/png');
 }
 
