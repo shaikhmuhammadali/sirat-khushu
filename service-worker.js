@@ -14,7 +14,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
 
-const VERSION = 'sabr-engine-v3.128.0';         // ← bump to ship an update (clients auto-drop the old cache)
+const VERSION = 'sabr-engine-v3.129.0';         // ← bump to ship an update (clients auto-drop the old cache)
 const SHELL   = VERSION + '-shell';
 const RUNTIME = VERSION + '-runtime';
 // Reciter audio (offline recitation) is bounded + FIFO. Its name is DELIBERATELY version-independent so a
@@ -49,6 +49,7 @@ const PRECACHE = [
   './icons/apple-touch-icon.png',
   './icons/favicon-32.png',
   './icons/favicon.ico',
+  './img/hadith-frame.jpg',
   './audio/salawat.mp3',
   './audio/alhamdulillah.mp3',
   './audio/assalamualaikum.mp3',
