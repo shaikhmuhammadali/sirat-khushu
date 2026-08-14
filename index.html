@@ -174,6 +174,14 @@
   .brand{display:flex; align-items:center; gap:11px; min-width:0}
   .brand-mark{display:inline-flex; align-items:center; line-height:0; flex:none}
   .brand-mark svg{filter:drop-shadow(0 0 9px rgba(217,180,91,.4))}
+  /* The header medallion is skMark()'s FIXED cream→gold gradient — correct on the dark login hero, but here
+     it sits on the theme page background var(--bg), so it washes out / vanishes on the light themes. Re-point
+     ONLY this instance's gradient stops to theme-aware golds so the logo stays visible on every theme. CSS
+     stop-color overrides the SVG presentation attribute, and this is scoped to .brand-mark so the login hero
+     (.ahero-logo, on a fixed-dark panel) is untouched. */
+  .brand-mark svg linearGradient stop:nth-child(1){stop-color:var(--gold)}
+  .brand-mark svg linearGradient stop:nth-child(2){stop-color:var(--gold)}
+  .brand-mark svg linearGradient stop:nth-child(3){stop-color:var(--gold-ink)}
   .brand .ar{font-family:var(--arabic); font-size:1.7rem; color:var(--gold); line-height:1}
   .brand .en{font-size:.7rem; letter-spacing:.3em; text-transform:uppercase; color:var(--muted); font-weight:800; white-space:nowrap}
   .hl-name{color:var(--gold-ink); font-weight:700}   /* the blessed names of Allah ﷻ and Muhammad ﷺ, emphasised wherever they appear */
@@ -989,8 +997,8 @@
   .bnav button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .22s cubic-bezier(.2,1.2,.4,1),filter .22s ease}
   .bnav button.active{color:var(--gold-ink)}
   /* premium active state: gold-gradient stroke, soft glow, and a jewelled pill above the icon */
-  .bnav button.active svg{stroke:url(#navGold);filter:drop-shadow(0 2px 7px color-mix(in srgb,var(--gold-ink) 42%,transparent))}
-  .bnav button::before{content:"";position:absolute;top:0;left:50%;width:26px;height:3px;border-radius:0 0 5px 5px;background:linear-gradient(90deg,#f4e3a1,#c9a24b);box-shadow:0 1px 8px color-mix(in srgb,var(--gold-ink) 60%,transparent);opacity:0;transform:translateX(-50%) scaleX(.25);transition:opacity .28s ease,transform .34s cubic-bezier(.2,1.2,.4,1)}
+  .bnav button.active svg{stroke:var(--gold-ink);filter:drop-shadow(0 2px 7px color-mix(in srgb,var(--gold-ink) 42%,transparent))}
+  .bnav button::before{content:"";position:absolute;top:0;left:50%;width:26px;height:3px;border-radius:0 0 5px 5px;background:linear-gradient(90deg,var(--gold),var(--gold-ink));box-shadow:0 1px 8px color-mix(in srgb,var(--gold-ink) 60%,transparent);opacity:0;transform:translateX(-50%) scaleX(.25);transition:opacity .28s ease,transform .34s cubic-bezier(.2,1.2,.4,1)}
   .bnav button.active::before{opacity:1;transform:translateX(-50%) scaleX(1)}
   @media (hover:hover){ .bnav button:not(.active):hover{color:color-mix(in srgb,var(--gold-ink) 70%,var(--dim))} .bnav button:not(.active):hover svg{transform:translateY(-1px)} }
   html.locked .bnav{display:none}
@@ -1080,7 +1088,7 @@
   .cal-cell.today .cg,.cal-cell.today .chj{color:#171204}
   .cal-cell.sel:not(.today){border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
   .cdot{width:5px;height:5px;border-radius:50%;background:var(--gold);position:absolute;bottom:5px;left:50%;transform:translateX(-50%)}
-  .cdot.cm{background:#3f9b73}
+  .cdot.cm{background:var(--teal)}
   .cal-cell.today .cdot{background:#171204}
   .cal-legend{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:12px;padding-top:11px;border-top:1px solid var(--stroke);font-size:.68rem;color:var(--dim)}
   .cal-legend span{display:inline-flex;align-items:center;gap:5px}
@@ -3646,6 +3654,47 @@ function _qWordWeight(w){
   return Math.max(1, base.length + madd * 1.1);
 }
 /* Highlight the ayah being recited + glow each word in turn, following the Qari. */
+/* ── Recitation auto-scroll ────────────────────────────────────────────────────────────
+   The whole PAGE is the scroller (the .qayah rows live in normal document flow). While a
+   surah/passage recites, ease window.scrollY so the CURRENTLY-GLOWING word (or, before its
+   word-spans exist, the reciting ayah) rides ~40% down the viewport — a slow, continuous
+   glide rather than a jerk to each ayah. It stops the instant the user scrolls by hand, when
+   recitation ends, or when it's stopped/superseded. html{scroll-behavior:smooth} is global,
+   so every scrollBy MUST pass behavior:'auto', else the browser double-animates each frame. */
+let _qsRAF = 0, _qsWatch = null;
+function _qsActiveEl(){
+  const card = document.getElementById('quranCard'); if (!card) return null;
+  return card.querySelector('.qayah.reciting .qar .qw.rw')   // the glowing word — follows recitation within a long ayah
+      || card.querySelector('.qayah.reciting');              // fallback: the ayah row itself
+}
+function startReciteScroll(){
+  stopReciteScroll();                                        // never stack two loops
+  if (typeof fastOn === 'function' && fastOn()) return;      // respect prefers-reduced-motion — no auto-motion
+  _qsWatch = function(){ stopReciteScroll(); };              // any real scroll gesture hands control back to the user
+  window.addEventListener('wheel', _qsWatch, { passive: true });
+  window.addEventListener('touchmove', _qsWatch, { passive: true });
+  const step = function(){
+    const el = _qsActiveEl();
+    if (el){
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      const delta = el.getBoundingClientRect().top - vh * 0.40;   // >0 → line is below the anchor → scroll DOWN
+      if (Math.abs(delta) > 2){
+        const dy = Math.max(-10, Math.min(10, delta * 0.06));     // ease toward it, capped small → slow & smooth
+        window.scrollBy({ top: dy, left: 0, behavior: 'auto' });  // 'auto' overrides the global smooth scroll-behavior
+      }
+    }
+    _qsRAF = requestAnimationFrame(step);
+  };
+  _qsRAF = requestAnimationFrame(step);
+}
+function stopReciteScroll(){
+  if (_qsRAF){ cancelAnimationFrame(_qsRAF); _qsRAF = 0; }
+  if (_qsWatch){
+    window.removeEventListener('wheel', _qsWatch, { passive: true });
+    window.removeEventListener('touchmove', _qsWatch, { passive: true });
+    _qsWatch = null;
+  }
+}
 function setRecitingAyah(sn, an, audio){
   const card = document.getElementById('quranCard'); if (!card) return;
   card.querySelectorAll('.qayah.reciting').forEach(q => q.classList.remove('reciting'));
@@ -3653,10 +3702,14 @@ function setRecitingAyah(sn, an, audio){
   const el = card.querySelector('.qayah[data-sn="' + sn + '"][data-an="' + an + '"]');
   if (!el) return;
   el.classList.add('reciting');
-  // scroll ONLY when the ayah isn't comfortably in view — never jerk the page on an already-visible ayah
+  // scroll ONLY when the ayah isn't comfortably in view — never jerk the page on an already-visible ayah.
+  // Skipped while the continuous auto-scroll loop owns the page (surah/passage recite, _qsRAF≠0) — the loop
+  // positions the page and this one-shot would fight it. So this runs only for a single-ayah recite.
   try{
-    const r = el.getBoundingClientRect(), vh = window.innerHeight || document.documentElement.clientHeight;
-    if (r.top < 84 || r.bottom > vh - 84) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    if (!_qsRAF){
+      const r = el.getBoundingClientRect(), vh = window.innerHeight || document.documentElement.clientHeight;
+      if (r.top < 84 || r.bottom > vh - 84) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
   }catch(e){}
   // word-by-word "lafẓ" glow. Per-word audio timings aren't published, so the glow is paced by each
   // word's reciting WEIGHT (letters + long-vowel madd) — far closer to the Qari than an equal split.
@@ -3692,6 +3745,7 @@ function stopReciteAudio(){
   try{ _stopVoices(); }catch(e){}                 // a starting/stopping recitation also silences any short greeting clip, so the two never overlap
   if ('speechSynthesis' in window){ try{ speechSynthesis.cancel(); }catch(e){} }
   document.querySelectorAll('.recitebtn.playing').forEach(b => b.classList.remove('playing'));
+  stopReciteScroll();                              // halt the auto-scroll on any stop / interrupt / new recite
   clearRecitingAyah();
 }
 let _reciteOfflineNoted = false;
@@ -3719,6 +3773,7 @@ function reciteSurahAudio(surah, count, firstG, btn){
   if (wasThis || !count) return;
   const seq = _qaSeq;
   if (btn) btn.classList.add('playing');
+  startReciteScroll();                             // gently follow the recitation down the page
   // Sunnah of recitation: every surah OPENS with Bismillah — except At-Tawba (9), while
   // Al-Fatiha (1) already carries it as its first ayah. We prepend the reciter's own
   // recorded Bismillah (= Al-Fatiha 1:1), which resolves for every reciter/source.
@@ -3733,7 +3788,7 @@ function reciteSurahAudio(surah, count, firstG, btn){
   let i = 0, cur = mk(0), nxt = (items.length > 1) ? mk(1) : null;
   (function play(){
     if (seq !== _qaSeq) return;                     // superseded/stopped
-    if (i >= items.length || !cur){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); return; }
+    if (i >= items.length || !cur){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); stopReciteScroll(); return; }
     _qa = cur;
     const _an = hasBism ? i : i + 1; if (_an >= 1) setRecitingAyah(surah, _an, cur); else clearRecitingAyah();
     const advance = () => { if (seq !== _qaSeq) return; i++; cur = nxt; nxt = (i + 1 < items.length) ? mk(i + 1) : null; play(); };
@@ -3747,13 +3802,14 @@ function recitePassage(surah, fromAyah, count, firstG, btn){
   if (wasThis || !count) return;
   const seq = _qaSeq;
   if (btn) btn.classList.add('playing');
+  startReciteScroll();                             // gently follow the recitation down the page
   // each ayah is a separate mp3 — preload the next while the current plays (gapless); each element
   // self-heals across CDN sources so one blocked host can't silently kill the passage mid-recitation.
   const mk = (k) => reciteAudio(surah, fromAyah + k, firstG + k);
   let i = 0, cur = mk(0), nxt = (count >= 2) ? mk(1) : null;
   (function play(){
     if (seq !== _qaSeq) return;
-    if (i >= count || !cur){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); return; }
+    if (i >= count || !cur){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); stopReciteScroll(); return; }
     _qa = cur;
     setRecitingAyah(surah, fromAyah + i, cur);
     const advance = () => { if (seq !== _qaSeq) return; i++; cur = nxt; nxt = (i + 1 < count) ? mk(i + 1) : null; play(); };
