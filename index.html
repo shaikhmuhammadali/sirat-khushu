@@ -1739,7 +1739,7 @@
 <!-- focus mode -->
 <div id="focus" class="focus"><div class="flabel">Focus Mode</div><div class="fname" id="fName">Prayer</div><div class="fwindow" id="fWindow"></div><div class="breath"></div><p class="fint" id="fInt"></p><button class="btn" onclick="logFromFocus()">I have prayed — Alhamdulillah</button><button class="fx" onclick="closeFocus()">I need my phone (emergency exit — no guilt)</button></div>
 <!-- prayer lock (full-screen, at prayer time) -->
-<div id="prayerLock" class="plock"><div class="plock-inner">
+<div id="prayerLock" class="plock" role="dialog" aria-modal="true" aria-labelledby="plName" tabindex="-1"><div class="plock-inner">
   <div class="plabel">It is time to pray</div>
   <div class="pname" id="plName">Prayer</div>
   <div class="pcount"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="pc-bg" cx="60" cy="60" r="54"></circle><circle class="pc-fg" id="plRing" cx="60" cy="60" r="54"></circle></svg><div class="pc-time" id="plTime">15:00</div></div>
@@ -1757,7 +1757,7 @@
   <button class="pfx" onclick="closePrayerLock()">I need my phone (emergency exit — no guilt)</button>
 </div></div>
 <!-- at-prayer-time prompt -->
-<div id="prayerPrompt" class="pprompt"><div class="pp-card">
+<div id="prayerPrompt" class="pprompt" role="dialog" aria-modal="true" aria-labelledby="ppName" tabindex="-1"><div class="pp-card">
   <div class="pp-label">Prayer time</div>
   <div class="pp-name" id="ppName">Prayer</div>
   <div class="pp-time" id="ppTime"></div>
@@ -2772,6 +2772,7 @@ function maybeLove(){
   const w = document.getElementById('welcome'), f = document.getElementById('focus');
   if ((w && w.classList.contains('open')) || (f && f.classList.contains('open'))) return;
   if (Date.now() - lastLove < S.loveEvery*60000) return;
+  if (typeof _reciting === 'function' && _reciting()) return;   // never cut off an in-progress recitation — retry next tick (lastLove NOT advanced)
   lastLove = Date.now();
   loveToast(pickNudge());
 }
@@ -2965,9 +2966,11 @@ function reciteText(text, btn){
   // 1) Qur'anic text → the user's chosen real reciter (qari), the same voice used everywhere.
   var _qy = qayahLookup(text);
   if (_qy){ try{ reciteAyah(_qy[0], _qy[1], _qy[2], btn); }catch(e){} return; }
-  // 2) Fixed dhikr / adhkar / hadith that has a pre-rendered bundled clip → play it (instant, offline).
-  try{ var vk = voiceKey(text); if (typeof VOICE_SET !== 'undefined' && VOICE_SET.has(vk)){ playBundledVoice(vk, text, btn); return; } }catch(e){}
-  // 3) Otherwise voice it with the device's own Arabic voice → the server TTS → an honest
+  // 2) (Pre-rendered offline dhikr/adhkar/hadith clips are NOT shipped in this deploy — audio/voice/*.mp3
+  //    doesn't exist, so the old VOICE_SET→playBundledVoice dispatch only fired a 404 then fell back, causing a
+  //    brief dead beat. Skip it and go straight to the device/online Arabic voice below. Restore this dispatch
+  //    only if the ~142 audio/voice/<hash>.mp3 clips are ever bundled AND added to the service-worker precache.)
+  // 3) Voice it with the device's own Arabic voice → the server TTS → an honest
   //    "not available on this device" note (reciteUnavailable + ttsHelp). NEVER a silent dead button.
   try{ speakArabicFallback(text, btn); }catch(e){ try{ if (btn) reciteUnavailable(btn); }catch(_){} }
 }
@@ -3539,9 +3542,10 @@ function showPrayerPrompt(k, e, tz, preview){
   const g = ppGuide(k);
   document.getElementById('ppDo').innerHTML = g.doList.map(x => '<li>' + esc(x) + '</li>').join('');
   document.getElementById('ppDont').innerHTML = g.dontList.map(x => '<li>' + esc(x) + '</li>').join('');
-  document.getElementById('prayerPrompt').classList.add('open');
+  const _pp = document.getElementById('prayerPrompt'); _pp.classList.add('open');
+  try{ _dlgLastFocus = document.activeElement; (_pp.querySelector('.btn') || _pp).focus({ preventScroll: true }); }catch(e){}   // a11y: announce the dialog + move focus in
 }
-function closePrayerPrompt(){ document.getElementById('prayerPrompt').classList.remove('open'); ppKey = null; ppPreview = false; }
+function closePrayerPrompt(){ document.getElementById('prayerPrompt').classList.remove('open'); ppKey = null; ppPreview = false; _restoreDlgFocus(); }
 function prayerPromptPrayed(){ const prev = ppPreview, k = ppKey; closePrayerPrompt(); if (prev) return; if (k && !todayLogs()[k]) toggleLog(k); }
 function prayerPromptFocus(){ const prev = ppPreview, k = ppKey; closePrayerPrompt(); if (prev) return; openFocus(k); }
 function previewPrayerPrompt(){
@@ -3661,7 +3665,7 @@ function _qWordWeight(w){
    glide rather than a jerk to each ayah. It stops the instant the user scrolls by hand, when
    recitation ends, or when it's stopped/superseded. html{scroll-behavior:smooth} is global,
    so every scrollBy MUST pass behavior:'auto', else the browser double-animates each frame. */
-let _qsRAF = 0, _qsWatch = null;
+let _qsRAF = 0, _qsWatch = null, _qsUserTook = false;   // _qsUserTook: user hand-scrolled during THIS recite → don't auto-recenter until a new recite
 function _qsActiveEl(){
   const card = document.getElementById('quranCard'); if (!card) return null;
   return card.querySelector('.qayah.reciting .qar .qw.rw')   // the glowing word — follows recitation within a long ayah
@@ -3670,7 +3674,7 @@ function _qsActiveEl(){
 function startReciteScroll(){
   stopReciteScroll();                                        // never stack two loops
   if (typeof fastOn === 'function' && fastOn()) return;      // respect prefers-reduced-motion — no auto-motion
-  _qsWatch = function(){ stopReciteScroll(); };              // any real scroll gesture hands control back to the user
+  _qsWatch = function(){ _qsUserTook = true; stopReciteScroll(); };   // a real scroll gesture hands control to the user AND keeps it (setRecitingAyah won't re-grab this recite)
   window.addEventListener('wheel', _qsWatch, { passive: true });
   window.addEventListener('touchmove', _qsWatch, { passive: true });
   const step = function(){
@@ -3706,7 +3710,7 @@ function setRecitingAyah(sn, an, audio){
   // Skipped while the continuous auto-scroll loop owns the page (surah/passage recite, _qsRAF≠0) — the loop
   // positions the page and this one-shot would fight it. So this runs only for a single-ayah recite.
   try{
-    if (!_qsRAF){
+    if (!_qsRAF && !_qsUserTook){
       const r = el.getBoundingClientRect(), vh = window.innerHeight || document.documentElement.clientHeight;
       if (r.top < 84 || r.bottom > vh - 84) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }
@@ -3745,7 +3749,7 @@ function stopReciteAudio(){
   try{ _stopVoices(); }catch(e){}                 // a starting/stopping recitation also silences any short greeting clip, so the two never overlap
   if ('speechSynthesis' in window){ try{ speechSynthesis.cancel(); }catch(e){} }
   document.querySelectorAll('.recitebtn.playing').forEach(b => b.classList.remove('playing'));
-  stopReciteScroll();                              // halt the auto-scroll on any stop / interrupt / new recite
+  stopReciteScroll(); _qsUserTook = false;         // halt the auto-scroll on any stop / interrupt / new recite, and clear the user-takeover flag so the next recite auto-follows again
   clearRecitingAyah();
 }
 let _reciteOfflineNoted = false;
@@ -5333,10 +5337,14 @@ function seededRand(seed){ return function(){ seed = (seed*9301 + 49297) % 23328
 function renderGarden(){
   const svg = document.getElementById('sky'); if (!svg) return;
   let total = 0, week = 0; const weekAgo = Date.now() - 7*86400000;
+  // Reckon the last-7-days window in the LOCATION timezone (string-compare day-keys, which are minted in that
+  // frame) so a traveller whose device clock differs from their prayer location isn't off by one; falls back
+  // to a device-local parse only when there is no location yet.
+  let _cutoffKey = null; try{ if (S.loc) _cutoffKey = keyForCivil(addCivilDays(currentSet().today, -6)); }catch(e){}
   const days = Object.keys(S.logs).sort(), dayStars = [];
   for (const dk of days){
     const n = Object.keys(S.logs[dk]).length; total += n;
-    if (new Date(dk + 'T12:00:00').getTime() >= weekAgo) week += n;
+    if (_cutoffKey ? (dk >= _cutoffKey) : (new Date(dk + 'T12:00:00').getTime() >= weekAgo)) week += n;
     dayStars.push({dk, n});
   }
   document.getElementById('skystats').innerHTML =
@@ -5617,7 +5625,7 @@ function updateEscalation(){
     for (let i = 0; i < win.length; i++){
       const w = win[i];
       if (w.e != null && w.e <= now && !logs[w.k]){
-        const nxt = win[i+1], end = (nxt && nxt.e) ? nxt.e : w.e + 2*3600000, left = end - now;
+        const end = (w.end != null) ? w.end : (w.e + 2*3600000), left = end - now;   // each prayer's OWN close (Fajr→sunrise, Isha→next Fajr), not the next prayer's start
         if (left > 0 && left < 30*60000){
           out = '<div class="banner gold" style="display:block"><b>' + w.k + ' closes in about ' + Math.ceil(left/60000) + ' min.</b> There is still time — two minutes is all it takes. <button class="linkish" onclick="openFocus(&quot;' + w.k + '&quot;)">Enter Focus Mode</button></div>';
           break;
@@ -5938,6 +5946,8 @@ function newLockAyah(){
   else { let n; do { n = LOCK_AYAHS[Math.floor(Math.random()*LOCK_AYAHS.length)]; } while (n === _plAyah); _plAyah = n; }
   paintLockAyah();
 }
+let _dlgLastFocus = null;
+function _restoreDlgFocus(){ try{ if (_dlgLastFocus && _dlgLastFocus.focus) _dlgLastFocus.focus({ preventScroll: true }); }catch(e){} _dlgLastFocus = null; }
 function openPrayerLock(k, e, tz){
   _plKey = k || null;
   _plMins = Math.max(1, Math.min(30, +S.prayerLockMins || 15));
@@ -5945,6 +5955,7 @@ function openPrayerLock(k, e, tz){
   const lock = document.getElementById('prayerLock'); if (!lock) return;
   try{ newLockAyah(); }catch(_){}                  // a fresh ayah each time the lock appears
   lock.classList.add('open');
+  try{ _dlgLastFocus = document.activeElement; (lock.querySelector('.plock-done') || lock).focus({ preventScroll: true }); }catch(e){}   // a11y: announce the dialog + move focus in
   try{ chime(); }catch(_){}                       // alert tone (a real azan.mp3 can be wired in later)
   try{ buzz([60, 80, 120]); }catch(_){}
   _plEnd = Date.now() + _plMins * 60000;
@@ -5959,8 +5970,8 @@ function openPrayerLock(k, e, tz){
   };
   tick(); _plTimer = setInterval(tick, 1000);
 }
-function prayerLockDone(){ clearInterval(_plTimer); const l = document.getElementById('prayerLock'); if (l) l.classList.remove('open'); if (_plKey && !todayLogs()[_plKey]) toggleLog(_plKey); }
-function closePrayerLock(){ clearInterval(_plTimer); const l = document.getElementById('prayerLock'); if (l) l.classList.remove('open'); }
+function prayerLockDone(){ clearInterval(_plTimer); const l = document.getElementById('prayerLock'); if (l) l.classList.remove('open'); _restoreDlgFocus(); if (_plKey && !todayLogs()[_plKey]) toggleLog(_plKey); }
+function closePrayerLock(){ clearInterval(_plTimer); const l = document.getElementById('prayerLock'); if (l) l.classList.remove('open'); _restoreDlgFocus(); }
 function togglePrayerLock(){
   S.prayerLock = document.getElementById('setPrayerLock').checked; save();
   const row = document.getElementById('plMinsRow'); if (row) row.style.display = S.prayerLock ? 'flex' : 'none';
