@@ -3645,7 +3645,7 @@ function reciteAudio(surah, ayah, g){
   const urls = ayahAudioUrls(surah, ayah, g);
   const seq = _qaSeq;                                    // liveness token
   const a = new Audio(); a.volume = 1; a.preload = 'auto';
-  let i = 0, busy = false, started = false, onFail = null;
+  let i = 0, busy = false, started = false, onFail = null, promoted = false;
   const setSrc = () => { a.src = urls[i++]; try{ a.load(); }catch(e){} };
   if (urls.length) setSrc();                             // prime + preload the first source
   const advance = () => {
@@ -3657,9 +3657,24 @@ function reciteAudio(surah, ayah, g){
     else busy = false;
   };
   a.addEventListener('error', () => { if (started && seq === _qaSeq) advance(); });
+  // GAPLESS: force this (preloaded-next) element to actually BUFFER now. Mobile WebViews ignore
+  // preload='auto' and don't fetch a byte until .play() — so without this the next ayah only starts
+  // downloading the instant the current ends, and THAT download is the audible break between verses.
+  // A muted play→pause→rewind primes the decode pipeline so its real turn starts with zero wait.
+  // Race-safe: once promoted to the live element, any late warm-pause is skipped so it can never
+  // stop real playback (critical for very short ayahs that get promoted before warm resolves).
+  a.warm = function(){
+    if (promoted || started || seq !== _qaSeq) return;
+    try{
+      a.muted = true;
+      const p = a.play();
+      if (p && p.then) p.then(() => { if (!promoted){ try{ a.pause(); a.currentTime = 0; }catch(e){} } }, () => {});
+    }catch(e){}
+  };
   a.playFallback = function(fail){
-    onFail = fail || onFail; started = true;
+    onFail = fail || onFail; started = true; promoted = true; a.muted = false;   // now the LIVE element: unmute + claim it so a pending warm-pause is ignored
     if (seq !== _qaSeq) return a;
+    try{ if (a.currentTime > 0.05) a.currentTime = 0; }catch(e){}                 // if warming nudged it forward, restart from the very first word
     const p = a.play();
     if (p && p.then) p.then(() => {}, () => { if (seq === _qaSeq) advance(); });
     return a;
@@ -3864,12 +3879,13 @@ function reciteSurahAudio(surah, count, firstG, btn){
   // self-heals across CDN sources, so a blocked host can't silently kill the surah mid-recitation.
   const mk = (k) => { const it = items[k]; return reciteAudio(it[0], it[1], it[2]); };
   let i = 0, cur = mk(0), nxt = (items.length > 1) ? mk(1) : null;
+  if (nxt) nxt.warm();                              // begin buffering the NEXT ayah while this one plays, so the hand-off is seamless
   (function play(){
     if (seq !== _qaSeq) return;                     // superseded/stopped
     if (i >= items.length || !cur){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); stopReciteScroll(); return; }
     _qa = cur;
     const _an = hasBism ? i : i + 1; if (_an >= 1) setRecitingAyah(surah, _an, cur); else clearRecitingAyah();
-    const advance = () => { if (seq !== _qaSeq) return; i++; cur = nxt; nxt = (i + 1 < items.length) ? mk(i + 1) : null; play(); };
+    const advance = () => { if (seq !== _qaSeq) return; i++; cur = nxt; nxt = (i + 1 < items.length) ? mk(i + 1) : null; if (nxt) nxt.warm(); play(); };
     cur.onended = advance;
     cur.playFallback(advance);                      // every source failed for this ayah → skip to next
   })();
@@ -3885,12 +3901,13 @@ function recitePassage(surah, fromAyah, count, firstG, btn){
   // self-heals across CDN sources so one blocked host can't silently kill the passage mid-recitation.
   const mk = (k) => reciteAudio(surah, fromAyah + k, firstG + k);
   let i = 0, cur = mk(0), nxt = (count >= 2) ? mk(1) : null;
+  if (nxt) nxt.warm();                              // begin buffering the NEXT ayah while this one plays, so the hand-off is seamless
   (function play(){
     if (seq !== _qaSeq) return;
     if (i >= count || !cur){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); stopReciteScroll(); return; }
     _qa = cur;
     setRecitingAyah(surah, fromAyah + i, cur);
-    const advance = () => { if (seq !== _qaSeq) return; i++; cur = nxt; nxt = (i + 1 < count) ? mk(i + 1) : null; play(); };
+    const advance = () => { if (seq !== _qaSeq) return; i++; cur = nxt; nxt = (i + 1 < count) ? mk(i + 1) : null; if (nxt) nxt.warm(); play(); };
     cur.onended = advance;
     cur.playFallback(advance);                      // every source failed for this ayah → skip to next
   })();
