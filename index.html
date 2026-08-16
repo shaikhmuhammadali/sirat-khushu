@@ -1066,7 +1066,7 @@
   .qtitle{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
   .qname{font-family:var(--serif,var(--font));font-weight:800;font-size:1.18rem;color:var(--gold-ink)}
   .qarname{font-size:1.1rem;color:var(--ink)}
-  .qayah{display:flex;gap:11px;padding:15px 0;border-bottom:1px solid color-mix(in srgb,var(--stroke) 55%,transparent)}
+  .qayah{display:flex;gap:11px;padding:15px 0;border-bottom:1px solid color-mix(in srgb,var(--stroke) 55%,transparent);content-visibility:auto;contain-intrinsic-size:340px;contain-intrinsic-size:auto 340px}   /* skip layout+paint of the hundreds of off-screen ayat in a long surah (Al-Baqarah = 286 rows / ~96,000px) so the WebView isn't re-rasterising them while the Qari mp3 decodes and the follow scrolls. 'auto' remembers each row's real height after first render, so scroll math stays stable; the plain length is the fallback for older WebViews. */
   .qayah:last-child{border-bottom:none}
   .qnum{flex:none;width:27px;height:27px;border-radius:50%;border:1px solid var(--stroke-gold);color:var(--gold-ink);display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;background:var(--gold-soft)}
   .qbody{flex:1;min-width:0}
@@ -1202,12 +1202,12 @@
   @media (prefers-reduced-motion:reduce){ .sajda-glyph{animation:none} }
   /* ── "following the Qari": the ayah currently being recited glows and gently pulses ── */
   .qayah{transition:background .45s ease,box-shadow .45s ease,border-color .45s ease}
-  .qayah.reciting{position:relative;border:1px solid var(--stroke-gold);border-radius:16px;padding:12px 14px 12px 18px;background:linear-gradient(120deg,color-mix(in srgb,var(--gold) 15%,transparent),transparent 68%);animation:reciteGlow 2.6s ease-in-out infinite}
+  .qayah.reciting{position:relative;border:1px solid var(--stroke-gold);border-radius:16px;padding:12px 14px 12px 18px;background:linear-gradient(120deg,color-mix(in srgb,var(--gold) 15%,transparent),transparent 68%);box-shadow:0 0 0 1px color-mix(in srgb,var(--gold-ink) 40%,transparent),0 12px 34px -12px color-mix(in srgb,var(--gold-ink) 62%,transparent)}   /* STATIC glow (was an infinite box-shadow animation → a continuous main-thread repaint the whole recitation; the ::before accent bar still pulses on compositor-only opacity/transform) */
   .qayah.reciting::before{content:"";position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:0 3px 3px 0;background:linear-gradient(180deg,#f7e9b0,#c9a24b);box-shadow:0 0 12px color-mix(in srgb,var(--gold-ink) 75%,transparent);animation:reciteBar 1.5s ease-in-out infinite}
   .qayah.reciting .qnum{background:linear-gradient(135deg,var(--gold),#b8933f);color:#171204;box-shadow:0 0 15px color-mix(in srgb,var(--gold-ink) 55%,transparent)}
   .qayah.reciting .qar{text-shadow:0 0 20px rgba(217,180,91,.4)}
   /* word-by-word "lafẓ" glow: the current word lights up, recited words dim, upcoming stay full */
-  .qar .qw{transition:color .35s ease, text-shadow .35s ease, opacity .35s ease}
+  .qar .qw{transition:color .3s ease, opacity .3s ease}   /* text-shadow dropped from the transition — animating a 22px blur repainted the word every frame during scroll; the glow now applies instantly while colour still eases */
   .qar .qw.rw-done{color:var(--gold-ink); opacity:.7}
   .qar .qw.rw{color:var(--gold-ink); text-shadow:0 0 22px rgba(217,180,91,1), 0 0 8px rgba(255,244,214,.9)}
   @media (prefers-reduced-motion:reduce){ .qar .qw{transition:color .12s ease} }
@@ -3696,7 +3696,7 @@ function _qWordWeight(w){
    recitation stops. A fractional cursor (_qsPos) is eased toward the anchor and written with
    scrollTo(round) — no per-frame scrollBy, so there's no sub-pixel rounding jitter and a stationary
    word parks perfectly still (no micro-vibration). */
-let _qsRAF = 0, _qsWatch = null, _qsUserTook = false, _qsLastTouch = 0, _qsAudio = null;   // _qsUserTook: reader is hand-scrolling right now → yield (resumes ~3s after last gesture). _qsAudio: the ayah's audio, so the drift is paced by real playback progress (teleprompter), not discrete word jumps
+let _qsRAF = 0, _qsWatch = null, _qsUserTook = false, _qsLastTouch = 0, _qsAudio = null, _qsAyTop = null, _qsAyH = 0, _qsFrac = 0, _qsPos = null, _qsWrote = -1;   // _qsAyTop/_qsAyH: the reciting ayah's ABSOLUTE geometry, cached ONCE in setRecitingAyah so the rAF loop needs no per-frame getBoundingClientRect (a forced reflow of the 96,000px surah DOM every frame was the surviving jank). _qsWrote: last written scroll px (skip redundant scrollTo)
 function _qsActiveEl(){
   const card = document.getElementById('quranCard'); if (!card) return null;
   return card.querySelector('.qayah.reciting .qar .qw.rw')   // the glowing word — follows recitation within a long ayah
@@ -3705,41 +3705,37 @@ function _qsActiveEl(){
 function startReciteScroll(){
   stopReciteScroll();                                        // never stack two loops
   if (typeof fastOn === 'function' && fastOn()) return;      // respect prefers-reduced-motion — no auto-motion
+  try{ document.documentElement.style.scrollBehavior = 'auto'; }catch(e){}   // CRITICAL: force the ROOT scroller instant. scrollTo({behavior:'auto'}) can INHERIT the computed html{scroll-behavior:smooth} on strict/older WebViews and re-animate every frame (the lag). Setting the property on the element guarantees instant on all engines. Restored in stopReciteScroll.
   _qsWatch = function(){ _qsUserTook = true; _qsLastTouch = performance.now(); };   // a hand-scroll PAUSES the follow (yields to the reader); it auto-resumes ~3s after the last gesture — not killed
   window.addEventListener('wheel', _qsWatch, { passive: true });
   window.addEventListener('touchmove', _qsWatch, { passive: true });
-  // TELEPROMPTER follow — the smoothest possible glide. The target is NOT the glowing word (which
-  // hops word-to-word and gives a faint stop-start rhythm); it is the CONTINUOUS point of the ayah
-  // currently being recited, derived from real audio progress (currentTime/duration). That point
-  // slides smoothly from the ayah's top to its bottom as it recites, so the page drifts at a steady,
-  // unbroken pace. A FRACTIONAL cursor eased toward it (then scrollTo(round)) removes sub-pixel
-  // chatter; the speed cap prevents any lurch; the deadzone parks it dead-still between ayat.
-  let _qsPos = null, _qsFrac = 0, _qsAyEl = null;
+  // TELEPROMPTER follow — the smoothest possible glide, with a ZERO-layout frame budget. The target
+  // is the CONTINUOUS point of the ayah being recited (audio currentTime/duration), computed from the
+  // ayah's geometry CACHED ONCE in setRecitingAyah — so the frame does NO getBoundingClientRect and NO
+  // querySelector (both forced a full reflow of the 96,000px surah DOM every frame → the real lag). A
+  // fractional cursor eased toward it (scrollTo(round), 'auto' to beat html{scroll-behavior:smooth});
+  // speed cap prevents any lurch; the deadzone parks it dead-still; redundant writes are skipped.
+  _qsPos = null; _qsWrote = -1;                                  // resync on the first frame of this recite
   const step = function(){
     if (_qsUserTook){                                            // reader is scrolling by hand → yield the page to them
       if ((performance.now() - _qsLastTouch) < 3000){ _qsRAF = requestAnimationFrame(step); return; }
-      _qsUserTook = false; _qsPos = null;                        // ~3s after their last gesture → gently re-take the follow (resync cursor first)
+      _qsUserTook = false; _qsPos = null;                        // ~3s after their last gesture → gently re-take the follow
     }
-    const cur = window.scrollY || window.pageYOffset || 0;
-    if (_qsPos === null || Math.abs(_qsPos - cur) > 140) _qsPos = cur;   // (re)sync after any page jump (layout shift, momentum, resize)
-    const ay = document.querySelector('#quranCard .qayah.reciting');
-    if (ay){
+    if (_qsAyTop !== null){                                      // an ayah is reciting (its geometry is cached — no layout here)
+      const cur = window.scrollY || window.pageYOffset || 0;    // cheap: reading scrollY forces no layout
+      if (_qsPos === null || Math.abs(_qsPos - cur) > 140) _qsPos = cur;   // (re)sync after a page jump (user scroll, layout shift)
       const vh = window.innerHeight || document.documentElement.clientHeight;
-      const r = ay.getBoundingClientRect();
-      // continuous 0→1 position through THIS ayah from the audio clock; smoothed so a duration/seek
-      // hiccup can't jerk it. Before duration is known it holds at the ayah's top.
       let f = 0; const a = _qsAudio;
       if (a && a.duration && isFinite(a.duration) && a.duration > 0) f = Math.min(1, Math.max(0, a.currentTime / a.duration));
-      if (ay !== _qsAyEl){ _qsAyEl = ay; _qsFrac = f; }          // new ayah → snap the fraction (don't drag the previous ayah's ~1.0 across the boundary)
-      else _qsFrac += (f - _qsFrac) * 0.15;                      // within an ayah → low-pass the fraction → silky, never a step
-      const focusY = r.top + r.height * _qsFrac;                 // the exact spot being recited right now (viewport-relative)
-      const targetY = cur + focusY - vh * 0.42;                  // seat that spot ~42% down the screen
+      _qsFrac += (f - _qsFrac) * 0.15;                          // low-pass the audio fraction → silky (snapped to 0 at each ayah start in setRecitingAyah)
+      const targetY = _qsAyTop + _qsAyH * _qsFrac - vh * 0.42;  // absolute page-Y to reach — from CACHED geometry, no per-frame layout
       const diff = targetY - _qsPos;
-      if (Math.abs(diff) > 0.4){                                 // deadzone → park perfectly still when already seated
-        let move = diff * 0.08;                                  // ease 8% of the remaining gap per frame → smooth deceleration
-        if (move > 14) move = 14; else if (move < -14) move = -14;   // cap ≈ 14px/frame → gentle & luxurious, never a lurch
+      if (Math.abs(diff) > 0.4){                                // deadzone → park perfectly still when seated
+        let move = diff * 0.08;                                 // ease 8%/frame → smooth deceleration
+        if (move > 14) move = 14; else if (move < -14) move = -14;   // cap ≈ 14px/frame → gentle, never a lurch
         _qsPos += move;
-        window.scrollTo({ top: Math.round(_qsPos), left: 0, behavior: 'auto' });   // 'auto' overrides html{scroll-behavior:smooth} — else the browser re-animates EVERY frame and fights this lerp (the real jank)
+        const y = Math.round(_qsPos);
+        if (y !== _qsWrote){ _qsWrote = y; window.scrollTo({ top: y, left: 0, behavior: 'auto' }); }   // skip redundant writes
       }
     }
     _qsRAF = requestAnimationFrame(step);
@@ -3748,6 +3744,7 @@ function startReciteScroll(){
 }
 function stopReciteScroll(){
   if (_qsRAF){ cancelAnimationFrame(_qsRAF); _qsRAF = 0; }
+  try{ document.documentElement.style.scrollBehavior = ''; }catch(e){}   // restore the global smooth scroll-behavior now the follow is done
   if (_qsWatch){
     window.removeEventListener('wheel', _qsWatch, { passive: true });
     window.removeEventListener('touchmove', _qsWatch, { passive: true });
@@ -3762,6 +3759,7 @@ function setRecitingAyah(sn, an, audio){
   if (!el) return;
   el.classList.add('reciting');
   _qsAudio = audio || null;                    // hand the teleprompter scroll this ayah's audio so it paces by real playback progress
+  try{ const _rr = el.getBoundingClientRect(); _qsAyTop = _rr.top + (window.scrollY || window.pageYOffset || 0); _qsAyH = _rr.height; _qsFrac = 0; }catch(e){ _qsAyTop = null; }   // cache this ayah's ABSOLUTE geometry ONCE (this is the ONLY layout read per ayah); the rAF loop then needs no per-frame reflow. _qsFrac=0 → the new ayah starts at its beginning.
   // scroll ONLY when the ayah isn't comfortably in view — never jerk the page on an already-visible ayah.
   // Skipped while the continuous auto-scroll loop owns the page (surah/passage recite, _qsRAF≠0) — the loop
   // positions the page and this one-shot would fight it. So this runs only for a single-ayah recite.
@@ -3808,7 +3806,7 @@ function setRecitingAyah(sn, an, audio){
   }
 }
 function clearRecitingAyah(){
-  _qsAudio = null;                             // no ayah reciting → teleprompter has nothing to pace to
+  _qsAudio = null; _qsAyTop = null;            // no ayah reciting → teleprompter idles (loop does nothing: no layout, no scroll)
   document.querySelectorAll('.qayah.reciting').forEach(q => q.classList.remove('reciting'));
   document.querySelectorAll('.qar .qw.rw, .qar .qw.rw-done').forEach(w => w.classList.remove('rw', 'rw-done'));
 }
