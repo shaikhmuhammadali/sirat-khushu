@@ -5369,6 +5369,12 @@ function qadaSyncBackfill(dk, key, logged){
     if (!q || !q.on || QADA_PRAYERS.indexOf(key) < 0) return;
     if (q.exempt && q.exempt[dk]) return;
     if (!q.ledgers || !q.ledgers[key]) return;
+    // A day BEFORE tracking started (q.startedKey) is already accounted for in the lifetime ESTIMATE (est);
+    // qadaReconcile never scans it. So a catch-up toggle on such a day must NOT touch the ledger — otherwise
+    // un-logging it books a phantom qada that double-counts against est. Its garden star still toggles (that's
+    // S.logs, set by logForDate, independent of this). startedKey null → tracking effectively begins today, so
+    // treat every past day as pre-tracking. (Same lexicographic day-key compare qadaReconcile uses.)
+    if (!q.startedKey || dk < q.startedKey) return;
     const rk = dk + ':' + key, isToday = (dk === todayKey());
     const mi = q.missedLog.findIndex(m => m.dk === dk && m.p === key);
     if (logged){
