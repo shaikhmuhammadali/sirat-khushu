@@ -9,12 +9,12 @@
    • Never phones home: this worker only ever fetches same-origin assets, one of
      the four opt-in API hosts, or the two allow-listed reciter-audio CDNs —
      nothing else, upholding the app's constitution and matching the page CSP.
-   • Calls skipWaiting on install so a new version activates immediately (never stuck),
+   • A new version WAITS on install; the page prompts the user to Reload (opt-in) instead of force-reloading,
      so a running session is never swapped out underneath the user.
    ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
 
-const VERSION = 'sabr-engine-v3.131.0';         // ← bump to ship an update (clients auto-drop the old cache)
+const VERSION = 'sabr-engine-v3.132.0';         // ← bump to ship an update (clients auto-drop the old cache)
 const SHELL   = VERSION + '-shell';
 const RUNTIME = VERSION + '-runtime';
 // Reciter audio (offline recitation) is bounded + FIFO. Its name is DELIBERATELY version-independent so a
@@ -81,7 +81,9 @@ self.addEventListener('install', event => {
       }
     } catch (e) {}
   }));
-  self.skipWaiting();   // activate immediately so a stale old version can never get stuck
+  // NOTE: no unconditional skipWaiting() here. A new version now WAITS until the user opts in via the
+  // "A new version is ready — Reload" toast (which posts SKIP_WAITING, handled below), so a background
+  // update never force-reloads the page and discards in-progress state (unsaved journal / open Prayer Lock).
 });
 
 self.addEventListener('activate', event => {
