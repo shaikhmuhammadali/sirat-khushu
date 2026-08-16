@@ -4303,7 +4303,7 @@ function authState(){
   if (!S.account && (AUTH_REQUIRED || !S.guestMode)){ showAuth('welcome'); return; }
   afterAuth();
 }
-function afterAuth(){
+function afterAuth(isNewSignup){
   document.documentElement.classList.remove('locked');
   document.getElementById('welcome').classList.remove('open');
   try{ renderXP(); renderDaily(); }catch(e){}
@@ -4313,10 +4313,15 @@ function afterAuth(){
   setTimeout(function(){ try{ maybeAskName(); }catch(e){} }, 1100);
   if (_pendingPrompt){ const p = _pendingPrompt; _pendingPrompt = null; if (!todayLogs()[p.k]) setTimeout(() => p.lock ? openPrayerLock(p.k, p.e, p.tz) : showPrayerPrompt(p.k, p.e, p.tz), 500); }
   setTimeout(function(){ try{ if (_pendingPw) cloudPushPassword(); else if (S.cloud && S.cloud.pwPending){ delete S.cloud.pwPending; persistCloudMeta(); } cloudSyncNow(); }catch(e){} }, 4000);   // quiet mirror-to-cloud on open (no-op unless connected)
-  setTimeout(function(){ try{ if (S.account && !S.tourSeen) startTour(); }catch(e){} }, 1000);   // first-run guided tour
-  // Auto-request permissions on login (once per device). New users get them right after the tour
-  // (see endTour); returning users & guests, who see no tour, get them shortly after landing.
-  setTimeout(function(){ try{ if (S.tourSeen || !S.account) maybeOfferFeatures(); }catch(e){} }, 1800);
+  // The guided tour is tied to the ACCOUNT, not the device: it runs ONLY at genuine account creation
+  // (createAccount passes isNewSignup=true) — never on login or app re-open, so a regular user never
+  // sees it again. For cloud-account holders S.tourSeen also rides the synced state blob, so a fresh
+  // device that restores from cloud won't re-show it either.
+  const willTour = isNewSignup && S.account && !S.tourSeen;
+  setTimeout(function(){ try{ if (willTour) startTour(); }catch(e){} }, 1000);   // first-run guided tour — signup only
+  // Permissions/features offer for everyone NOT getting the tour (returning users, guests, and any
+  // account that already saw it). New signups get them right after the tour ends (see endTour).
+  setTimeout(function(){ try{ if (!willTour) maybeOfferFeatures(); }catch(e){} }, 1800);
 }
 /* ── first-run guided tour: a friendly walk through each section after the first login ── */
 const TOUR_STEPS = [
@@ -4784,7 +4789,7 @@ async function createAccount(){
   if (!acct.passHash){ setBtnLoading(_btn, false); err.textContent = 'Could not secure the password on this device — please open over https:// and try again.'; return; }
   S.account = acct;
   S.gender = _acGender; S.profile = {name:dn, since: todayKey() || ''}; S.lockEnabled = true; S.guestMode = false; S.staySignedIn = true;
-  save(); sessionUnlock(); afterAuth(); try{ renderLockControls(); }catch(e){}   // notification prompt is deferred to endTour() so it lands AFTER the tour, not the instant Sign up is tapped
+  save(); sessionUnlock(); afterAuth(true); try{ renderLockControls(); }catch(e){}   // afterAuth(true): this is the ONE genuine new-account moment → the guided tour runs here (and only here). Notification prompt is deferred to endTour() so it lands AFTER the tour.
   // PRIVACY — cloud sync is OPT-IN. We deliberately do NOT auto-upload on sign-up: a new account stays
   // on THIS device only and nothing leaves it ("data between them and Allah" by default). The user can
   // later enable cross-device sync + emailed password reset from Settings → "Turn on cloud login"
