@@ -1686,6 +1686,22 @@
       <div class="lbl"><b>Preview the lock</b><span>See how the Prayer Lock looks</span></div>
       <button class="btn ghost" onclick="previewPrayerLock()">Preview</button>
     </div>
+    <div class="srow">
+      <div class="lbl"><b>Hadith of the Day &mdash; background 📿</b><span>Receive the daily hadith as a notification that pops up even while you&rsquo;re in another app. <i>(Android app only.)</i></span></div>
+      <label class="switch"><input type="checkbox" id="setHadithNotif" onchange="toggleHadithNotif()" aria-label="Daily Hadith notification"><span class="sl"></span></label>
+    </div>
+    <div class="srow" id="hadithTimeRow" style="display:none">
+      <div class="lbl"><b>Delivery time</b><span>When the daily hadith arrives</span></div>
+      <input type="time" id="setHadithTime" onchange="setHadithTime(this.value)" aria-label="Hadith delivery time" value="08:00">
+    </div>
+    <div class="srow" id="hadithOverlayRow" style="display:none">
+      <div class="lbl"><b>Also float over other apps</b><span>Show a tappable hadith card over whatever app is open (uses &ldquo;display over other apps&rdquo;).</span></div>
+      <label class="switch"><input type="checkbox" id="setHadithOverlay" onchange="toggleHadithOverlay()" aria-label="Float hadith over other apps"><span class="sl"></span></label>
+    </div>
+    <div class="srow" id="hadithPreviewRow" style="display:none">
+      <div class="lbl"><b>Preview the hadith</b><span>Show the notification now</span></div>
+      <button class="btn ghost" onclick="previewHadithNotif()">Preview</button>
+    </div>
     <!-- "Guided tour · Replay" removed: the tour runs AUTOMATICALLY on first launch. -->
   </div>
 
@@ -1808,6 +1824,7 @@ const DEFAULTS = {
   logs:{}, streakBest:0, streakCelebrated:0, dhikrTotal:0, tasbih:{count:0,target:33,phrase:0},
   journal:[], bookmarks:[], duas:[], hadithSeen:[], hadithToday:null,
   taraweeh:{}, ramadanPreview:false, hadithPopSeen:null,
+  hadithNotif:false, hadithOverlay:false, hadithHour:8, hadithMin:0,
   profile:null, nameAsked:0, xp:0, achievements:[], questClaim:null, dhikrDay:null, greetSeen:null,
   remind:true, notifPre:0, notifPost:0, soundName:'bell', vol:1, vibrate:true,
   quiet:false, quietFrom:22, quietTo:6, hadithPopup:true, progressToasts:true, loveEvery:45,
@@ -6054,6 +6071,31 @@ function previewPrayerLock(){
   const k = (t && t.k) || (win.find(w => w.e != null) || {}).k || 'Fajr';
   openPrayerLock(k, null, S.loc && S.loc.tz);
 }
+/* ── Daily Hadith of the Day (background notification + optional floating overlay) ──
+   Web toggles persist here; the native bridge (native-bridge.js, Android app) picks them up and
+   schedules the once-a-day heads-up notification. On web the setting is stored but inert. */
+function _hadithOptRows(on){ ['hadithTimeRow','hadithOverlayRow','hadithPreviewRow'].forEach(function(id){ const r = document.getElementById(id); if (r) r.style.display = on ? 'flex' : 'none'; }); }
+function toggleHadithNotif(){
+  S.hadithNotif = document.getElementById('setHadithNotif').checked; save();
+  _hadithOptRows(S.hadithNotif);
+  try{ if (window.SKNative && window.SKNative.pushHadith) window.SKNative.pushHadith(); }catch(e){}
+  if (S.hadithNotif){ try{ toast('Daily hadith on', 'A hadith will reach you each day at your chosen time — even while you’re in another app (Android app).', '📿'); }catch(e){} }
+}
+function toggleHadithOverlay(){
+  S.hadithOverlay = document.getElementById('setHadithOverlay').checked; save();
+  try{ if (window.SKNative && window.SKNative.pushHadith) window.SKNative.pushHadith(); }catch(e){}
+}
+function setHadithTime(v){
+  const m = /^(\d{1,2}):(\d{2})$/.exec(v || ''); if (!m) return;
+  S.hadithHour = Math.max(0, Math.min(23, +m[1])); S.hadithMin = Math.max(0, Math.min(59, +m[2])); save();
+  try{ if (window.SKNative && window.SKNative.pushHadith) window.SKNative.pushHadith(); }catch(e){}
+}
+function previewHadithNotif(){
+  try{
+    if (window.SKNative && window.SKNative.previewHadith){ window.SKNative.previewHadith(); toast('Sent', 'Check your notification shade for today’s hadith.', '📿'); }
+    else { toast('Android app only', 'Background hadith notifications appear in the installed Android app.', 'ℹ️'); }
+  }catch(e){}
+}
 
 function toggleRamadanPreview(){ S.ramadanPreview = document.getElementById('setRamadanPrev').checked; save(); renderRamadan(); if (S.ramadanPreview){ try{ toast('Ramadan mode on', 'Suhoor \u0026 iftar countdowns and Taraweeh tracking now appear at the top of Today.', '\ud83c\udf19'); go('today'); }catch(e){} } }
 
@@ -6431,6 +6473,10 @@ function renderAppFeatures(){
   const plk = document.getElementById('setPrayerLock'); if (plk) plk.checked = !!S.prayerLock;
   const plr = document.getElementById('plMinsRow'); if (plr) plr.style.display = S.prayerLock ? 'flex' : 'none';
   const plm = document.getElementById('setPlMins'); if (plm) plm.value = String(S.prayerLockMins || 15);
+  const hn = document.getElementById('setHadithNotif'); if (hn) hn.checked = !!S.hadithNotif;
+  const hov = document.getElementById('setHadithOverlay'); if (hov) hov.checked = !!S.hadithOverlay;
+  const htm = document.getElementById('setHadithTime'); if (htm) htm.value = ('0' + (S.hadithHour != null ? S.hadithHour : 8)).slice(-2) + ':' + ('0' + (S.hadithMin != null ? S.hadithMin : 0)).slice(-2);
+  ['hadithTimeRow','hadithOverlayRow','hadithPreviewRow'].forEach(function(id){ const r = document.getElementById(id); if (r) r.style.display = S.hadithNotif ? 'flex' : 'none'; });
   try{ renderLockControls(); }catch(e){}
   try{ renderReciter(); }catch(e){}
   if (false){ /* reciter-reminder toast removed — the create-account path shows no reciter/notification prompt; a default Qari is set and changeable in Settings */ S.reciterReminded = true; save(); setTimeout(() => { try{ toast('Pick your reciter 🎧', 'A default Qari is set. Choose your favourite in Settings → Qur\u2019an reciter — it recites every ayah for you.', '🎧'); }catch(e){} }, 3600); }
