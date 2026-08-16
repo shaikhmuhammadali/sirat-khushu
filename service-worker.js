@@ -14,7 +14,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
 
-const VERSION = 'sabr-engine-v3.141.0';         // ← bump to ship an update (clients auto-drop the old cache)
+const VERSION = 'sabr-engine-v3.142.0';         // ← bump to ship an update (clients auto-drop the old cache)
 const SHELL   = VERSION + '-shell';
 const RUNTIME = VERSION + '-runtime';
 // Reciter audio (offline recitation) is bounded + FIFO. Its name is DELIBERATELY version-independent so a
@@ -40,7 +40,6 @@ const AUDIO_HOSTS = new Set([
 const PRECACHE = [
   './',
   './index.html',
-  './offline.html',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -229,7 +228,7 @@ self.addEventListener('fetch', event => {
         if (res && res.ok){ const copy = res.clone(); event.waitUntil((async () => { const c = await caches.open(SHELL); await c.put('./index.html', copy); })()); }
         return res;
       } catch (e) {
-        return (await caches.match('./index.html')) || (await caches.match('./')) || (await caches.match('./offline.html')) || Response.error();
+        return (await caches.match('./index.html')) || (await caches.match('./')) || Response.error();
       }
     })());
     return;
