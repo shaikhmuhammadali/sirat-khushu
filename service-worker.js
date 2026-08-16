@@ -14,7 +14,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
 
-const VERSION = 'sabr-engine-v3.132.0';         // ← bump to ship an update (clients auto-drop the old cache)
+const VERSION = 'sabr-engine-v3.133.0';         // ← bump to ship an update (clients auto-drop the old cache)
 const SHELL   = VERSION + '-shell';
 const RUNTIME = VERSION + '-runtime';
 // Reciter audio (offline recitation) is bounded + FIFO. Its name is DELIBERATELY version-independent so a
