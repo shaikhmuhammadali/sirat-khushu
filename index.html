@@ -54,8 +54,8 @@
 </script>
 
 <!-- Privacy posture: no third-party trackers or analytics, ever. This page contacts only the opt-in
-     geo/timezone providers, the Qur'an text and reciter CDNs, and (only if you set them up) EmailJS and
-     your own push server. Everything else is computed locally on your device. -->
+     geo/timezone providers, the Qur'an text and reciter CDNs, and (only if you set it up) your own push
+     server. Everything else is computed locally on your device. -->
 <!-- (c) Sirat Khushu - Proprietary. All rights reserved. Only the owner may modify, copy, or redistribute this code. Unauthorized modification is prohibited. -->
 <!-- Content-Security-Policy = the app's "API firewall". connect-src / media-src are an EXPLICIT
      allow-list of the ONLY hosts this app may reach — never a bare `https:` wildcard, which would let
@@ -63,11 +63,10 @@
        • geocoding-api.open-meteo.com / nominatim.openstreetmap.org — city search
        • api.aladhan.com / api.bigdatacloud.net — prayer-time / reverse-geocode helpers
        • sabr-push-server.onrender.com — YOUR optional account/sync/push/TTS server (CLOUD_URL)
-       • api.emailjs.com — optional password-reset email
        • everyayah.com / cdn.islamic.network — reciter audio
      SELF-HOSTING NOTE: if you point CLOUD_URL / push at a different server, add that exact origin to
      BOTH connect-src and media-src below, or sync/TTS will be blocked. Keep the list minimal. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://shaikhmuhammadali.github.io https://geocoding-api.open-meteo.com https://nominatim.openstreetmap.org https://api.aladhan.com https://api.bigdatacloud.net https://ipwho.is https://get.geojs.io https://sabr-push-server.onrender.com https://api.emailjs.com http://localhost:* http://127.0.0.1:*; media-src 'self' https://everyayah.com https://cdn.islamic.network https://sabr-push-server.onrender.com http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://shaikhmuhammadali.github.io https://geocoding-api.open-meteo.com https://nominatim.openstreetmap.org https://api.aladhan.com https://api.bigdatacloud.net https://ipwho.is https://get.geojs.io https://sabr-push-server.onrender.com http://localhost:* http://127.0.0.1:*; media-src 'self' https://everyayah.com https://cdn.islamic.network https://sabr-push-server.onrender.com http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <!-- Warm the reciter-audio CDNs so the FIRST Recite tap doesn't pay DNS+TLS. Resource hints aren't gated
      by CSP connect-src; the audio itself is allowed by media-src. -->
 <link rel="preconnect" href="https://everyayah.com" crossorigin>
@@ -1828,7 +1827,7 @@ const DEFAULTS = {
   profile:null, nameAsked:0, xp:0, achievements:[], questClaim:null, dhikrDay:null, greetSeen:null,
   remind:true, notifPre:0, notifPost:0, soundName:'bell', vol:1, vibrate:true,
   quiet:false, quietFrom:22, quietTo:6, hadithPopup:true, progressToasts:true, loveEvery:45,
-  gender:null, dhikrVoice:true, adhkarCount:null, voiceDepth:'deep', salawatAudio:true, reciter:'afasy', reciterReminded:false, rot:null, lockEnabled:false, lockFails:null, account:null, emailjs:{service:'',template:'',pubkey:'',privkey:''}, resetCode:null, push:{url:'',key:'',appkey:'',on:false}, methodAuto:true,
+  gender:null, dhikrVoice:true, adhkarCount:null, voiceDepth:'deep', salawatAudio:true, reciter:'afasy', reciterReminded:false, rot:null, lockEnabled:false, lockFails:null, account:null, push:{url:'',key:'',appkey:'',on:false}, methodAuto:true,
   analytics:false,         // anonymous usage sharing — OFF by default; opt-in only
   qada:{fajr:{owed:0,cleared:0},dhuhr:{owed:0,cleared:0},asr:{owed:0,cleared:0},maghrib:{owed:0,cleared:0},isha:{owed:0,cleared:0},witr:{owed:0,cleared:0},source:'logged',plan:{pace:5,order:'recommended'},hidden:false,estimate:null},
   moodLog:[]              // on-device emotion log [{ts,emotion}]
@@ -1845,6 +1844,10 @@ let S = (() => {
   // reject a corrupt/unknown persisted timezone so a stale bad value can never brick boot
   if (merged.loc && !isValidTz(merged.loc.tz)) merged.loc = null;
   merged.dhikrVoice = true; merged.salawatAudio = true;   // recite-aloud & salawat audio are always-on now (no toggle) — override any previously-saved false
+  // SECURITY: email password-reset is now 100% server-side. Actively WIPE any legacy client-side EmailJS
+  // config (which could hold a user's EmailJS private key) + its local reset code left in localStorage by an
+  // older version, and persist the removal — so no secret lingers on-device.
+  try{ if (merged.emailjs || merged.resetCode){ delete merged.emailjs; delete merged.resetCode; localStorage.setItem(KEY, JSON.stringify(merged)); } }catch(e){}
   return merged;
 })();
 /* DO NOT REMOVE. `let S` at the top level of a classic script creates a binding in the
@@ -4729,13 +4732,6 @@ function showAuth(mode){
         + `<button class="btn wbtn" onclick="sendForgotCode()">Send code</button>`
         + `<button class="wlink" onclick="showAuth(S.account ? 'lock' : 'restore')">← Back to log in</button>`;
     }
-  } else if (mode === 'emailcode'){
-    html = astep(2) + fh('Enter verification code', 'We emailed a 6-digit code'+((S.account && S.account.email) ? ' to '+esc(maskEmailC(S.account.email)) : '')+'. Enter it below.')
-      + aotp('ecCode')
-      + `<div class="autherr" id="ecErr"></div>`
-      + `<button class="btn wbtn" onclick="verifyResetCode()">Verify code</button>`
-      + `<button class="wlink" id="resendBtn" onclick="sendResetCode()">Resend code</button>`
-      + `<button class="wlink" onclick="showAuth('forgot')">← Back</button>`;
   } else if (mode === 'reset'){
     html = astep(3) + fh('Create a new password', 'Choose a new password for your account.')
       + apwfield('rsPass','New password',{meter:true})
@@ -4755,7 +4751,6 @@ function showAuth(mode){
   if (mode === 'create'){ setAcGender(S.gender || 'male'); ['acEmail','acPass','acPass2'].forEach(function(id){ const e = document.getElementById(id); if (e) e.addEventListener('input', acLive); }); }
   if (mode === 'lock'){ const lu = document.getElementById('lkUser'); if (lu){ lu.value = (S.account && S.account.username) || ''; } }
   if (mode === 'forgot'){ const fe = document.getElementById('feEmail'); if (fe && !fe.value){ fe.value = _feEmail || ''; } }   // don't pre-fill a real address — let the user enter their own (example shown as a hint)
-  if (mode === 'emailcode'){ otpInit('ecCode', verifyResetCode); startResend(); }
   if (!document.getElementById('ahAyah')) renderAyahHero(); else ahStart();
 }
 async function createAccount(){
@@ -4846,50 +4841,11 @@ async function cloudPushPassword(){
     try{ toast('Heads up', 'Could not update the cloud password yet (offline?). It will retry automatically; until then, new devices need your previous password.', '⚠️'); }catch(_){}
   }
 }
-async function sendResetCode(){
-  const err = document.getElementById('fgErr') || document.getElementById('ecErr');
-  if (!(S.account && S.account.email)){ if(err) err.textContent = 'No email saved on this account — use your security question.'; return; }
-  if (!(S.emailjs && S.emailjs.service && S.emailjs.template && S.emailjs.pubkey)){ if(err) err.textContent = 'Email reset is not set up (Settings → Password reset by email).'; return; }
-  if (err) err.textContent = 'Sending code…';
-  const code = String(Math.floor(100000 + Math.random()*900000));
-  S.resetCode = { hash: await sha256(code), exp: Date.now() + 15*60000 }; save();
-  try{
-    const body = { service_id:S.emailjs.service, template_id:S.emailjs.template, user_id:S.emailjs.pubkey,
-      template_params:{ to_email:S.account.email, email:S.account.email, username:S.account.username, code:code, passcode:code } };
-    if (S.emailjs.privkey) body.accessToken = S.emailjs.privkey;   // EmailJS strict mode needs the private key from a browser
-    const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
-    });
-    if (!res.ok){ const tx = await res.text().catch(()=> ''); throw new Error('HTTP ' + res.status + (tx ? ' — ' + tx : '')); }
-    showAuth('emailcode');
-  }catch(e){ if (err) err.textContent = 'Could not send email (' + (e.message||'error') + '). Add your Private Key above if EmailJS blocks browser sends, or use your security question.'; }
-}
-async function testEmailJs(){
-  const el = document.getElementById('ejTest');
-  const set = (m) => { if (el) el.textContent = m; };
-  if (!(S.emailjs && S.emailjs.service && S.emailjs.template && S.emailjs.pubkey)){ set('Fill in Service ID, Template ID and Public Key first.'); return; }
-  let to = (S.account && S.account.email) ? S.account.email : '';
-  if (!to){ try{ to = prompt('Send the test email to which address?') || ''; }catch(e){} }
-  if (!to){ set(''); return; }
-  set('Sending a test email to ' + to + ' \u2026');
-  try{
-    const body = { service_id:S.emailjs.service, template_id:S.emailjs.template, user_id:S.emailjs.pubkey,
-      template_params:{ to_email:to, email:to, username:(S.account&&S.account.username)||'friend', code:'123456', passcode:'123456' } };
-    if (S.emailjs.privkey) body.accessToken = S.emailjs.privkey;
-    const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
-    if (!res.ok){ const tx = await res.text().catch(()=> ''); throw new Error('HTTP ' + res.status + (tx ? ' — ' + tx : '')); }
-    set('\u2713 Sent \u2014 check the inbox of ' + to + ' (and spam).');
-  }catch(e){ set('\u2717 ' + (e.message||'failed') + '  \u00b7 tip: add your Private Key, and in EmailJS allow this site under Account \u2192 Security.'); }
-}
-async function verifyResetCode(){
-  const err = document.getElementById('ecErr'), c = val('ecCode').trim();
-  const cd = lockCooldownMs(); if (cd){ if(err) err.textContent = 'Too many attempts — please wait ' + Math.ceil(cd/1000) + 's.'; return; }
-  if (!S.resetCode || Date.now() > S.resetCode.exp){ if(err) err.textContent = 'That code has expired — request a new one.'; return; }
-  if ((await sha256(c)) === S.resetCode.hash){ S.resetCode = null; clearAuthFails(); save(); showAuth('reset'); }
-  else { const until = noteAuthFail(); try{ otpShake('ecCode'); }catch(_){} if (err) err.textContent = until ? ('Incorrect — too many attempts, wait ' + Math.ceil((until-Date.now())/1000) + 's.') : 'Incorrect code. Check your email and try again.'; }
-}
-function saveEjs(){ S.emailjs = { service: val('ejService').trim(), template: val('ejTemplate').trim(), pubkey: val('ejKey').trim(), privkey: val('ejPriv').trim() }; save(); }
-function renderEjs(){ const m={ejService:'service',ejTemplate:'template',ejKey:'pubkey',ejPriv:'privkey'}; for (const id in m){ const e=document.getElementById(id); if (e && S.emailjs) e.value = S.emailjs[m[id]] || ''; } }
+// [REMOVED for security] The old client-side EmailJS password-reset (sendResetCode / verifyResetCode /
+// testEmailJs / saveEjs / renderEjs + the 'emailcode' screen) is gone. It stored a user's EmailJS PRIVATE
+// key in the browser and sent reset codes client-side. Email password-reset is now 100% server-side
+// (sendForgotCode -> /auth/forgot-email -> cloudEmailReset -> /auth/reset-email), where the mail secret
+// lives only on the server. Local-only accounts recover via their security question or a backup file.
 /* ── Background reminders (web push) ── the app computes its own reminder timestamps and
    uploads them to the user's small push server, which fires them even when Sabr is closed. */
 function fastOn(){ return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches); }
@@ -6684,7 +6640,6 @@ async function cloudFetch(path, body, token, timeoutMs){
 const CLOUD_STRIP_ACCT = ['passHash','salt','iters','kdf','hashAlg','secAHash','secQ'];
 function cloudBlob(){
   const c = Object.assign({}, S); delete c.cloud;
-  delete c.emailjs;                                    // holds an EmailJS private key — device-local config, never upload it
   if (c.account){ const a = Object.assign({}, c.account); CLOUD_STRIP_ACCT.forEach(k => delete a[k]); c.account = a; }
   return c;
 }
@@ -6722,7 +6677,6 @@ function _sanitizeServerData(v, depth){
 async function applyCloudRestore(j, pw, urlThatWorked){
   const data = _sanitizeServerData((j.data && typeof j.data === 'object') ? j.data : {});
   data.dhikrTotal = Number(data.dhikrTotal) || 0;        // never persist a non-numeric value the garden renders into innerHTML
-  data.emailjs = S.emailjs;                              // keep THIS device's email config — a server must not redirect reset emails
   const baseAcct = (data.account && typeof data.account === 'object') ? data.account
                    : (S.account ? {username:S.account.username, email:S.account.email} : {username:j.username});
   if (!baseAcct.username) baseAcct.username = j.username;
