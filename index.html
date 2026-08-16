@@ -540,6 +540,8 @@
   @keyframes pop{from{transform:scale(0) rotate(-25deg)}to{transform:scale(1) rotate(0)}}
   @keyframes fade{from{opacity:0}to{opacity:1}}
   .focus{position:fixed;inset:0;z-index:130;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:max(32px,env(safe-area-inset-top)) 32px max(32px,env(safe-area-inset-bottom));background:radial-gradient(100% 100% at 50% 0%,#101a28 0%,#05080d 80%)}
+  /* the focus overlay is ALWAYS dark, so pin the vars its children use (teal-ink/dim + the focus-ring gold) to light values on every theme — matches the .plock pin below */
+  .focus{--teal-ink:#7fe0d5;--dim:#9aa2af;--gold-ink:#e6c169}
   .focus.open{display:flex;animation:fade .4s ease}
   .focus .flabel{font-size:.7rem;letter-spacing:.4em;text-transform:uppercase;color:var(--teal-ink);font-weight:800}
   .focus .fname{font-size:2.4rem;font-weight:800;margin:6px 0;color:#ecebe4}
@@ -577,6 +579,8 @@
   @media (prefers-reduced-motion:reduce){ .pcount .pc-fg{transition:none} }
   /* ── premium: welcome, toasts, xp, quests, daily ── */
   .greetline{font-size:.9rem;font-weight:700;color:var(--gold-ink);margin-bottom:6px;letter-spacing:.01em}
+  /* the welcome / auth overlay is ALWAYS dark → pin the focus-ring gold to its light value so the keyboard focus outline is visible on the light themes */
+  .welcome{--gold-ink:#e6c169}
   .welcome{position:fixed;inset:0;z-index:160;display:none;align-items:center;justify-content:center;overflow-y:auto;-webkit-overflow-scrolling:touch;
     padding:max(24px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
     background:radial-gradient(130% 100% at 50% -10%,#1b3050 0%,#0c1420 55%,#05080e 100%)}
@@ -972,6 +976,11 @@
   .adh{padding:13px 0;border-bottom:1px solid var(--stroke)}
   .adh:last-child{border:none}
   .adh .ar{font-family:var(--arabic);font-size:clamp(1.05rem,4.6vw,1.3rem);line-height:2.1;direction:rtl;text-align:right;color:var(--text)}
+  .adh .adhfoot{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .adh .adhspace{flex:1;min-width:8px}
+  .adh .adhcount{background:var(--gold-soft);border:1px solid var(--stroke-gold);color:var(--gold-ink);font-family:var(--font);font-weight:800;font-size:.72rem;padding:6px 13px;border-radius:20px;cursor:pointer;transition:transform .12s ease,background .2s ease,color .2s ease;font-variant-numeric:tabular-nums}
+  .adh .adhcount.full{background:var(--teal-soft);border-color:var(--teal-border);color:var(--teal-ink)}
+  .adh .adhcount:active{transform:scale(.93)}
   .adhmeta{margin-top:8px}
   .repbtn{border:1px solid var(--stroke-gold);background:transparent;color:var(--gold-ink);border-radius:999px;padding:6px 16px;font-family:var(--font);font-weight:800;font-size:.8rem;cursor:pointer;font-variant-numeric:tabular-nums}
   .repbtn.done{background:var(--gold-soft)}
@@ -1655,10 +1664,8 @@
 
   <div class="glass">
     <h2 class="sec">Your practice</h2>
-    <div class="srow">
-      <div class="lbl"><b>Preview Ramadan mode</b><span>See the Ramadan super-mode any time of year</span></div>
-      <label class="switch"><input type="checkbox" id="setRamadanPrev" onchange="toggleRamadanPreview()" aria-label="Preview Ramadan mode"><span class="sl"></span></label>
-    </div>
+    <!-- "Preview Ramadan mode" removed: the Ramadan super-mode now begins & ends AUTOMATICALLY on the real
+         Hijri date (ramadanActive() → Umm al-Qura month 9), so a manual preview toggle is no longer needed. -->
     <div class="srow">
       <div class="lbl"><b>Prayer-time prompt</b><span>A gentle full-screen reminder the moment each prayer enters</span></div>
       <label class="switch"><input type="checkbox" id="setPrayerPopup" onchange="togglePrayerPopup()" aria-label="Prayer-time prompt"><span class="sl"></span></label>
@@ -1679,10 +1686,7 @@
       <div class="lbl"><b>Preview the lock</b><span>See how the Prayer Lock looks</span></div>
       <button class="btn ghost" onclick="previewPrayerLock()">Preview</button>
     </div>
-    <div class="srow">
-      <div class="lbl"><b>Guided tour</b><span>Walk through every section of the app again</span></div>
-      <button class="btn ghost" onclick="startTour(true)">Replay</button>
-    </div>
+    <!-- "Guided tour · Replay" removed: the tour runs AUTOMATICALLY on first launch. -->
   </div>
 
   <div class="glass" id="reciterCard">
@@ -1809,7 +1813,7 @@ const DEFAULTS = {
   quiet:false, quietFrom:22, quietTo:6, hadithPopup:true, progressToasts:true, loveEvery:45,
   gender:null, dhikrVoice:true, adhkarCount:null, voiceDepth:'deep', salawatAudio:true, reciter:'afasy', reciterReminded:false, rot:null, lockEnabled:false, lockFails:null, account:null, emailjs:{service:'',template:'',pubkey:'',privkey:''}, resetCode:null, push:{url:'',key:'',appkey:'',on:false}, methodAuto:true,
   analytics:false,         // anonymous usage sharing — OFF by default; opt-in only
-  qada:{fajr:{owed:0,cleared:0},dhuhr:{owed:0,cleared:0},asr:{owed:0,cleared:0},maghrib:{owed:0,cleared:0},isha:{owed:0,cleared:0},witr:{owed:0,cleared:0},source:'logged',plan:{pace:5,order:'rec'},hidden:false,estimate:null},
+  qada:{fajr:{owed:0,cleared:0},dhuhr:{owed:0,cleared:0},asr:{owed:0,cleared:0},maghrib:{owed:0,cleared:0},isha:{owed:0,cleared:0},witr:{owed:0,cleared:0},source:'logged',plan:{pace:5,order:'recommended'},hidden:false,estimate:null},
   moodLog:[]              // on-device emotion log [{ts,emotion}]
 };
 function isValidTz(tz){
@@ -3016,13 +3020,20 @@ function renderAdhkar(){
   const TABS = [['morning','Morning'],['evening','Evening'],['prayer','After prayer'],['sleep','Before sleep'],['anytime','Anytime']];
   const inTab = (a) => adhkarTab==='morning' ? (a.cat==='morning'||a.cat==='both') : (adhkarTab==='evening' ? (a.cat==='evening'||a.cat==='both') : a.cat===adhkarTab);
   const chips = TABS.map(t => '<button class="pchip '+(adhkarTab===t[0]?'on':'')+'" onclick="setAdhkarTab(\''+t[0]+'\')">'+t[1]+'</button>').join('');
+  // today-scoped counts (tapAdhkar resets on a new civil day; read the same way so stale counts never show)
+  const _acToday = todayKey() || 'x';
+  const _ac = (S.adhkarCount && S.adhkarCount.date === _acToday) ? S.adhkarCount : {};
   const body = ADHKAR.map((a,i) => ({a:a,i:i})).filter(x => inTab(x.a)).map(x => {
-    const a = x.a, i = x.i, key = adhkarTab + ':' + i, done = S.adhkarCount[key] || 0;
+    const a = x.a, i = x.i, key = adhkarTab + ':' + i, done = _ac[key] || 0, tgt = a.count || 1;
+    const arAttr = esc(a.ar).replace(/"/g,'&#34;');
     return '<div class="adh"><div class="ar" lang="ar" dir="rtl">'+a.ar+'</div>'
       + '<div class="qtr" style="margin-top:7px">'+esc(a.tr)+'</div>'
       + '<div class="small muted" style="margin-top:4px">'+esc(a.en)+'</div>'
       + (a.virtue ? '<div class="small dim" style="margin-top:5px;font-style:italic">'+esc(a.virtue)+'</div>' : '')
-      + '<div style="margin-top:8px"><span class="badge ref">'+esc(fmtRef(a.ref))+'</span></div></div>';
+      + '<div class="adhfoot"><span class="badge ref">'+esc(fmtRef(a.ref))+'</span><span class="adhspace"></span>'
+      +   '<button class="adhcount'+(done>=tgt?' full':'')+'" onclick="tapAdhkar(\''+key+'\','+tgt+')" aria-label="Count this remembrance">'+(tgt>1 ? (done+' / '+tgt) : (done>0?'Done ✓':'Mark'))+'</button>'
+      +   '<button class="recitebtn" onclick="reciteText(&quot;'+arAttr+'&quot;, this)" aria-label="Recite aloud">'+RICON_SVG+'<span class="rlbl">Recite</span></button>'
+      + '</div></div>';
   }).join('');
   el.innerHTML = '<h2 class="sec">Adhkar &amp; dhikr</h2>'
     + '<p class="small dim" style="margin-bottom:8px">Authentic remembrance from Hisn al-Muslim &mdash; morning, evening, after prayer, before sleep, and anytime.</p>'
@@ -3546,7 +3557,7 @@ function showPrayerPrompt(k, e, tz, preview){
   try{ _dlgLastFocus = document.activeElement; (_pp.querySelector('.btn') || _pp).focus({ preventScroll: true }); }catch(e){}   // a11y: announce the dialog + move focus in
 }
 function closePrayerPrompt(){ document.getElementById('prayerPrompt').classList.remove('open'); ppKey = null; ppPreview = false; _restoreDlgFocus(); }
-function prayerPromptPrayed(){ const prev = ppPreview, k = ppKey; closePrayerPrompt(); if (prev) return; if (k && !todayLogs()[k]) toggleLog(k); }
+function prayerPromptPrayed(){ const prev = ppPreview, k = ppKey; closePrayerPrompt(); if (prev) return; if (k) logPrayerForToday(k); }
 function prayerPromptFocus(){ const prev = ppPreview, k = ppKey; closePrayerPrompt(); if (prev) return; openFocus(k); }
 function previewPrayerPrompt(){
   // Preview must ALWAYS work — with a location we show the true current window;
@@ -3623,7 +3634,7 @@ function reciteAudio(surah, ayah, g){
   if (urls.length) setSrc();                             // prime + preload the first source
   const advance = () => {
     if (seq !== _qaSeq || busy) return; busy = true;     // one advance per failed source (dedupes error+reject)
-    if (i >= urls.length){ busy = false; if (onFail) onFail(); return; }
+    if (i >= urls.length){ busy = false; const f = onFail; onFail = null; if (f) f(); return; }   // fire-once: the twin error+reject of the LAST source must not double-advance/skip an ayah
     setSrc();
     const p = a.play();
     if (p && p.then) p.then(() => { busy = false; }, () => { busy = false; advance(); });
@@ -5283,12 +5294,25 @@ function toggleLog(key){
   const k = todayKey(); if (!k) return;
   if (currentPrayerKey() !== key) return;   // only the CURRENT prayer may be logged/unlogged (Sirat Khushu)
   const logs = S.logs[k] || (S.logs[k] = {});
-  if (logs[key]){ delete logs[key]; if (!Object.keys(logs).length) delete S.logs[k]; save(); renderAppFeatures(); return; }
+  if (logs[key]){ delete logs[key]; if (!Object.keys(logs).length) delete S.logs[k]; save(); try{ qadaSyncBackfill(k, key, false); }catch(e){} renderAppFeatures(); return; }
   logs[key] = {t: Date.now()}; save();
+  try{ qadaSyncBackfill(k, key, true); }catch(e){}   // if reconcile already booked this window today (e.g. Fajr after sunrise), un-count it so it isn't BOTH prayed AND owed-as-qada
   try{ qadaMaybePair(key); }catch(e){}
   renderAppFeatures();
   buzz([30,40,60]);   // via buzz() so the vibrate setting + quiet hours are respected
   showHadithPop(key);
+}
+// Log a SPECIFIC prayer for today, bypassing toggleLog's "only the current prayer" guard. The Prayer Lock /
+// Prompt "I have prayed" action owns a specific prayer that may no longer be the CURRENT window by the time
+// the user finishes (e.g. they tapped after the next adhan) — the guard used to silently drop that log.
+function logPrayerForToday(key){
+  const k = todayKey(); if (!k || !key) return;
+  const logs = S.logs[k] || (S.logs[k] = {});
+  if (logs[key]) return;                                 // already logged — nothing to do
+  logs[key] = { t: Date.now() }; save();
+  try{ qadaSyncBackfill(k, key, true); }catch(e){}       // reconcile the qada ledger (window may have closed while praying)
+  try{ qadaMaybePair(key); }catch(e){}
+  renderAppFeatures();
 }
 function logForDate(dk, key){
   try{
@@ -5317,16 +5341,21 @@ function logForDate(dk, key){
 function qadaSyncBackfill(dk, key, logged){
   try{
     const q = S.qada;
-    if (!q || !q.on || dk === todayKey() || QADA_PRAYERS.indexOf(key) < 0) return;
+    if (!q || !q.on || QADA_PRAYERS.indexOf(key) < 0) return;
     if (q.exempt && q.exempt[dk]) return;
     if (!q.ledgers || !q.ledgers[key]) return;
-    const rk = dk + ':' + key;
+    const rk = dk + ':' + key, isToday = (dk === todayKey());
     const mi = q.missedLog.findIndex(m => m.dk === dk && m.p === key);
     if (logged){
-      if (mi >= 0){ q.missedLog.splice(mi, 1); if (q.ledgers[key].log > 0) q.ledgers[key].log -= 1; }
-      q.resolved[rk] = 1;                                       // now prayed (adā) → no longer owed
+      // Reverse a prior "missed" booking whenever the prayer is now logged — INCLUDING today's Fajr that
+      // reconcile already booked after sunrise (the old blanket today no-op left Fajr counted as BOTH prayed
+      // AND owed-as-qada). Only a BOOKED window (mi>=0) is reversed on today; a still-open one is left to reconcile.
+      if (mi >= 0){ q.missedLog.splice(mi, 1); if (q.ledgers[key].log > 0) q.ledgers[key].log -= 1; q.resolved[rk] = 1; }
+      else if (!isToday){ q.resolved[rk] = 1; }                 // a closed PAST day, never booked → mark adā
     } else {
-      if (mi < 0){ q.seq += 1; q.missedLog.push({ seq:q.seq, dk, p:key }); q.ledgers[key].log += 1; q.resolved[rk] = 1; }  // un-logged a closed day → owed again, once
+      if (!isToday){
+        if (mi < 0){ q.seq += 1; q.missedLog.push({ seq:q.seq, dk, p:key }); q.ledgers[key].log += 1; q.resolved[rk] = 1; }  // un-logged a closed past day → owed again, once
+      } else { delete q.resolved[rk]; }                         // today un-log → let reconcile re-decide this window
     }
   }catch(e){}
 }
@@ -5970,7 +5999,7 @@ function openPrayerLock(k, e, tz){
   };
   tick(); _plTimer = setInterval(tick, 1000);
 }
-function prayerLockDone(){ clearInterval(_plTimer); const l = document.getElementById('prayerLock'); if (l) l.classList.remove('open'); _restoreDlgFocus(); if (_plKey && !todayLogs()[_plKey]) toggleLog(_plKey); }
+function prayerLockDone(){ clearInterval(_plTimer); const l = document.getElementById('prayerLock'); if (l) l.classList.remove('open'); _restoreDlgFocus(); if (_plKey) logPrayerForToday(_plKey); }
 function closePrayerLock(){ clearInterval(_plTimer); const l = document.getElementById('prayerLock'); if (l) l.classList.remove('open'); _restoreDlgFocus(); }
 function togglePrayerLock(){
   S.prayerLock = document.getElementById('setPrayerLock').checked; save();
@@ -6018,7 +6047,8 @@ function qadaInit(){
   if (!q.missedLog) q.missedLog = [];
   if (q.seq == null) q.seq = 0;
   if (!q.exempt) q.exempt = {};
-  if (!q.plan) q.plan = { pace:5, order:'none' };
+  if (!q.plan) q.plan = { pace:5, order:'recommended' };
+  else if (!['strict','recommended','none'].includes(q.plan.order)) q.plan.order = 'recommended';   // heal the stale 'rec' default (and any other invalid value) so the plan sheet never shows "undefined"
   if (!q.settings) q.settings = {};
   if (q.settings.trackWitr == null) q.settings.trackWitr = false;
   if (q.settings.hidden == null) q.settings.hidden = false;
@@ -6331,7 +6361,7 @@ function renderQadaPlan(){
         '<button class="'+(q.plan.order==='strict'?'on':'')+'" onclick="qadaPlanOrder(\'strict\')">Strict</button>'+
         '<button class="'+(q.plan.order==='recommended'?'on':'')+'" onclick="qadaPlanOrder(\'recommended\')">Recommended</button>'+
         '<button class="'+(q.plan.order==='none'?'on':'')+'" onclick="qadaPlanOrder(\'none\')">No order</button>'+
-      '</div><p class="small dim" style="margin-top:6px">'+notes[q.plan.order||'none']+'</p></div>'+
+      '</div><p class="small dim" style="margin-top:6px">'+(notes[q.plan.order] || notes.recommended || '')+'</p></div>'+
     '<div class="qfield" style="margin-top:12px"><label class="qrowlbl"><input type="checkbox" '+(q.settings.trackWitr?'checked':'')+' onchange="qadaToggleWitr()"> Track Witr as well (Ḥanafī)</label></div>'+
     '<button class="btn ghost" style="width:100%;margin-top:6px" onclick="closeModal(\'qadaPlanModal\')">Done</button>';
 }
@@ -7484,14 +7514,16 @@ boot();
 
   window.addEventListener('load', function(){
     navigator.serviceWorker.register('service-worker.js').then(function(reg){
-      function apply(worker){ if (worker) try{ worker.postMessage({type:'SKIP_WAITING'}); }catch(e){} }
+      // A ready update no longer force-applies (which reloaded the page unconditionally, discarding an
+      // unsaved journal draft or an open Prayer Lock). Instead we surface the gentle opt-in toast; the
+      // reload only happens when the user taps "Reload" (which posts SKIP_WAITING → controllerchange).
       function track(worker){
         if (!worker) return;
         worker.addEventListener('statechange', function(){
-          if (worker.state === 'installed' && navigator.serviceWorker.controller) apply(worker);
+          if (worker.state === 'installed' && navigator.serviceWorker.controller) showUpdateToast(worker);
         });
       }
-      if (reg.waiting && navigator.serviceWorker.controller) apply(reg.waiting);
+      if (reg.waiting && navigator.serviceWorker.controller) showUpdateToast(reg.waiting);
       reg.addEventListener('updatefound', function(){ track(reg.installing); });
       try{ reg.update(); }catch(e){}
       setInterval(function(){ try{ reg.update(); }catch(e){} }, 1800000);
