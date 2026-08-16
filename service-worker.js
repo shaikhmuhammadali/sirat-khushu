@@ -14,7 +14,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
 
-const VERSION = 'sabr-engine-v3.144.0';         // ← bump to ship an update (clients auto-drop the old cache)
+const VERSION = 'sabr-engine-v3.145.0';         // ← bump to ship an update (clients auto-drop the old cache)
 const SHELL   = VERSION + '-shell';
 const RUNTIME = VERSION + '-runtime';
 // Reciter audio (offline recitation) is bounded + FIFO. Its name is DELIBERATELY version-independent so a
@@ -34,7 +34,8 @@ const API_HOSTS = new Set([
 // These are the ONLY cross-origin hosts this worker will cache. Nothing else is touched.
 const AUDIO_HOSTS = new Set([
   'everyayah.com',
-  'cdn.islamic.network'
+  'cdn.islamic.network',
+  'audio.qurancdn.com'
 ]);
 
 const PRECACHE = [
