@@ -1780,7 +1780,7 @@
 <canvas id="shareCanvas" width="1080" height="1080" style="display:none"></canvas>
 
 <!-- premium welcome / on-device sign-in -->
-<div id="welcome" class="welcome"><span class="wstars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><div class="acard"><aside class="ahero" id="ahero" aria-hidden="true"></aside><div class="aform" id="authBox"></div></div></div>
+<div id="welcome" class="welcome" role="dialog" aria-modal="true" aria-label="Sirat Khushu account" tabindex="-1"><span class="wstars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><div class="acard"><aside class="ahero" id="ahero" aria-hidden="true"></aside><div class="aform" id="authBox"></div></div></div>
 <div id="namePop" class="welcome" role="dialog" aria-label="Your name"><div class="wcard">
   <div class="wbismillah" lang="ar" dir="rtl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</div>
   <div class="wmoon">&#9790;</div>
@@ -4387,13 +4387,15 @@ function cloudStatusHTML(){
 function renderLockControls(){
   const el = document.getElementById('lockControls'); if (!el) return;
   const cloudLine = cloudStatusHTML();
+  // "right to be forgotten": a signed-in user can erase their whole account + data themselves (see deleteAccount).
+  const dangerLine = '<div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(0,0,0,.08)"><button class="wlink" style="display:inline-block;margin:0;padding:0;color:var(--rose)" onclick="deleteAccount()">Delete my account &amp; data…</button></div>';
   if (S.account && S.lockEnabled){
     el.innerHTML = '<p class="small" style="margin-bottom:10px;color:var(--gold-ink)">Signed in as <b>' + esc(S.account.username) + '</b>. You stay signed in on this device — no need to log in again unless you log out.</p>'
       + '<label class="small dim" style="display:flex;align-items:center;gap:9px;margin:0 0 12px;cursor:pointer"><input type="checkbox" ' + (S.lockEachLaunch ? 'checked' : '') + ' onchange="setLockEachLaunch(this.checked)" style="width:18px;height:18px;accent-color:var(--gold);cursor:pointer"> Ask for my password every launch <span class="dim">(extra privacy on a shared device)</span></label>'
-      + '<div class="grid2"><button class="btn" onclick="lockNow()">Log out</button><button class="btn ghost" onclick="removeLock()">Turn off login</button></div>' + cloudLine;
+      + '<div class="grid2"><button class="btn" onclick="lockNow()">Log out</button><button class="btn ghost" onclick="removeLock()">Turn off login</button></div>' + cloudLine + dangerLine;
   } else if (S.account){
     el.innerHTML = '<p class="small dim" style="margin-bottom:10px">You have an account (<b>' + esc(S.account.username) + '</b>) but login is off — the app opens freely on launch.</p>'
-      + '<button class="btn" onclick="enableLock()">Turn the login page back on</button>' + cloudLine;
+      + '<button class="btn" onclick="enableLock()">Turn the login page back on</button>' + cloudLine + dangerLine;
   } else {
     el.innerHTML = '<div class="grid2"><button class="btn" onclick="showAuth(\'create\')">Create my account</button><button class="btn ghost" onclick="showAuth(\'restore\')">Log in</button></div>';
   }
@@ -4402,6 +4404,34 @@ function enableLock(){ S.lockEnabled = true; save(); renderLockControls(); try{ 
 function removeLock(){ if (!confirm('Turn off the login page? Sirat Khushu will open freely from now on.')) return; S.lockEnabled = false; save(); sessionUnlock(); renderLockControls(); try{ toast('Login turned off', 'Sirat Khushu now opens freely.', '🔓'); }catch(e){} }
 function lockNow(){ sessionUnlocked = false; S.staySignedIn = false; try{ save(); }catch(e){} try{ sessionStorage.removeItem('sabr-unlocked'); }catch(e){} document.documentElement.classList.add('locked'); if (S.account) showAuth('lock'); }
 function setLockEachLaunch(on){ S.lockEachLaunch = !!on; if (!on) S.staySignedIn = true; save(); try{ renderLockControls(); }catch(e){} }
+// Self-service account erasure (GDPR "right to be forgotten"). Two explicit confirms — confirm() works
+// everywhere web/PWA/Android WebView, unlike prompt(). If the account is on the cloud we delete the
+// server copy first via the authenticated POST /auth/delete, then wipe every trace on this device and
+// hard-reload into a pristine first-run state.
+async function deleteAccount(){
+  if (!S.account) return;
+  const uname = S.account.username || 'your account';
+  const isCloud = !!(S.cloud && S.cloud.token && cloudUrl());
+  const scope = isCloud ? 'the cloud server AND this device' : 'this device';
+  if (!confirm('Delete the account “' + uname + '”?\n\nThis permanently erases your account and everything saved on ' + scope + ' — prayer records, journal, qada, garden and all progress.\n\nThis cannot be undone.')) return;
+  if (!confirm('Last check — really delete “' + uname + '” and all of its data forever?\n\nThere is no way to recover it afterwards.')) return;
+  // 1) Erase the server-side account + cloud blob first. If we can't reach the server (offline) or it says
+  //    the session is already gone, still let the user finish wiping this device.
+  if (isCloud){
+    try{ await cloudFetch('/auth/delete', {}, S.cloud.token); }
+    catch(err){
+      const alreadyGone = err && (err.status === 401 || err.status === 404);   // token dead / not found → nothing left online
+      if (!alreadyGone && !confirm('Couldn’t reach the server to delete your online copy (you may be offline). Erase everything on THIS device anyway?')) return;
+    }
+  }
+  // 2) Drop the push subscription (it holds this device's reminder schedule), block any in-flight sync from
+  //    re-persisting, wipe local storage, and reload into a clean install.
+  try{ await disablePush(); }catch(e){}
+  try{ _storeInvalidated = true; }catch(e){}
+  try{ localStorage.removeItem(KEY); }catch(e){}
+  try{ sessionStorage.clear(); }catch(e){}
+  location.reload();
+}
 function setAcGender(g){ _acGender = g; const m = document.getElementById('gMale'), f = document.getElementById('gFemale'); if (m) m.classList.toggle('on', g === 'male'); if (f) f.classList.toggle('on', g === 'female'); }
 function acQChange(){ const c = document.getElementById('acQCustom'); if (c) c.style.display = document.getElementById('acQ').value === '__custom' ? 'block' : 'none'; }
 /* ═══ One master verse library ════════════════════════════════════════════════════
@@ -4757,6 +4787,13 @@ function showAuth(mode){
   if (mode === 'create'){ setAcGender(S.gender || 'male'); ['acEmail','acPass','acPass2'].forEach(function(id){ const e = document.getElementById(id); if (e) e.addEventListener('input', acLive); }); }
   if (mode === 'lock'){ const lu = document.getElementById('lkUser'); if (lu){ lu.value = (S.account && S.account.username) || ''; } }
   if (mode === 'forgot'){ const fe = document.getElementById('feEmail'); if (fe && !fe.value){ fe.value = _feEmail || ''; } }   // don't pre-fill a real address — let the user enter their own (example shown as a hint)
+  // a11y: land the keyboard on this screen's primary control so the focus-trap has an anchor and a keyboard/SR
+  // user isn't stranded behind the (now aria-modal) overlay. `lock` prefills the username → jump to the password.
+  try{
+    const _focusId = { create:'acName', lock:'lkPass', restore:'clUser', forgot:'feEmail', reset:'rsPass' }[mode];
+    const _tgt = (_focusId && document.getElementById(_focusId)) || box.querySelector('input:not([type="checkbox"]), button');
+    if (_tgt) setTimeout(function(){ try{ _tgt.focus({ preventScroll: true }); }catch(e){} }, 60);
+  }catch(e){}
   if (!document.getElementById('ahAyah')) renderAyahHero(); else ahStart();
 }
 async function createAccount(){
@@ -6007,6 +6044,34 @@ function newLockAyah(){
 }
 let _dlgLastFocus = null;
 function _restoreDlgFocus(){ try{ if (_dlgLastFocus && _dlgLastFocus.focus) _dlgLastFocus.focus({ preventScroll: true }); }catch(e){} _dlgLastFocus = null; }
+// ── a11y focus trap ── keep the keyboard INSIDE the open modal dialog (WCAG 2.1.2 / 2.4.3). The app already
+// moves focus in on open and restores it on close; this stops Tab from silently walking OUT of the auth gate
+// or a prayer dialog into the app hidden behind the overlay. One capturing listener covers every dialog.
+const _DLG_TRAP_SEL = '#welcome, #prayerLock, #prayerPrompt, #focus, #hadithPop, #namePop, #featuresModal, .modal';
+function _activeTrapDialog(){
+  const nodes = document.querySelectorAll(_DLG_TRAP_SEL);
+  let first = null;
+  for (let i = 0; i < nodes.length; i++){
+    const d = nodes[i];
+    if (!d.classList.contains('open')) continue;
+    if (!(d.offsetWidth || d.offsetHeight || d.getClientRects().length)) continue;   // must be visible
+    if (d.contains(document.activeElement)) return d;                                 // the one already holding focus wins
+    if (!first) first = d;
+  }
+  return first;
+}
+document.addEventListener('keydown', function(e){
+  if (e.key !== 'Tab' && e.keyCode !== 9) return;
+  const dlg = _activeTrapDialog(); if (!dlg) return;
+  const cand = dlg.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+  const items = [];
+  for (let i = 0; i < cand.length; i++){ const el = cand[i]; if (el.offsetWidth || el.offsetHeight || el.getClientRects().length) items.push(el); }
+  if (!items.length) return;
+  const first = items[0], last = items[items.length - 1], act = document.activeElement;
+  if (!dlg.contains(act)){ e.preventDefault(); first.focus({ preventScroll: true }); return; }
+  if (e.shiftKey && act === first){ e.preventDefault(); last.focus({ preventScroll: true }); }
+  else if (!e.shiftKey && act === last){ e.preventDefault(); first.focus({ preventScroll: true }); }
+}, true);
 function openPrayerLock(k, e, tz, preview){
   _plKey = k || null;
   _plPreview = !!preview;                          // a PREVIEW must never log a real prayer (matches the prompt's ppPreview guard)
