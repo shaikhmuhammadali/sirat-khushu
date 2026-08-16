@@ -3699,7 +3699,7 @@ function _qWordWeight(w){
    recitation stops. A fractional cursor (_qsPos) is eased toward the anchor and written with
    scrollTo(round) — no per-frame scrollBy, so there's no sub-pixel rounding jitter and a stationary
    word parks perfectly still (no micro-vibration). */
-let _qsRAF = 0, _qsWatch = null, _qsUserTook = false, _qsLastTouch = 0, _qsAudio = null, _qsAyTop = null, _qsAyH = 0, _qsFrac = 0, _qsPos = null, _qsWrote = -1;   // _qsAyTop/_qsAyH: the reciting ayah's ABSOLUTE geometry, cached ONCE in setRecitingAyah so the rAF loop needs no per-frame getBoundingClientRect (a forced reflow of the 96,000px surah DOM every frame was the surviving jank). _qsWrote: last written scroll px (skip redundant scrollTo)
+let _qsRAF = 0, _qsWatch = null, _qsUserTook = false, _qsLastTouch = 0, _qsAudio = null, _qsAyTop = null, _qsAyH = 0, _qsFrac = 0, _qsPos = null, _qsWrote = -1, _qsAyEl = null, _qsTick = 0;   // _qsAyTop/_qsAyH: the reciting ayah's ABSOLUTE geometry, cached in setRecitingAyah + cheaply re-measured ~3x/sec (via _qsAyEl) so the rAF loop avoids the per-frame getBoundingClientRect that caused the lag, yet stays correct after a resize/reflow or once a content-visibility'd row renders. _qsWrote: last written scroll px
 function _qsActiveEl(){
   const card = document.getElementById('quranCard'); if (!card) return null;
   return card.querySelector('.qayah.reciting .qar .qw.rw')   // the glowing word — follows recitation within a long ayah
@@ -3726,6 +3726,13 @@ function startReciteScroll(){
     }
     if (_qsAyTop !== null){                                      // an ayah is reciting (its geometry is cached — no layout here)
       const cur = window.scrollY || window.pageYOffset || 0;    // cheap: reading scrollY forces no layout
+      // RE-MEASURE the reciting ayah a few times a second (NOT every frame): corrects a stale cache after
+      // an orientation/resize reflow, and fixes a content-visibility:auto row first measured at its ~340px
+      // placeholder height (before it rendered). ~3x/sec is negligible on the content-visibility'd DOM and
+      // keeps the smooth glide honest without the 60fps forced reflow that caused the original lag.
+      if (_qsAyEl && (++_qsTick % 20 === 0)){
+        try{ const rr = _qsAyEl.getBoundingClientRect(); if (rr.height > 1){ _qsAyTop = rr.top + cur; _qsAyH = rr.height; } }catch(e){}
+      }
       if (_qsPos === null || Math.abs(_qsPos - cur) > 140) _qsPos = cur;   // (re)sync after a page jump (user scroll, layout shift)
       const vh = window.innerHeight || document.documentElement.clientHeight;
       let f = 0; const a = _qsAudio;
@@ -3762,7 +3769,7 @@ function setRecitingAyah(sn, an, audio){
   if (!el) return;
   el.classList.add('reciting');
   _qsAudio = audio || null;                    // hand the teleprompter scroll this ayah's audio so it paces by real playback progress
-  try{ const _rr = el.getBoundingClientRect(); _qsAyTop = _rr.top + (window.scrollY || window.pageYOffset || 0); _qsAyH = _rr.height; _qsFrac = 0; }catch(e){ _qsAyTop = null; }   // cache this ayah's ABSOLUTE geometry ONCE (this is the ONLY layout read per ayah); the rAF loop then needs no per-frame reflow. _qsFrac=0 → the new ayah starts at its beginning.
+  try{ const _rr = el.getBoundingClientRect(); _qsAyTop = _rr.top + (window.scrollY || window.pageYOffset || 0); _qsAyH = _rr.height; _qsAyEl = el; _qsTick = 0; _qsFrac = 0; }catch(e){ _qsAyTop = null; _qsAyEl = null; }   // cache this ayah's ABSOLUTE geometry + its element (for the cheap periodic re-measure). _qsFrac=0 → the new ayah starts at its beginning.
   // scroll ONLY when the ayah isn't comfortably in view — never jerk the page on an already-visible ayah.
   // Skipped while the continuous auto-scroll loop owns the page (surah/passage recite, _qsRAF≠0) — the loop
   // positions the page and this one-shot would fight it. So this runs only for a single-ayah recite.
@@ -3809,7 +3816,7 @@ function setRecitingAyah(sn, an, audio){
   }
 }
 function clearRecitingAyah(){
-  _qsAudio = null; _qsAyTop = null;            // no ayah reciting → teleprompter idles (loop does nothing: no layout, no scroll)
+  _qsAudio = null; _qsAyTop = null; _qsAyEl = null;   // no ayah reciting → teleprompter idles (loop does nothing: no layout, no scroll)
   document.querySelectorAll('.qayah.reciting').forEach(q => q.classList.remove('reciting'));
   document.querySelectorAll('.qar .qw.rw, .qar .qw.rw-done').forEach(w => w.classList.remove('rw', 'rw-done'));
 }
@@ -4337,7 +4344,7 @@ const TOUR_STEPS = [
   {tab:'journal',  ic:'📝', t:'Journal', b:'Your private space for one honest line a day — a quiet muhasaba. It stays on your device, and travels safely inside your account when you’re signed in.'},
   {tab:'settings', ic:'📍', t:'Settings · location & prayer', b:'Set your location by search or GPS, choose your calculation method and Asr school, and fine-tune high-latitude rules. Set up reminders that arrive even when the app is closed.'},
   {tab:'settings', ic:'🎨', t:'Settings · make it yours', b:'Pick from 12 themes, choose your favourite reciter, and manage your account — log out, or turn cloud login on and off. With cloud login you can reset a forgotten password by email; and a saved backup file restores you on any device.'},
-  {tab:'today',    ic:'🤲', t:'You’re all set', b:'That’s the whole app. Tap any tab along the bottom to begin. May Allah accept your prayers and make this a source of khushūʿ. You can replay this tour anytime from Settings.'},
+  {tab:'today',    ic:'🤲', t:'You’re all set', b:'That’s the whole app. Tap any tab along the bottom to begin. May Allah accept your prayers and make this a source of khushūʿ.'},
 ];
 let _tourI = 0;
 function startTour(force){ if (!force && S.tourSeen) return; _tourI = 0; renderTourStep(); }
@@ -5974,7 +5981,7 @@ function logFromFocus(){ document.getElementById('focus').classList.remove('open
 function closeFocus(){ document.getElementById('focus').classList.remove('open'); }
 
 /* ── Prayer Lock: a full-screen, reverent lock at prayer time (in-app; azan + ayah + focus timer) ── */
-let _plTimer = null, _plEnd = 0, _plKey = null, _plMins = 15;
+let _plTimer = null, _plEnd = 0, _plKey = null, _plMins = 15, _plPreview = false;
 const _PL_C = 339.3;   // 2πr for r=54
 /* A pool of ayat shown on the lock — a different one appears each time the lock opens, while the
    two-angels reminder above it stays constant (Kiraman Katibin — Surah al-Infitar 82:11). That
@@ -5995,8 +6002,9 @@ function newLockAyah(){
 }
 let _dlgLastFocus = null;
 function _restoreDlgFocus(){ try{ if (_dlgLastFocus && _dlgLastFocus.focus) _dlgLastFocus.focus({ preventScroll: true }); }catch(e){} _dlgLastFocus = null; }
-function openPrayerLock(k, e, tz){
+function openPrayerLock(k, e, tz, preview){
   _plKey = k || null;
+  _plPreview = !!preview;                          // a PREVIEW must never log a real prayer (matches the prompt's ppPreview guard)
   _plMins = Math.max(1, Math.min(30, +S.prayerLockMins || 15));
   const nm = document.getElementById('plName'); if (nm) nm.textContent = k || 'Prayer';
   const lock = document.getElementById('prayerLock'); if (!lock) return;
@@ -6017,7 +6025,7 @@ function openPrayerLock(k, e, tz){
   };
   tick(); _plTimer = setInterval(tick, 1000);
 }
-function prayerLockDone(){ clearInterval(_plTimer); const l = document.getElementById('prayerLock'); if (l) l.classList.remove('open'); _restoreDlgFocus(); if (_plKey) logPrayerForToday(_plKey); }
+function prayerLockDone(){ clearInterval(_plTimer); const l = document.getElementById('prayerLock'); if (l) l.classList.remove('open'); _restoreDlgFocus(); const prev = _plPreview; _plPreview = false; if (prev) return; if (_plKey) logPrayerForToday(_plKey); }   // preview → close without logging
 function closePrayerLock(){ clearInterval(_plTimer); const l = document.getElementById('prayerLock'); if (l) l.classList.remove('open'); _restoreDlgFocus(); }
 function togglePrayerLock(){
   S.prayerLock = document.getElementById('setPrayerLock').checked; save();
@@ -6028,7 +6036,7 @@ function previewPrayerLock(){
   const win = S.loc ? prayerWindows(currentSet()).filter(w => !w.info) : [];
   const now = Date.now(); let t = null; for (const w of win){ if (w.e != null && w.e <= now) t = w; }
   const k = (t && t.k) || (win.find(w => w.e != null) || {}).k || 'Fajr';
-  openPrayerLock(k, null, S.loc && S.loc.tz);
+  openPrayerLock(k, null, S.loc && S.loc.tz, true);   // preview — never logs a real prayer
 }
 /* ── Daily Hadith of the Day (background notification + optional floating overlay) ──
    Web toggles persist here; the native bridge (native-bridge.js, Android app) picks them up and
@@ -6502,6 +6510,7 @@ function initNav(){
   setTimeout(function(){ try{ maybeOfferFeatures(); }catch(e){} }, 6500);   // first-run: offer the features/permissions setup once (deferred so it never lands on the login/tour)
 }
 function go(sec){
+  try{ if (typeof stopReciteAudio === 'function') stopReciteAudio(); }catch(e){}   // leaving the view must silence any Qur'an recitation AND stop its follow-scroll loop — tabs share one scroll document, so a running teleprompter would otherwise drag the new tab downward and leave scroll-behavior stuck on 'auto'
   const w = document.querySelector('.wrap'); if (w){ w.dataset.tab = sec; w.classList.remove('tabfade'); void w.offsetWidth; w.classList.add('tabfade'); }
   document.querySelectorAll('.bnav button').forEach(x => x.classList.toggle('active', x.dataset.tab === sec));
   window.scrollTo({top:0});
