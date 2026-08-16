@@ -66,9 +66,10 @@
        • everyayah.com / cdn.islamic.network — reciter audio
      SELF-HOSTING NOTE: if you point CLOUD_URL / push at a different server, add that exact origin to
      BOTH connect-src and media-src below, or sync/TTS will be blocked. Keep the list minimal. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://shaikhmuhammadali.github.io https://geocoding-api.open-meteo.com https://nominatim.openstreetmap.org https://api.aladhan.com https://api.bigdatacloud.net https://ipwho.is https://get.geojs.io https://sabr-push-server.onrender.com http://localhost:* http://127.0.0.1:*; media-src 'self' https://everyayah.com https://cdn.islamic.network https://sabr-push-server.onrender.com http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://shaikhmuhammadali.github.io https://geocoding-api.open-meteo.com https://nominatim.openstreetmap.org https://api.aladhan.com https://api.bigdatacloud.net https://ipwho.is https://get.geojs.io https://sabr-push-server.onrender.com http://localhost:* http://127.0.0.1:*; media-src 'self' https://everyayah.com https://cdn.islamic.network https://audio.qurancdn.com https://sabr-push-server.onrender.com http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <!-- Warm the reciter-audio CDNs so the FIRST Recite tap doesn't pay DNS+TLS. Resource hints aren't gated
      by CSP connect-src; the audio itself is allowed by media-src. -->
+<link rel="preconnect" href="https://audio.qurancdn.com" crossorigin>
 <link rel="preconnect" href="https://everyayah.com" crossorigin>
 <link rel="preconnect" href="https://cdn.islamic.network" crossorigin>
 <!-- PWA layer: installable + fully offline. Manifest, icons, and iOS standalone meta. -->
@@ -3615,11 +3616,11 @@ const RICON_SVG = '<svg class="ricon" viewBox="0 0 24 24" aria-hidden="true"><pa
 // Every URL below was live-verified (HTTP 206 audio/mpeg). Order = primary first (unchanged behaviour
 // for users it already works for), verified fallback second where one exists.
 const RECITERS = [
-  {id:'afasy',    name:'Mishary Rashid Al-Afasy',    srcs:[['isn','ar.alafasy'],                  ['ey','Alafasy_128kbps']]},
+  {id:'afasy',    name:'Mishary Rashid Al-Afasy',    srcs:[['qc','Alafasy'], ['isn','ar.alafasy'],                  ['ey','Alafasy_128kbps']]},
   {id:'husary',   name:'Mahmoud Khalil Al-Husary',   srcs:[['isn','ar.husary'],                   ['ey','Husary_128kbps']]},
-  {id:'basit',    name:'Abdul Basit Abdul Samad',    srcs:[['ey','Abdul_Basit_Murattal_192kbps'], ['isn','ar.abdulbasitmurattal',64]]},
-  {id:'minshawi', name:'Mohamed Siddiq El-Minshawi', srcs:[['ey','Minshawy_Murattal_128kbps'],    ['isn','ar.minshawi']]},
-  {id:'sudais',   name:'Abdul Rahman Al-Sudais',     srcs:[['ey','Abdurrahmaan_As-Sudais_192kbps'],['isn','ar.abdurrahmaansudais',64]]},
+  {id:'basit',    name:'Abdul Basit Abdul Samad',    srcs:[['qc','AbdulBaset/Murattal'], ['ey','Abdul_Basit_Murattal_192kbps'], ['isn','ar.abdulbasitmurattal',64]]},
+  {id:'minshawi', name:'Mohamed Siddiq El-Minshawi', srcs:[['qc','Minshawi/Murattal'], ['ey','Minshawy_Murattal_128kbps'],    ['isn','ar.minshawi']]},
+  {id:'sudais',   name:'Abdul Rahman Al-Sudais',     srcs:[['qc','Sudais'], ['ey','Abdurrahmaan_As-Sudais_192kbps'],['isn','ar.abdurrahmaansudais',64]]},
   {id:'shuraim',  name:'Saud Al-Shuraim',            srcs:[['ey','Saood_ash-Shuraym_128kbps']]},
   {id:'maher',    name:'Maher Al-Muaiqly',           srcs:[['isn','ar.mahermuaiqly'],             ['ey','MaherAlMuaiqly128kbps']]},
   {id:'ghamdi',   name:'Saad Al-Ghamdi',             srcs:[['ey','Ghamadi_40kbps']]},
@@ -3638,6 +3639,8 @@ function ayahAudioUrls(surah, ayah, g){
   const r = currentReciter(), s3 = ('00'+surah).slice(-3), a3 = ('00'+ayah).slice(-3);
   return (r.srcs || []).map(s => s[0] === 'ey'
     ? 'https://everyayah.com/data/' + s[1] + '/' + s3 + a3 + '.mp3'
+    : s[0] === 'qc'
+    ? 'https://audio.qurancdn.com/' + s[1] + '/mp3/' + s3 + a3 + '.mp3'   // quran.com's Cloudflare CDN — a THIRD host, rarely blocked where everyayah/islamic.network are (e.g. some India ISPs)
     : 'https://cdn.islamic.network/quran/audio/' + (s[2] || 128) + '/' + s[1] + '/' + g + '.mp3');
 }
 // Back-compat: the single primary URL (used for prefetch warming).
