@@ -3673,11 +3673,13 @@ function _qWordWeight(w){
    The whole PAGE is the scroller (the .qayah rows live in normal document flow). While a
    surah/passage recites, ease window.scrollY so the CURRENTLY-GLOWING word (or, before its
    word-spans exist, the reciting ayah) rides ~40% down the viewport — a slow, continuous
-   glide rather than a jerk to each ayah. It stops the instant the user scrolls by hand, when
-   recitation ends, or when it's stopped/superseded. A fractional cursor (_qsPos) is eased toward
-   the anchor and written with scrollTo(round) — no per-frame scrollBy, so there's no sub-pixel
-   rounding jitter and a stationary word parks perfectly still (no micro-vibration). */
-let _qsRAF = 0, _qsWatch = null, _qsUserTook = false;   // _qsUserTook: user hand-scrolled during THIS recite → don't auto-recenter until a new recite
+   glide rather than a jerk to each ayah. A hand-scroll PAUSES the follow (the reader is in control)
+   and it auto-RESUMES ~3s after they settle — it is never killed for the rest of the recitation, so
+   an elderly reader who nudges the screen doesn't lose the hands-free follow. It ends only when the
+   recitation stops. A fractional cursor (_qsPos) is eased toward the anchor and written with
+   scrollTo(round) — no per-frame scrollBy, so there's no sub-pixel rounding jitter and a stationary
+   word parks perfectly still (no micro-vibration). */
+let _qsRAF = 0, _qsWatch = null, _qsUserTook = false, _qsLastTouch = 0;   // _qsUserTook: reader is hand-scrolling right now → yield; the follow resumes ~3s after the last gesture (_qsLastTouch)
 function _qsActiveEl(){
   const card = document.getElementById('quranCard'); if (!card) return null;
   return card.querySelector('.qayah.reciting .qar .qw.rw')   // the glowing word — follows recitation within a long ayah
@@ -3686,7 +3688,7 @@ function _qsActiveEl(){
 function startReciteScroll(){
   stopReciteScroll();                                        // never stack two loops
   if (typeof fastOn === 'function' && fastOn()) return;      // respect prefers-reduced-motion — no auto-motion
-  _qsWatch = function(){ _qsUserTook = true; stopReciteScroll(); };   // a real scroll gesture hands control to the user AND keeps it (setRecitingAyah won't re-grab this recite)
+  _qsWatch = function(){ _qsUserTook = true; _qsLastTouch = performance.now(); };   // a hand-scroll PAUSES the follow (yields to the reader); it auto-resumes ~3s after the last gesture — not killed
   window.addEventListener('wheel', _qsWatch, { passive: true });
   window.addEventListener('touchmove', _qsWatch, { passive: true });
   // Butter-smooth follow: keep a FRACTIONAL cursor and ease it toward the anchor each frame, then
@@ -3696,16 +3698,20 @@ function startReciteScroll(){
   // seated at the anchor, so a static word can never micro-vibrate.
   let _qsPos = null;
   const step = function(){
+    if (_qsUserTook){                                            // reader is scrolling by hand → yield the page to them
+      if ((performance.now() - _qsLastTouch) < 3000){ _qsRAF = requestAnimationFrame(step); return; }
+      _qsUserTook = false; _qsPos = null;                        // ~3s after their last gesture → gently re-take the follow (resync cursor first)
+    }
     const cur = window.scrollY || window.pageYOffset || 0;
     if (_qsPos === null || Math.abs(_qsPos - cur) > 140) _qsPos = cur;   // (re)sync after any page jump (layout shift, momentum, resize)
     const el = _qsActiveEl();
     if (el){
       const vh = window.innerHeight || document.documentElement.clientHeight;
-      const targetY = cur + el.getBoundingClientRect().top - vh * 0.40;   // absolute page-Y that seats the glow ~40% down
+      const targetY = cur + el.getBoundingClientRect().top - vh * 0.42;   // absolute page-Y that seats the glow ~42% down
       const diff = targetY - _qsPos;
       if (Math.abs(diff) > 0.4){                                  // deadzone → park perfectly still when already seated
-        let move = diff * 0.075;                                  // ease 7.5% of the remaining gap per frame → smooth deceleration
-        if (move > 9) move = 9; else if (move < -9) move = -9;    // cap ≈ 9px/frame (~540px/s) → slow, luxurious, never a lurch
+        let move = diff * 0.08;                                   // ease 8% of the remaining gap per frame → smooth deceleration
+        if (move > 14) move = 14; else if (move < -14) move = -14;   // cap ≈ 14px/frame → gentle & luxurious, keeps pace, never a lurch
         _qsPos += move;
         window.scrollTo(0, Math.round(_qsPos));
       }
@@ -3801,10 +3807,11 @@ function reciteAyah(surah, ayah, g, btn){
   const seq = _qaSeq;
   if (btn) btn.classList.add('playing');
   const a = _qa = reciteAudio(surah, ayah, g);     // self-heals across every CDN source
+  startReciteScroll();                             // follow a single-ayah tap too (word-by-word) — helps elderly readers, not just whole-surah playback
   setRecitingAyah(surah, ayah, a);
   try{ prefetchAyahAudio(surah, ayah + 1, g + 1); }catch(e){}   // users read in order — make the next tap instant
-  a.onended = () => { if (seq === _qaSeq){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); } };
-  a.playFallback(() => { if (seq === _qaSeq){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); reciteOfflineNotice(btn); } });
+  a.onended = () => { if (seq === _qaSeq){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); stopReciteScroll(); } };
+  a.playFallback(() => { if (seq === _qaSeq){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); stopReciteScroll(); reciteOfflineNotice(btn); } });
 }
 function reciteSurahAudio(surah, count, firstG, btn){
   const wasThis = btn && btn.classList.contains('playing');
