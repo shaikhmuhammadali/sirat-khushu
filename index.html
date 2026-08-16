@@ -3722,7 +3722,7 @@ function startReciteScroll(){
         let move = diff * 0.08;                                  // ease 8% of the remaining gap per frame → smooth deceleration
         if (move > 14) move = 14; else if (move < -14) move = -14;   // cap ≈ 14px/frame → gentle & luxurious, never a lurch
         _qsPos += move;
-        window.scrollTo(0, Math.round(_qsPos));
+        window.scrollTo({ top: Math.round(_qsPos), left: 0, behavior: 'auto' });   // 'auto' overrides html{scroll-behavior:smooth} — else the browser re-animates EVERY frame and fights this lerp (the real jank)
       }
     }
     _qsRAF = requestAnimationFrame(step);
