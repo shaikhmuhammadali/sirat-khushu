@@ -1822,7 +1822,7 @@ const DEFAULTS = {
   notifMaster:false, notif:{Fajr:true, Dhuhr:true, Asr:true, Maghrib:true, Isha:true},
   logs:{}, streakBest:0, streakCelebrated:0, dhikrTotal:0, tasbih:{count:0,target:33,phrase:0},
   journal:[], bookmarks:[], duas:[], hadithSeen:[], hadithToday:null,
-  taraweeh:{}, ramadanPreview:false, hadithPopSeen:null,
+  taraweeh:{}, hadithPopSeen:null,
   hadithNotif:false, hadithOverlay:false, hadithHour:8, hadithMin:0,
   profile:null, nameAsked:0, xp:0, achievements:[], questClaim:null, dhikrDay:null, greetSeen:null,
   remind:true, notifPre:0, notifPost:0, soundName:'bell', vol:1, vibrate:true,
@@ -1847,7 +1847,10 @@ let S = (() => {
   // SECURITY: email password-reset is now 100% server-side. Actively WIPE any legacy client-side EmailJS
   // config (which could hold a user's EmailJS private key) + its local reset code left in localStorage by an
   // older version, and persist the removal — so no secret lingers on-device.
-  try{ if (merged.emailjs || merged.resetCode){ delete merged.emailjs; delete merged.resetCode; localStorage.setItem(KEY, JSON.stringify(merged)); } }catch(e){}
+  // Wipe legacy/stuck flags left in localStorage by older builds, and persist the removal: the EmailJS
+  // config (possible private key) + its local reset code, and a stuck ramadanPreview that would otherwise
+  // pin Ramadan super-mode on all year (there is no longer any toggle to clear it — it is Hijri-automatic).
+  try{ if (merged.emailjs || merged.resetCode || merged.ramadanPreview){ delete merged.emailjs; delete merged.resetCode; delete merged.ramadanPreview; localStorage.setItem(KEY, JSON.stringify(merged)); } }catch(e){}
   return merged;
 })();
 /* DO NOT REMOVE. `let S` at the top level of a classic script creates a binding in the
@@ -5648,7 +5651,7 @@ function renderCatchup(){
 }
 
 /* ── Ramadan super-mode + escalation ── */
-function ramadanActive(){ if (S.ramadanPreview) return true; if (!S.loc) return false; return hijriPartsAt(Date.now(), S.loc.tz, S.hijriAdj).m === 9; }
+function ramadanActive(){ if (!S.loc) return false; return hijriPartsAt(Date.now(), S.loc.tz, S.hijriAdj).m === 9; }   // PURELY automatic: Ramadan super-mode is on iff the real Hijri month (with the user's hijriAdj moonsight offset) is 9 — no manual preview override, ever.
 function renderRamadan(){
   const el = document.getElementById('ramadanCard'); if (!el) return;
   if (!ramadanActive()){ el.innerHTML = ''; return; }
@@ -6070,7 +6073,7 @@ function previewHadithNotif(){
   }catch(e){}
 }
 
-function toggleRamadanPreview(){ S.ramadanPreview = document.getElementById('setRamadanPrev').checked; save(); renderRamadan(); if (S.ramadanPreview){ try{ toast('Ramadan mode on', 'Suhoor \u0026 iftar countdowns and Taraweeh tracking now appear at the top of Today.', '\ud83c\udf19'); go('today'); }catch(e){} } }
+// [removed] toggleRamadanPreview — Ramadan super-mode is now purely Hijri-automatic (ramadanActive); no manual preview toggle exists.
 
 /* ═══════════════ Qada — missed-prayer tracker (precise · on-device · waswas-safe) ═══════════════
    Window-based per-prayer detection: a prayer becomes Qada the instant its time window closes
@@ -6440,7 +6443,6 @@ function renderAppFeatures(){
     try{ renderJournalHistory(); }catch(e){}
     renderDaily(); renderAdhkar(); renderDuas(); renderCalendar();
   }catch(e){} }, 50);
-  const rp = document.getElementById('setRamadanPrev'); if (rp) rp.checked = !!S.ramadanPreview;
   const pp = document.getElementById('setPrayerPopup'); if (pp) pp.checked = S.prayerPopup !== false;
   const an = document.getElementById('setAnalytics'); if (an) an.checked = !!S.analytics;
   const plk = document.getElementById('setPrayerLock'); if (plk) plk.checked = !!S.prayerLock;
