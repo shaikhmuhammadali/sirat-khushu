@@ -3674,8 +3674,9 @@ function _qWordWeight(w){
    surah/passage recites, ease window.scrollY so the CURRENTLY-GLOWING word (or, before its
    word-spans exist, the reciting ayah) rides ~40% down the viewport — a slow, continuous
    glide rather than a jerk to each ayah. It stops the instant the user scrolls by hand, when
-   recitation ends, or when it's stopped/superseded. html{scroll-behavior:smooth} is global,
-   so every scrollBy MUST pass behavior:'auto', else the browser double-animates each frame. */
+   recitation ends, or when it's stopped/superseded. A fractional cursor (_qsPos) is eased toward
+   the anchor and written with scrollTo(round) — no per-frame scrollBy, so there's no sub-pixel
+   rounding jitter and a stationary word parks perfectly still (no micro-vibration). */
 let _qsRAF = 0, _qsWatch = null, _qsUserTook = false;   // _qsUserTook: user hand-scrolled during THIS recite → don't auto-recenter until a new recite
 function _qsActiveEl(){
   const card = document.getElementById('quranCard'); if (!card) return null;
@@ -3688,14 +3689,25 @@ function startReciteScroll(){
   _qsWatch = function(){ _qsUserTook = true; stopReciteScroll(); };   // a real scroll gesture hands control to the user AND keeps it (setRecitingAyah won't re-grab this recite)
   window.addEventListener('wheel', _qsWatch, { passive: true });
   window.addEventListener('touchmove', _qsWatch, { passive: true });
+  // Butter-smooth follow: keep a FRACTIONAL cursor and ease it toward the anchor each frame, then
+  // scrollTo(round). Because the cursor accumulates sub-pixel progress (rather than issuing a fresh
+  // fractional scrollBy every frame) there is no rounding chatter; the small ease factor + speed cap
+  // give a slow continuous glide; and the deadzone parks the page dead-still once the glowing word is
+  // seated at the anchor, so a static word can never micro-vibrate.
+  let _qsPos = null;
   const step = function(){
+    const cur = window.scrollY || window.pageYOffset || 0;
+    if (_qsPos === null || Math.abs(_qsPos - cur) > 140) _qsPos = cur;   // (re)sync after any page jump (layout shift, momentum, resize)
     const el = _qsActiveEl();
     if (el){
       const vh = window.innerHeight || document.documentElement.clientHeight;
-      const delta = el.getBoundingClientRect().top - vh * 0.40;   // >0 → line is below the anchor → scroll DOWN
-      if (Math.abs(delta) > 2){
-        const dy = Math.max(-10, Math.min(10, delta * 0.06));     // ease toward it, capped small → slow & smooth
-        window.scrollBy({ top: dy, left: 0, behavior: 'auto' });  // 'auto' overrides the global smooth scroll-behavior
+      const targetY = cur + el.getBoundingClientRect().top - vh * 0.40;   // absolute page-Y that seats the glow ~40% down
+      const diff = targetY - _qsPos;
+      if (Math.abs(diff) > 0.4){                                  // deadzone → park perfectly still when already seated
+        let move = diff * 0.075;                                  // ease 7.5% of the remaining gap per frame → smooth deceleration
+        if (move > 9) move = 9; else if (move < -9) move = -9;    // cap ≈ 9px/frame (~540px/s) → slow, luxurious, never a lurch
+        _qsPos += move;
+        window.scrollTo(0, Math.round(_qsPos));
       }
     }
     _qsRAF = requestAnimationFrame(step);
@@ -3739,11 +3751,23 @@ function setRecitingAyah(sn, an, audio){
       const wts = words.map(w => _qWordWeight(w.textContent));
       const tot = wts.reduce((a, b) => a + b, 0) || 1;
       const cum = []; let acc = 0; for (const wt of wts){ acc += wt; cum.push(acc / tot); }
+      // Only touch the DOM when the glowing word actually CHANGES, and only the words that changed.
+      // The old loop re-toggled two classes on EVERY word on EVERY timeupdate (many ticks/sec) → O(words)
+      // style recalcs + text-shadow repaints per tick, which is what made a long ayah lag & hang. Now it's
+      // O(1) on a normal advance (the word we left → done, the new word → glow) and O(delta) only on a seek.
+      let _lastIdx = -1;
       const onTime = () => {
         const d = audio.duration; if (!d || !isFinite(d)) return;
         const frac = Math.min(0.999, audio.currentTime / d);
         let idx = 0; while (idx < cum.length - 1 && frac > cum[idx]) idx++;
-        for (let k = 0; k < words.length; k++){ words[k].classList.toggle('rw', k === idx); words[k].classList.toggle('rw-done', k < idx); }
+        if (idx === _lastIdx) return;                                       // no change this tick → zero DOM work
+        if (idx > _lastIdx){                                                // forward (normal playback): the words we passed become "done"
+          for (let k = Math.max(0, _lastIdx); k < idx; k++){ const c = words[k].classList; c.remove('rw'); c.add('rw-done'); }
+        } else {                                                           // backward (user seek): wipe anything now in the future
+          for (let k = idx + 1; k <= _lastIdx && k < words.length; k++){ words[k].classList.remove('rw', 'rw-done'); }
+        }
+        const c = words[idx].classList; c.remove('rw-done'); c.add('rw');   // the current word glows
+        _lastIdx = idx;
       };
       audio.addEventListener('timeupdate', onTime);
       audio.addEventListener('ended', () => words.forEach(w => w.classList.remove('rw', 'rw-done')), { once: true });
