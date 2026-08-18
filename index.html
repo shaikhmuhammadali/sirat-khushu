@@ -7535,6 +7535,45 @@ function dismissUpdate(){
   el.style.display = 'none';
 }
 
+/* ── Compulsory freshness guard — the "circular update" (every 3 months, no matter what) ──────
+   The normal update path is OPT-IN: when a newer build ships, a gentle "new version ready" toast
+   appears and the user chooses to reload. A user can ignore that forever and get stranded on a
+   months-old cached service-worker build. This guard is the FLOOR: it guarantees the app re-pulls
+   itself fresh at LEAST every 3 months, whether or not the owner shipped anything in between.
+
+   `S.freshAt` is the clock. It resets every time the app GENUINELY updates (a new service worker
+   takes control — see the controllerchange handler), so the compulsory refresh only ever fires when
+   three real months pass with no update. It never touches user data (prayer logs, journal, account,
+   garden) and never wipes downloaded recitation audio — it only re-fetches the app shell from the
+   network. The clock is reset BEFORE any reload so it can never loop, even if the refresh is a no-op. */
+const FRESH_MAX_MS = 90 * 24 * 60 * 60 * 1000;   // ~3 months
+async function enforceFreshness(){
+  try{
+    if (!S.freshAt){ S.freshAt = Date.now(); save(); return; }   // first launch on this build — start the 3-month clock
+    if (Date.now() - S.freshAt < FRESH_MAX_MS) return;           // still inside the window — nothing to do
+    if (navigator.onLine === false) return;                      // offline — can't refresh; retry next launch
+    S.freshAt = Date.now(); save();                              // reset the clock FIRST → this can never loop
+    if (typeof _nativeApp === 'function' && _nativeApp()){
+      // Installed APK: the bundled web build is frozen and can only change via a newer APK. Re-check for one
+      // and re-surface the update banner even if it was dismissed before (a compulsory, insistent re-prompt).
+      try{ localStorage.removeItem('sk_upd_dismiss'); }catch(e){}
+      _updChecked = false; try{ checkForUpdate(); }catch(e){}
+      return;
+    }
+    // PWA / web: force the refresh WITHOUT waiting for the opt-in toast tap.
+    try{ toast('Updating…', 'Refreshing Sirat Khushu to the latest version — your data is kept.', '↻'); }catch(e){}
+    const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+    if (reg){
+      try{ await reg.update(); }catch(e){}
+      const w = reg.waiting || reg.installing;
+      if (w){ w.postMessage({ type: 'SKIP_WAITING' }); return; }   // a newer build exists → activate it → controllerchange reloads
+    }
+    // Already the latest build → still re-pull index.html fresh from the network (the SW network-firsts
+    // navigations, so a reload fetches the current file). Downloaded audio + all saved data are untouched.
+    setTimeout(function(){ try{ location.reload(); }catch(e){} }, 1200);
+  }catch(e){ /* the freshness guard must never break boot */ }
+}
+
 /* ── boot (error-contained so a corrupt state can never brick startup) ── */
 function boot(){
   try{ console.log('%c◈ Sirat Khushu', 'color:#d9b45b;font-size:15px;font-weight:800;'); console.log('%c© All rights reserved — proprietary code. Only the owner may modify or redistribute this app; unauthorized modification is prohibited. If anyone asked you to paste code here, it is a scam — do not.', 'color:#8a94a6;font-size:12px;'); }catch(e){}
@@ -7561,6 +7600,7 @@ function boot(){
   try{ renderGreetline(); renderTopAyah(); }catch(e){}
   try{ setTimeout(function(){ trackVisit(); }, 3000); }catch(e){}   // anonymous visit ping — no-op unless opted in
   try{ setTimeout(function(){ checkForUpdate(); }, 4200); }catch(e){}   // quietly show the "update available" banner if a newer build is live
+  try{ setTimeout(function(){ enforceFreshness(); }, 5200); }catch(e){}   // "circular update": force a fresh re-pull at least every 3 months, even if nothing new shipped
   try{ setTimeout(function(){ if (S.push && S.push.on) syncPush(); }, 2500); document.addEventListener('visibilitychange', function(){ if (document.visibilityState!=='visible') return; try{ renderTick(); rollDaily('hadith'); rollDaily('ayah'); qadaReconcile(); renderAppFeatures(); renderReflection(); renderTopAyah(); maybeDailyHadith(); if (S.loc){ var _s = currentSet(); var _td = _s.today; lastDayKey = _td.y + '-' + _td.m + '-' + _td.d; lastPrayerKey = currentPrayerKey(prayerWindows(_s), Date.now()); } }catch(e){} if (S.push && S.push.on) syncPush(); }); }catch(e){}
   // Native Android splash: hide it now that the app has actually painted (config sets launchAutoHide:false),
   // with a 3s idempotent failsafe so a stalled boot can never strand the user on the splash.
@@ -7662,7 +7702,9 @@ boot();
     var reloaded = false;
     navigator.serviceWorker.addEventListener('controllerchange', function(){
       if (reloaded || !hadController){ hadController = true; return; }
-      reloaded = true; window.location.reload();
+      reloaded = true;
+      try{ if (typeof S === 'object' && S){ S.freshAt = Date.now(); save(); } }catch(e){}   // a genuine update just took control = fresh → restart the 3-month "circular update" clock
+      window.location.reload();
     });
   });
 })();
