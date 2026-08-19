@@ -1710,6 +1710,12 @@
     <div id="journalHistory" style="margin-top:12px"></div>
   </div>
 
+  <div class="glass" data-sec="settings">
+    <h2 class="sec">Account &amp; sign-in</h2>
+    <p class="small dim">Your account keeps your prayers, journal and progress — on this device, and (if you turn on cloud login) on your own server so you can sign in on another phone.</p>
+    <div id="lockControls" style="margin-top:12px"></div>
+  </div>
+
   <div class="glass">
     <h2 class="sec">Your data — an amanah</h2>
     <p class="small muted">Your data is an <b>amanah</b> — a sacred trust. As humble servants of Allah ﷻ, we guard what He has given us the honour to keep: everything you write, log and search stays on <b>your own device</b>, and — only if you turn on cloud login — on <b>your own server</b>. We never sell it, never share it, and never look into what is yours. It remains yours alone, in shā’ Allah — kept the way an amanah deserves to be kept.</p>
@@ -1834,6 +1840,7 @@ let S = (() => {
   const merged = Object.assign({}, DEFAULTS, s, {notif:Object.assign({}, DEFAULTS.notif, s.notif || {})});
   // reject a corrupt/unknown persisted timezone so a stale bad value can never brick boot
   if (merged.loc && !isValidTz(merged.loc.tz)) merged.loc = null;
+  if (merged.loc && merged.loc.cc) merged.loc.cc = String(merged.loc.cc).toUpperCase();   // self-heal legacy lowercase codes (pre-v3.99) so CC_METHOD/auto-method matches again
   merged.dhikrVoice = true; merged.salawatAudio = true;   // recite-aloud & salawat audio are always-on now (no toggle) — override any previously-saved false
   // SECURITY: email password-reset is now 100% server-side. Actively WIPE any legacy client-side EmailJS
   // config (which could hold a user's EmailJS private key) + its local reset code left in localStorage by an
@@ -1861,6 +1868,7 @@ const METHODS = {
   Egypt:     {label:'Egyptian General Authority',         fajr:19.5, isha:{angle:17.5}},
   Makkah:    {label:'Umm al-Qura — Makkah',               fajr:18.5, isha:{mins:90}, ramadanMins:120},
   Karachi:   {label:'Univ. of Islamic Sciences, Karachi', fajr:18,   isha:{angle:18}},
+  Tehran:    {label:'Iran — Inst. of Geophysics, Tehran', fajr:17.7, isha:{angle:14}},
   India:     {label:'India \u2014 Univ. of Islamic Sciences (18\u00b0/18\u00b0)', fajr:18,   isha:{angle:18}},
   Kuwait:    {label:'Kuwait',                             fajr:18,   isha:{angle:17.5}},
   Qatar:     {label:'Qatar',                              fajr:18,   isha:{mins:90}},
@@ -2467,11 +2475,19 @@ function renderEvents(set, now, tz){
     }
   }
 }
+// The real epoch of LOCAL midnight for a civil date in tz — so "in X days/HH:MM:SS" counts down to the
+// day's true start in the user's own timezone, not to UTC midnight (which is hours off for most of the world).
+function civilMidnightEpoch(c, tz){
+  const base = Date.UTC(c.y, c.m-1, c.d);
+  let t = base - tzOffsetMin(tz, new Date(base)) * 60000;
+  t = base - tzOffsetMin(tz, new Date(t)) * 60000;   // second pass re-resolves across a DST transition
+  return t;
+}
 function computeEvents(today, tz, now){
   const out = [];
   // "in Ramadan / sacred day right now?" — check today's Hijri
   const hToday = hijriPartsAt(now, tz, S.hijriAdj);
-  const startOfCivilDay = Date.UTC(today.y, today.m-1, today.d); // approx anchor for countdown labels
+  const startOfCivilDay = civilMidnightEpoch(today, tz); // anchor countdowns to the LOCATION's midnight
 
   // Jumuʿah: next Friday in the location's timezone
   const dow = new Date(new Intl.DateTimeFormat('en-CA', {timeZone:tz, year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date(now)) + 'T12:00:00Z').getUTCDay();
@@ -2480,7 +2496,7 @@ function computeEvents(today, tz, now){
   const daysToFri = (5 - civWeekday + 7) % 7;
   out.push({ic:'🕌', t:'Jumuʿah', s:'Friday — Surah al-Kahf, extra salawat, the hour of answered duʿaʾ',
     long:'The weekly day of gathering — “the best day on which the sun rises.” Muslims come together for the Jumuʿah prayer in place of Dhuhr. It is sunnah to bathe, wear clean clothes, read Surah al-Kahf, and send abundant salawat upon the Prophet ﷺ. Within the day is a hidden hour in which duʿaʾ is answered — most hoped for in the last hour before Maghrib.',
-    today: daysToFri === 0, startEpoch: startOfCivilDay + daysToFri*86400000});
+    today: daysToFri === 0, startEpoch: civilMidnightEpoch(addCivilDays(today, daysToFri), tz)});
 
   // scan forward up to 400 days for each defined Hijri occasion (nearest future incl. today)
   for (const def of EVENT_DEFS){
@@ -2489,7 +2505,7 @@ function computeEvents(today, tz, now){
       const anchor = Date.UTC(c.y, c.m-1, c.d) + 12*3600000; // midday to dodge tz edge
       const h = hijriPartsAt(anchor, 'UTC', S.hijriAdj);
       if (h.m === def.m && h.d === def.d){
-        out.push({ic:def.ic, t:def.t, s:def.s, long:def.long, today:i === 0, startEpoch: Date.UTC(c.y, c.m-1, c.d)});
+        out.push({ic:def.ic, t:def.t, s:def.s, long:def.long, today:i === 0, startEpoch: civilMidnightEpoch(c, tz)});
         break;
       }
     }
@@ -2500,7 +2516,7 @@ function computeEvents(today, tz, now){
     const anchor = Date.UTC(c.y, c.m-1, c.d) + 12*3600000;
     const h = hijriPartsAt(anchor, 'UTC', S.hijriAdj);
     if ([13,14,15].includes(h.d)){
-      out.push({ic:'🤍', t:'White Days (Ayyam al-Beed)', s:'13–15 of the Hijri month — recurring sunnah fast', today:i === 0, startEpoch: Date.UTC(c.y, c.m-1, c.d),
+      out.push({ic:'🤍', t:'White Days (Ayyam al-Beed)', s:'13–15 of the Hijri month — recurring sunnah fast', today:i === 0, startEpoch: civilMidnightEpoch(c, tz),
         long:'The 13th, 14th and 15th of every Hijri month — the “white” nights, when the full moon lights the sky. The Prophet ﷺ encouraged fasting these three days each month. Since every good deed is rewarded at least tenfold, fasting three days a month is like fasting a lifetime.'});
       break;
     }
@@ -2828,8 +2844,9 @@ function saveNotif(){
   // dhikrVoice & salawatAudio are always-on now (forced at load) — no longer read from deleted toggles.
   save();
   const qr=document.getElementById('nQuietRow'); if (qr) qr.style.display = S.quiet ? 'flex' : 'none';
+  try{ if (S.push && S.push.on) syncPush(); }catch(e){}   // reminder settings changed → re-upload the schedule now (don't wait for the next app open)
 }
-function togglePrayerNotif(k){ S.notif=S.notif||{}; S.notif[k]=!(S.notif[k]!==false); save(); renderNotif(); }
+function togglePrayerNotif(k){ S.notif=S.notif||{}; S.notif[k]=!(S.notif[k]!==false); save(); renderNotif(); try{ if (S.push && S.push.on) syncPush(); }catch(e){} }
 // Notification.requestPermission has TWO forms: modern returns a Promise; legacy (Safari <=12, some old
 // WebViews) takes a callback and returns undefined. Support both, and never fire the callback twice.
 function askNotifPermission(cb){
@@ -3961,8 +3978,8 @@ function loadQuranData(){
   })();
   return _qpromise;
 }
-function setQuranSurah(i){ quranSel = (+i) || 0; renderQuran(); const c = document.getElementById('quranCard'); if (c) c.scrollIntoView({block:'start', behavior:'smooth'}); }
-function quranStep(delta){ const l = quranList(); quranSel = (quranSel + delta + l.length) % l.length; renderQuran(); const c = document.getElementById('quranCard'); if (c) c.scrollIntoView({block:'start'}); }
+function setQuranSurah(i){ try{ stopReciteAudio(); }catch(e){} quranSel = (+i) || 0; renderQuran(); const c = document.getElementById('quranCard'); if (c) c.scrollIntoView({block:'start', behavior:'smooth'}); }   // stop any recitation of the OLD surah before switching (else it plays over the new view + the teleprompter scroll-fights the reader)
+function quranStep(delta){ try{ stopReciteAudio(); }catch(e){} const l = quranList(); quranSel = (quranSel + delta + l.length) % l.length; renderQuran(); const c = document.getElementById('quranCard'); if (c) c.scrollIntoView({block:'start'}); }
 async function renderQuran(){
   const el = document.getElementById('quranCard'); if (!el) return;
   el.className = 'glass';
@@ -4447,6 +4464,7 @@ async function deleteAccount(){
   try{ _storeInvalidated = true; }catch(e){}
   try{ localStorage.removeItem(KEY); }catch(e){}
   try{ sessionStorage.clear(); }catch(e){}
+  try{ if (window.caches){ const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } }catch(e){}   // purge SW caches too (app shell + cached geocode/audio) so "delete everything" truly returns to a pristine first-run
   location.reload();
 }
 function setAcGender(g){ _acGender = g; const m = document.getElementById('gMale'), f = document.getElementById('gFemale'); if (m) m.classList.toggle('on', g === 'male'); if (f) f.classList.toggle('on', g === 'female'); }
@@ -5020,8 +5038,10 @@ function buildPushSchedule(){
         if (S.notifPre>0){ const pre=t-S.notifPre*60000; if (pre>now) out.push({ts:pre, title:'\u23f3 '+k+' in '+S.notifPre+' min', body:'Wind down and prepare for '+k+'.', tag:'r'+k+d}); }
       }
     });
-    if (E.fajr){ const at=E.fajr+40*60000; if (at>now && typeof AYAHS!=='undefined'){ const a=AYAHS[d%AYAHS.length]; out.push({ts:at, title:'\ud83d\udcd6 Ayah of the day \u00b7 '+a.ref, body:String(a.tr).replace(/^"|"$/g,'').slice(0,200), tag:'ay'+d}); } }
-    if (E.asr){ const at=E.asr+30*60000; if (at>now && typeof HADITH!=='undefined' && HADITH.length){ const hi=((typeof todaysHadithIndex==='function'?todaysHadithIndex():0)+d)%HADITH.length; const hd=HADITH[hi]; if (hd) out.push({ts:at, title:'\ud83d\udcdc Hadith of the day', body:String(hd.english).slice(0,200), tag:'hd'+d}); } }
+    if (S.remind!==false){   // the daily Ayah + Hadith background pushes must also honour the master "Prayer reminders" switch (they used to keep firing after it was turned off)
+      if (E.fajr){ const at=E.fajr+40*60000; if (at>now && typeof AYAHS!=='undefined'){ const a=AYAHS[d%AYAHS.length]; out.push({ts:at, title:'\ud83d\udcd6 Ayah of the day \u00b7 '+a.ref, body:String(a.tr).replace(/^"|"$/g,'').slice(0,200), tag:'ay'+d}); } }
+      if (E.asr){ const at=E.asr+30*60000; if (at>now && typeof HADITH!=='undefined' && HADITH.length){ const hi=((typeof todaysHadithIndex==='function'?todaysHadithIndex():0)+d)%HADITH.length; const hd=HADITH[hi]; if (hd) out.push({ts:at, title:'\ud83d\udcdc Hadith of the day', body:String(hd.english).slice(0,200), tag:'hd'+d}); } }
+    }
   }
   return out.sort(function(x,y){ return x.ts-y.ts; }).slice(0,300);
 }
@@ -5387,9 +5407,10 @@ function logPrayerForToday(key){
   const k = todayKey(); if (!k || !key) return;
   const logs = S.logs[k] || (S.logs[k] = {});
   if (logs[key]) return;                                 // already logged — nothing to do
-  logs[key] = { t: Date.now() }; save();
-  try{ qadaSyncBackfill(k, key, true); }catch(e){}       // reconcile the qada ledger (window may have closed while praying)
+  logs[key] = { t: Date.now() };
+  try{ qadaSyncBackfill(k, key, true); }catch(e){}       // reconcile the qada ledger FIRST (window may have closed while praying)…
   try{ qadaMaybePair(key); }catch(e){}
+  save();                                                // …then persist the log AND the ledger change together, so a late-prayed prayer isn't left double-counted as owed qada after reload
   renderAppFeatures();
 }
 function logForDate(dk, key){
@@ -6207,7 +6228,7 @@ function qadaReconcile(){
   const now = Date.now();
   const todayK = keyForCivil(civilDateInTz(S.loc.tz, new Date()));
   let c = qCivilFromKey(q.lastCheckedKey || q.startedKey || todayK);
-  const events = []; let guard = 0;
+  const events = []; let guard = 0, firstOpen = null;
   while (keyForCivil(c) <= todayK && guard++ < 4000){
     const dk = keyForCivil(c);
     let E, nextFajr;
@@ -6220,7 +6241,8 @@ function qadaReconcile(){
       const rk = dk + ':' + p;
       if (q.resolved[rk]) continue;
       const end = ends[p];
-      if (end == null || now < end) continue;        // still open (or undefined at polar) — decide later
+      if (end == null) continue;                     // polar/undefined — cannot resolve here; let the watermark pass
+      if (now < end){ if (!firstOpen) firstOpen = dk; continue; }   // STILL OPEN → will close later; remember this day so the watermark never advances past it (else a missed Isha whose window spans midnight is silently dropped)
       if (exempt){ q.resolved[rk] = 1; continue; }
       if (logs[p]){ q.resolved[rk] = 1; continue; }   // prayed on time (adā)
       q.ledgers[p].log += 1; q.resolved[rk] = 1; q.seq += 1;
@@ -6234,6 +6256,9 @@ function qadaReconcile(){
   // backlog) tripped before catching up, `c` points at the next un-scanned day, so we resume there
   // next run instead of skipping to today and silently dropping the un-reconciled days.
   q.lastCheckedKey = (keyForCivil(c) <= todayK) ? keyForCivil(c) : todayK;
+  // Never advance past the earliest day that still has an OPEN (not-yet-closed) window — otherwise that
+  // day is never rescanned and its later-closing prayer (e.g. a missed Isha spanning midnight) is lost.
+  if (firstOpen && firstOpen < q.lastCheckedKey) q.lastCheckedKey = firstOpen;
   if (events.length) save();
   return events;
 }
@@ -6720,6 +6745,7 @@ async function cloudFetch(path, body, token, timeoutMs){
 const CLOUD_STRIP_ACCT = ['passHash','salt','iters','kdf','hashAlg','secAHash','secQ'];
 function cloudBlob(){
   const c = Object.assign({}, S); delete c.cloud;
+  delete c.loc;   // location is DEVICE-LOCAL (like push): never sync it, so restoring on a new phone in a new city doesn't inherit the old device's city/timezone — that phone auto-locates itself. Also a privacy win.
   if (c.account){ const a = Object.assign({}, c.account); CLOUD_STRIP_ACCT.forEach(k => delete a[k]); c.account = a; }
   return c;
 }
@@ -7003,6 +7029,18 @@ async function cloudLogin(){
 // Conflict resolution (two devices edited the same account): keep this device's copy, or take the cloud's.
 async function cloudResolveConflict(keep){
   if (!(S.cloud && S.cloud.conflict)) return;
+  // The conflict payload (_cloudConflict) is memory-only, so a restart loses it while S.cloud.conflict
+  // persists. Re-fetch the server copy READ-ONLY (baseRev:-1 can never match, so it 409s with {rev,data}
+  // and writes nothing) — otherwise "Use the cloud copy" falsely says empty and "Keep this device" uploads
+  // with a stale baseRev and just re-conflicts, which used to steer the user into losing the newer data.
+  if (!_cloudConflict && S.cloud.token && cloudUrl()){
+    try{
+      await cloudFetch('/auth/sync', {data: cloudBlob(), baseRev: -1}, S.cloud.token, 45000);
+    }catch(e){
+      if (e && e.status === 409 && e.body){ _cloudConflict = {rev: e.body.rev, data: (e.body.data && typeof e.body.data === 'object') ? e.body.data : null}; }
+      else { try{ toast('Couldn’t reach the cloud', 'Check your connection and try again — nothing was changed.', '☁️'); }catch(_){}; return; }
+    }
+  }
   if (keep === 'mine'){
     if (_cloudConflict && typeof _cloudConflict.rev === 'number') S.cloud.rev = _cloudConflict.rev;
     S.cloud.conflict = false; S.cloud.err = null; _cloudConflict = null; _cloudLast = ''; save();
@@ -7029,6 +7067,9 @@ async function cloudReauth(){
   try{
     const j = await cloudFetch('/auth/login', {username:name, password:pw}, null, 45000);
     S.cloud = {user:j.username, token:j.token, rev:(j.rev || 0), ts:Date.now(), err:null, conflict:false};
+    // Realign the LOCAL lock hash to the just-proven password. If the password was reset on another device,
+    // the token refreshes but the local lock would still expect the OLD password and lock this device out.
+    try{ if (S.account) S.account = await rehydrateAccount(S.account, pw); }catch(e){}
     _cloudLast = ''; save(); try{ renderLockControls(); }catch(e){}
     try{ toast('Reconnected ✓', 'Your changes will sync again.', '☁️'); }catch(e){}
     cloudSyncNow();
@@ -7191,23 +7232,28 @@ var _IP_SRC = [
     map:function(j){ return { lat:+j.latitude, lng:+j.longitude, city:j.city, region:j.region, country:j.country, cc:j.country_code, tz:j.timezone }; } }
 ];
 // ipLocate(i, onOk, onFail): try source i; on success setLocation() + onOk(); if every source fails, onFail().
-function ipLocate(i, onOk, onFail){
+// Fetch the network-location CANDIDATE across the fallback sources, WITHOUT committing it — so the
+// travel re-check (refreshLocation) can compare it against the saved city before deciding to move.
+function ipProbe(i, cb){
   i = i || 0;
-  if (i >= _IP_SRC.length){ if (onFail) onFail(); return; }
+  if (i >= _IP_SRC.length){ cb(null); return; }
   var s = _IP_SRC[i];
-  var next = function(){ ipLocate(i+1, onOk, onFail); };
+  var next = function(){ ipProbe(i+1, cb); };
   try{
     fetch(s.url, {cache:'no-store'}).then(function(r){ return r.json(); }).then(function(j){
       if (!s.ok(j)){ next(); return; }
       var p = s.map(j);
       if (isNaN(+p.lat) || isNaN(+p.lng)){ next(); return; }
       var tz = (p.tz && isValidTz(p.tz)) ? p.tz : Intl.DateTimeFormat().resolvedOptions().timeZone;
-      setLocation({ name: p.city || p.region || 'My area', admin1: p.region || '', country: p.country || '',
+      cb({ name: p.city || p.region || 'My area', admin1: p.region || '', country: p.country || '',
         cc: (p.cc || '').toUpperCase(), lat: +(+p.lat).toFixed(3), lng: +(+p.lng).toFixed(3),   // UPPERCASE — CC_METHOD is keyed by uppercase ISO codes
         elev: null, tz: isValidTz(tz) ? tz : 'UTC', source: 'ip' });
-      if (onOk) onOk();
     }).catch(next);
   }catch(e){ next(); }
+}
+// Commit the network location live (used by autoLocate + the GPS-button fallback).
+function ipLocate(i, onOk, onFail){
+  ipProbe(0, function(cand){ if (!cand){ if (onFail) onFail(); return; } setLocation(cand); if (onOk) onOk(); });
 }
 function _setGpsLoc(pos){
   var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -7301,21 +7347,65 @@ async function nameThisPlace(){
     }
   }catch(e){}
 }
-const CC_METHOD = {IN:'India',PK:'Karachi',BD:'Karachi',AF:'Karachi',NP:'Karachi',LK:'Karachi',US:'ISNA',CA:'ISNA',EG:'Egypt',SD:'Egypt',SA:'Makkah',YE:'Makkah',AE:'Dubai',KW:'Kuwait',QA:'Qatar',BH:'Gulf',OM:'Gulf',TR:'Turkey',SG:'Singapore',MY:'JAKIM',BN:'JAKIM',ID:'Kemenag',FR:'France',BE:'France',RU:'Russia',JO:'Jordan',PS:'Jordan',SY:'Jordan',LB:'Jordan',IQ:'Jordan',MA:'Morocco',TN:'Tunisia',DZ:'Algeria',LY:'Algeria',ZA:'SouthAfrica',PT:'Portugal',BA:'Egypt2',BG:'Egypt2'};
+const CC_METHOD = {IN:'India',PK:'Karachi',BD:'Karachi',AF:'Karachi',NP:'Karachi',LK:'Karachi',US:'ISNA',CA:'ISNA',EG:'Egypt',SD:'Egypt',SA:'Makkah',YE:'Makkah',AE:'Dubai',KW:'Kuwait',QA:'Qatar',BH:'Gulf',OM:'Gulf',TR:'Turkey',SG:'Singapore',MY:'JAKIM',BN:'JAKIM',ID:'Kemenag',FR:'France',BE:'France',RU:'Russia',JO:'Jordan',PS:'Jordan',SY:'Jordan',LB:'Jordan',IQ:'Jordan',IR:'Tehran',MA:'Morocco',TN:'Tunisia',DZ:'Algeria',LY:'Algeria',ZA:'SouthAfrica',PT:'Portugal',BA:'Egypt2',BG:'Egypt2'};
+// IANA timezone → ISO country code, for the CC_METHOD countries — lets the app pick the right calc
+// method (and, later, region) when the IP/geocoder returned no country code (e.g. a GPS fix whose
+// reverse-geocode failed). Covers the primary zone(s) of each supported country.
+const TZ_CC = {'Asia/Karachi':'PK','Asia/Kolkata':'IN','Asia/Calcutta':'IN','Asia/Dhaka':'BD','Asia/Kabul':'AF','Asia/Kathmandu':'NP','Asia/Colombo':'LK','America/New_York':'US','America/Chicago':'US','America/Denver':'US','America/Los_Angeles':'US','America/Phoenix':'US','America/Detroit':'US','America/Anchorage':'US','Pacific/Honolulu':'US','America/Toronto':'CA','America/Vancouver':'CA','America/Edmonton':'CA','America/Winnipeg':'CA','America/Halifax':'CA','Africa/Cairo':'EG','Africa/Khartoum':'SD','Asia/Riyadh':'SA','Asia/Aden':'YE','Asia/Dubai':'AE','Asia/Kuwait':'KW','Asia/Qatar':'QA','Asia/Bahrain':'BH','Asia/Muscat':'OM','Europe/Istanbul':'TR','Asia/Singapore':'SG','Asia/Kuala_Lumpur':'MY','Asia/Brunei':'BN','Asia/Jakarta':'ID','Asia/Makassar':'ID','Asia/Pontianak':'ID','Europe/Paris':'FR','Europe/Brussels':'BE','Europe/Moscow':'RU','Asia/Amman':'JO','Asia/Gaza':'PS','Asia/Hebron':'PS','Asia/Damascus':'SY','Asia/Beirut':'LB','Asia/Baghdad':'IQ','Asia/Tehran':'IR','Africa/Casablanca':'MA','Africa/Tunis':'TN','Africa/Algiers':'DZ','Africa/Tripoli':'LY','Africa/Johannesburg':'ZA','Europe/Lisbon':'PT','Europe/Sarajevo':'BA','Europe/Sofia':'BG'};
 function autoMethodForLoc(){
   if (S.methodAuto === false) return;
-  const cc = S.loc && S.loc.cc; if (!cc) return;
+  let cc = S.loc && S.loc.cc;
+  if (!cc && S.loc && S.loc.tz) cc = TZ_CC[S.loc.tz] || '';   // no country code → derive it from the timezone
+  if (!cc) return;
   const m = CC_METHOD[cc]; if (!m || !METHODS[m] || S.method === m) return;
   S.method = m; save();
   try{ const sel = document.getElementById('setMethod'); if (sel) sel.value = m; }catch(e){}
   dayCache = {}; try{ renderStatic(); }catch(e){}
 }
 function setLocation(loc){
+  if (loc) loc.checkedAt = Date.now();          // freshness stamp for the travel re-check (refreshLocation)
   S.loc = loc; save();
   try{ autoMethodForLoc(); }catch(e){}
   dayCache = {}; notifiedKeys = {}; eventCacheKey = ''; cardsSig = ''; cardRefs = null;
   compassHeading = null; _csx = _csy = null;   // new location → drop any stale live-compass rotation so the needle recomputes for the new qibla bearing
   renderStatic();
+  try{ if (S.push && S.push.on) syncPush(); }catch(e){}   // a city change must immediately re-upload the push schedule (else background reminders replay the OLD city)
+}
+// ── Travel/location freshness — "keep the data accurate over time" ─────────────────────────────
+// A user used to stay pinned to their first city forever (autoLocate early-returns whenever S.loc
+// exists). This re-checks the permission-free network location, throttled to ~6h, and if the device
+// genuinely moved — a DIFFERENT timezone, or >100 km — it follows the move: silently for an auto
+// (ip/gps) fix, or with a heads-up for a hand-typed city (a deliberate choice is never overwritten).
+function _haversineKm(a1,o1,a2,o2){
+  var R=6371, dLat=(a2-a1)*Math.PI/180, dLng=(o2-o1)*Math.PI/180;
+  var s=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(a1*Math.PI/180)*Math.cos(a2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return 2*R*Math.asin(Math.min(1,Math.sqrt(s)));
+}
+var _relocating = false;
+function refreshLocation(force){
+  try{
+    if (_relocating || !S.loc || navigator.onLine === false) return;
+    var since = Date.now() - (S.loc.checkedAt || 0);
+    if (!force && since < 6*3600000) return;                          // at most once every 6 hours
+    _relocating = true;
+    ipProbe(0, function(c){
+      _relocating = false;
+      try{
+        if (!c || !S.loc) return;
+        S.loc.checkedAt = Date.now(); save();                        // stamp even when we don't move, so resume doesn't re-probe every time
+        var moved = (c.tz && S.loc.tz && c.tz !== S.loc.tz) ||
+                    (isFinite(c.lat) && isFinite(S.loc.lat) && _haversineKm(S.loc.lat, S.loc.lng, c.lat, c.lng) > 100);
+        if (!moved) return;
+        if (S.loc.source === 'search'){
+          // a hand-typed city is deliberate — never silently overwrite; point them to the one-tap control
+          try{ toast('You seem to have moved', 'You set your city by hand. Now near ' + (c.name||'a new area') + '? Tap the ⌖ GPS button in Settings to switch prayer times & qibla.', '📍'); }catch(e){}
+        } else {
+          setLocation(c);                                            // an auto (ip/gps) fix follows travel automatically
+          try{ toast('Location updated', 'You moved — now showing prayer times & qibla for ' + (c.name||'your area') + '.', '📍'); }catch(e){}
+        }
+      }catch(e){}
+    });
+  }catch(e){ _relocating = false; }
 }
 
 /* ── live compass ──
@@ -7593,6 +7683,8 @@ function boot(){
   try{ initNav(); }catch(e){ console.warn('initNav', e); }
   try{ startApp(); }catch(e){ console.warn('startApp', e); }
   try{ autoLocate(); }catch(e){}
+  try{ autoMethodForLoc(); }catch(e){}   // apply the region-correct calc method at boot too (autoLocate early-returns for returning users, so this was never re-run)
+  try{ setTimeout(function(){ refreshLocation(); }, 4500); }catch(e){}   // travel re-check: if the device has moved to a new timezone/>100km, follow it
   // Autonomous live compass: auto-start on load (non-iOS; iOS needs a user tap for its permission).
   // Safe now — a relative (non-true-north) reading no longer moves the needle, so the dial keeps the
   // correct static Kaaba bearing; only a real true-north reading turns on live follow.
@@ -7601,7 +7693,7 @@ function boot(){
   try{ setTimeout(function(){ trackVisit(); }, 3000); }catch(e){}   // anonymous visit ping — no-op unless opted in
   try{ setTimeout(function(){ checkForUpdate(); }, 4200); }catch(e){}   // quietly show the "update available" banner if a newer build is live
   try{ setTimeout(function(){ enforceFreshness(); }, 5200); }catch(e){}   // "circular update": force a fresh re-pull at least every 3 months, even if nothing new shipped
-  try{ setTimeout(function(){ if (S.push && S.push.on) syncPush(); }, 2500); document.addEventListener('visibilitychange', function(){ if (document.visibilityState!=='visible') return; try{ renderTick(); rollDaily('hadith'); rollDaily('ayah'); qadaReconcile(); renderAppFeatures(); renderReflection(); renderTopAyah(); maybeDailyHadith(); if (S.loc){ var _s = currentSet(); var _td = _s.today; lastDayKey = _td.y + '-' + _td.m + '-' + _td.d; lastPrayerKey = currentPrayerKey(prayerWindows(_s), Date.now()); } }catch(e){} if (S.push && S.push.on) syncPush(); }); }catch(e){}
+  try{ setTimeout(function(){ if (S.push && S.push.on) syncPush(); }, 2500); document.addEventListener('visibilitychange', function(){ if (document.visibilityState!=='visible') return; try{ renderTick(); rollDaily('hadith'); rollDaily('ayah'); qadaReconcile(); renderAppFeatures(); renderReflection(); renderTopAyah(); maybeDailyHadith(); if (S.loc){ var _s = currentSet(); var _td = _s.today; lastDayKey = _td.y + '-' + _td.m + '-' + _td.d; lastPrayerKey = currentPrayerKey(prayerWindows(_s), Date.now()); } }catch(e){} try{ refreshLocation(); }catch(e){} if (S.push && S.push.on) syncPush(); }); }catch(e){}
   // Native Android splash: hide it now that the app has actually painted (config sets launchAutoHide:false),
   // with a 3s idempotent failsafe so a stalled boot can never strand the user on the splash.
   try { var _SS = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SplashScreen; if (_SS) { _SS.hide({ fadeOutDuration: 200 }); setTimeout(function(){ try{ _SS.hide(); }catch(e){} }, 3000); } } catch(e){}
