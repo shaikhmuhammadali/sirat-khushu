@@ -2013,9 +2013,19 @@ function computeDay(civil, loc, opts){
 const _hijriFmt = {};   // cache the (expensive) Umm-al-Qura formatter per timezone — the calendar builds ~31/cell otherwise
 function hijriPartsAt(epoch, tz, adj){
   try{
-    const d = new Date(epoch + Number(adj || 0)*86400000);
-    const fmt = _hijriFmt[tz] || (_hijriFmt[tz] = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn',
-      {timeZone:tz, day:'numeric', month:'numeric', year:'numeric'}));
+    adj = Number(adj || 0);
+    let d = new Date(epoch), useTz = tz;
+    if (adj){
+      // Shift by whole CIVIL days in the location's timezone (not raw milliseconds), then read the Hijri
+      // date at that day's midday in UTC — identical to calHijri. A raw ms shift lands one hour short of a
+      // civil day on a DST fall-back night, which used to make the Today line and the calendar grid disagree
+      // by a day for the first hour past midnight. (adj===0, the default, keeps the exact original behaviour.)
+      const c = addCivilDays(civilDateInTz(tz, d), adj);
+      d = new Date(Date.UTC(c.y, c.m-1, c.d) + 12*3600000);
+      useTz = 'UTC';
+    }
+    const fmt = _hijriFmt[useTz] || (_hijriFmt[useTz] = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn',
+      {timeZone:useTz, day:'numeric', month:'numeric', year:'numeric'}));
     const parts = fmt.formatToParts(d);
     const g = t => Number((parts.find(p => p.type === t) || {}).value);
     return {d:g('day'), m:g('month'), y:g('year')};
@@ -2996,7 +3006,9 @@ function speakArabicFallback(text, btn){
   speakArabicOnline(text, btn);
 }
 function reciteText(text, btn){
+  var wasPlaying = btn && btn.classList.contains('playing');   // capture BEFORE stopReciteAudio clears it
   try{ if (typeof stopReciteAudio === 'function') stopReciteAudio(); else if ('speechSynthesis' in window) speechSynthesis.cancel(); }catch(e){}
+  if (wasPlaying) return;   // a second tap on a PLAYING button means STOP — don't re-dispatch and restart it
   if (!text) return;
   // 1) Qur'anic text → the user's chosen real reciter (qari), the same voice used everywhere.
   var _qy = qayahLookup(text);
@@ -5733,7 +5745,8 @@ function renderRamadan(){
     '<div><span>Suhoor ends in</span><b id="ramSuhoor">—</b></div>' +
     '<div><span>Iftar in</span><b id="ramIftar">—</b></div></div>' +
     (last10 ? '<div class="banner gold" style="margin-top:12px;display:block"><b>The last ten nights.</b> ' + (odd ? 'Tonight is an <b>odd night</b> — seek Laylat al-Qadr in worship and duʿaʾ.' : 'Seek Laylat al-Qadr in the odd nights.') + '</div>' : '') +
-    '<div class="taraweeh"><span>Taraweeh tonight</span><button class="btn ' + (tarDone?'':'ghost') + '" style="padding:8px 16px;font-size:.8rem" onclick="toggleTaraweeh()">' + (tarDone?'Prayed ✓':'Mark prayed') + '</button></div>';
+    '<div class="taraweeh"><span>Taraweeh tonight</span><button class="btn ' + (tarDone?'':'ghost') + '" style="padding:8px 16px;font-size:.8rem" onclick="toggleTaraweeh()">' + (tarDone?'Prayed ✓':'Mark prayed') + '</button></div>' +
+    '<p class="small dim" style="margin-top:12px;line-height:1.6">🌙 These dates follow the <b>Umm al-Qura</b> (calculated) calendar. Your local <b>moon-sighting can differ by a day</b> — if your community began on a different day, set the Hijri day offset in <button type="button" class="lk" style="display:inline;margin:0;padding:0" onclick="go(\'settings\')">Settings</button> so Suhoor, Iftar and Eid all match locally.</p>';
   updateRamadanCountdown();
 }
 function updateRamadanCountdown(){
