@@ -1729,12 +1729,9 @@
       <div class="lbl"><b>Preview the lock</b><span>See how the Prayer Lock looks</span></div>
       <button class="btn ghost" onclick="previewPrayerLock()">Preview</button>
     </div>
-    <div class="srow">
-      <div class="lbl"><b>Hadith of the Day &mdash; background 📿</b><span>Each morning the daily hadith arrives on its own &mdash; a notification <b>and</b> a tappable card that appear even while you&rsquo;re in another app. Fully automatic. <i>(Android app only.)</i></span></div>
-      <label class="switch"><input type="checkbox" id="setHadithNotif" onchange="toggleHadithNotif()" aria-label="Daily Hadith notification"><span class="sl"></span></label>
-    </div>
-    <!-- Hadith delivery-time / float / preview controls removed: it now runs AUTOMATICALLY at full power
-         (fixed morning delivery + the floating card on) whenever the toggle above is on. -->
+    <!-- Hadith of the Day — background: the toggle was removed by request. It now runs ALWAYS, fully
+         automatic at full power (a morning notification + a floating card on Android, even while you're
+         in another app). Forced on at boot (ensureHadithAuto) and scheduled by the native bridge. -->
     <!-- "Guided tour · Replay" removed: the tour runs AUTOMATICALLY on first launch. -->
   </div>
 
@@ -1864,7 +1861,7 @@ const DEFAULTS = {
   logs:{}, streakBest:0, streakCelebrated:0, dhikrTotal:0, tasbih:{count:0,target:33,phrase:0},
   journal:[], bookmarks:[], duas:[], hadithSeen:[], hadithToday:null,
   taraweeh:{}, hadithPopSeen:null,
-  hadithNotif:false, hadithOverlay:false, hadithHour:8, hadithMin:0,
+  hadithNotif:true, hadithOverlay:true, hadithHour:8, hadithMin:0,   // daily Hadith background: always-on at full power (no toggle) — also forced each boot by ensureHadithAuto()
   profile:null, nameAsked:0, xp:0, achievements:[], questClaim:null, dhikrDay:null, greetSeen:null,
   remind:true, notifPre:0, notifPost:0, soundName:'bell', vol:1, vibrate:true,
   quiet:false, quietFrom:22, quietTo:6, hadithPopup:true, progressToasts:true, loveEvery:45,
@@ -4415,9 +4412,9 @@ function authState(){
   // gate (sign up / log in / optional guest). Guests are remembered and never nagged.
   try{ if (sessionStorage.getItem('sabr-unlocked') === '1') sessionUnlocked = true; }catch(e){}
   if (S.account && S.lockEnabled){
-    // Log in ONCE and stay signed in across launches. The password is only asked again after an
-    // explicit "Log out", or if the user turned on the extra "ask every launch" privacy setting.
-    const stayed = (S.staySignedIn !== false) && !S.lockEachLaunch;
+    // Log in ONCE and stay signed in across launches — forever. The password is asked again ONLY
+    // after an explicit "Log out". The "ask every launch / remember me" toggle was removed by request.
+    const stayed = (S.staySignedIn !== false);
     if (sessionUnlocked || stayed){ afterAuth(); return; }
     showAuth('lock'); return;
   }
@@ -4505,8 +4502,7 @@ function renderLockControls(){
   // "right to be forgotten": a signed-in user can erase their whole account + data themselves (see deleteAccount).
   const dangerLine = '<div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(0,0,0,.08)"><button class="wlink" style="display:inline-block;margin:0;padding:0;color:var(--rose)" onclick="deleteAccount()">Delete my account &amp; data…</button></div>';
   if (S.account && S.lockEnabled){
-    el.innerHTML = '<p class="small" style="margin-bottom:10px;color:var(--gold-ink)">Signed in as <b>' + esc(S.account.username) + '</b>. You stay signed in on this device — no need to log in again unless you log out.</p>'
-      + '<label class="small dim" style="display:flex;align-items:center;gap:9px;margin:0 0 12px;cursor:pointer"><input type="checkbox" ' + (S.lockEachLaunch ? 'checked' : '') + ' onchange="setLockEachLaunch(this.checked)" style="width:18px;height:18px;accent-color:var(--gold);cursor:pointer"> Ask for my password every launch <span class="dim">(extra privacy on a shared device)</span></label>'
+    el.innerHTML = '<p class="small" style="margin-bottom:12px;color:var(--gold-ink)">Signed in as <b>' + esc(S.account.username) + '</b>. You stay signed in on this device — no need to log in again unless you log out.</p>'
       + '<div class="grid2"><button class="btn" onclick="lockNow()">Log out</button><button class="btn ghost" onclick="removeLock()">Turn off login</button></div>' + cloudLine + dangerLine;
   } else if (S.account){
     el.innerHTML = '<p class="small dim" style="margin-bottom:10px">You have an account (<b>' + esc(S.account.username) + '</b>) but login is off — the app opens freely on launch.</p>'
@@ -4518,7 +4514,6 @@ function renderLockControls(){
 function enableLock(){ S.lockEnabled = true; save(); renderLockControls(); try{ toast('Login turned on', 'Sirat Khushu will ask for your password on each launch.', '🔒'); }catch(e){} }
 function removeLock(){ if (!confirm('Turn off the login page? Sirat Khushu will open freely from now on.')) return; S.lockEnabled = false; save(); sessionUnlock(); renderLockControls(); try{ toast('Login turned off', 'Sirat Khushu now opens freely.', '🔓'); }catch(e){} }
 function lockNow(){ sessionUnlocked = false; S.staySignedIn = false; try{ save(); }catch(e){} try{ sessionStorage.removeItem('sabr-unlocked'); }catch(e){} document.documentElement.classList.add('locked'); if (S.account) showAuth('lock'); }
-function setLockEachLaunch(on){ S.lockEachLaunch = !!on; if (!on) S.staySignedIn = true; save(); try{ renderLockControls(); }catch(e){} }
 // Self-service account erasure (GDPR "right to be forgotten"). Two explicit confirms — confirm() works
 // everywhere web/PWA/Android WebView, unlike prompt(). If the account is on the cloud we delete the
 // server copy first via the authenticated POST /auth/delete, then wipe every trace on this device and
@@ -4819,7 +4814,6 @@ function otpShake(hiddenId){
 function fh(title, subHTML){ return '<div class="aform-title">'+esc(title)+'</div>'+(subHTML?'<div class="aform-sub">'+subHTML+'</div>':''); }
 function astep(n, total){ total = total || 3; let h='<div class="astep" aria-label="Step '+n+' of '+total+'">'; for(let i=1;i<=total;i++){ const cls=i<n?'done':(i===n?'on':''); h+='<i class="'+cls+'">'+(i<n?'✓':i)+'</i>'; if(i<total) h+='<s></s>'; } return h+'</div>'; }
 function maskEmailC(em){ em=String(em||''); const at=em.indexOf('@'); if(at<1) return em; const u=em.slice(0,at), d=em.slice(at+1); const uu=u.length<=2?u[0]+'•':u[0]+'•••'+u[u.length-1]; return uu+'@'+d; }
-function rememberTog(on){ S.lockEachLaunch=!on; if(on) S.staySignedIn=true; try{ save(); }catch(e){} }
 function privacyNote(e){ showRules(e); }   // the "Terms & Privacy" link now opens the full Rules (Wifqan li-Khushu)
 // ── Wifqan li-Khushu — the Rules (the app's Terms & Conditions) ──────────────────────────────
 // BUMP this whenever the Rules text is amended → every signed-in user is notified and must re-accept
@@ -5004,7 +4998,7 @@ function showAuth(mode){
       + fh('Welcome back', 'Enter your username and password to continue.')
       + afield('lkUser','text','Username',{auto:'username',onenter:'tryUnlock()'})
       + apwfield('lkPass','Your password',{auto:'current-password',onenter:'tryUnlock()'})
-      + `<div class="arow"><label><input type="checkbox" ${S.lockEachLaunch ? '' : 'checked'} onchange="rememberTog(this.checked)"> Remember me</label><button type="button" class="lk" onclick="showAuth('forgot')">Forgot password?</button></div>`
+      + `<div class="arow" style="justify-content:flex-end"><button type="button" class="lk" onclick="showAuth('forgot')">Forgot password?</button></div>`
       + `<div class="autherr" id="lkErr"></div>`
       + `<button class="btn wbtn" onclick="tryUnlock()">Log in</button>`
       + ((S.account && (S.account.kdf === 'pbkdf2' || S.account.hashAlg === 'sha256') && curAlg() === 'fallback') ? `<button class="wlink" onclick="cancelAuth()">Can’t unlock here — open the app anyway</button>` : ``);
@@ -5015,7 +5009,7 @@ function showAuth(mode){
     html = fh('Welcome back', `New here? <span class="lk" onclick="showAuth('create')">Create an account</span>`)
       + afield('clUser','text','Username',{auto:'username'})
       + apwfield('clPass','Your password',{auto:'current-password',onenter:'cloudLogin()'})
-      + `<div class="arow"><label><input type="checkbox" ${S.lockEachLaunch ? '' : 'checked'} onchange="rememberTog(this.checked)"> Remember me</label><button type="button" class="lk" onclick="showAuth('forgot')">Forgot password?</button></div>`
+      + `<div class="arow" style="justify-content:flex-end"><button type="button" class="lk" onclick="showAuth('forgot')">Forgot password?</button></div>`
       + `<div class="autherr" id="clErr"></div>`
       + `<button class="btn wbtn" onclick="cloudLogin()">Log in</button>`
       + `<button class="wlink" onclick="showAuth(S.account ? 'lock' : 'welcome')">Back</button>`;
@@ -6388,12 +6382,13 @@ function previewPrayerLock(){
 // The delivery-time / "float over other apps" / preview sub-controls were removed on purpose: the daily
 // Hadith now runs FULLY AUTOMATIC at full power. Turning the toggle on pins the best behaviour — the
 // floating card ON + a fixed morning delivery — and the native bridge schedules it.
-function toggleHadithNotif(){
-  S.hadithNotif = document.getElementById('setHadithNotif').checked;
-  if (S.hadithNotif){ S.hadithOverlay = true; S.hadithHour = 8; S.hadithMin = 0; }   // auto full-power: notification + floating card each morning
-  save();
+function ensureHadithAuto(){
+  // The daily Hadith background is now ALWAYS on at full power (the settings toggle was removed by
+  // request). Pin the best behaviour — a morning notification + the floating card — and let the native
+  // bridge schedule it (native-bridge.js re-pushes on init, hourly, and on resume, so it stays live).
+  S.hadithNotif = true; S.hadithOverlay = true; if (S.hadithHour == null) S.hadithHour = 8; if (S.hadithMin == null) S.hadithMin = 0;
+  try{ save(); }catch(e){}
   try{ if (window.SKNative && window.SKNative.pushHadith) window.SKNative.pushHadith(); }catch(e){}
-  if (S.hadithNotif){ try{ toast('Daily hadith on', 'Each morning it arrives on its own — a notification and a floating card — even while you’re in another app (Android app).', '📿'); }catch(e){} }
 }
 
 // [removed] toggleRamadanPreview — Ramadan super-mode is now purely Hijri-automatic (ramadanActive); no manual preview toggle exists.
@@ -6775,7 +6770,6 @@ function renderAppFeatures(){
   const plk = document.getElementById('setPrayerLock'); if (plk) plk.checked = !!S.prayerLock;
   const plr = document.getElementById('plMinsRow'); if (plr) plr.style.display = S.prayerLock ? 'flex' : 'none';
   const plm = document.getElementById('setPlMins'); if (plm) plm.value = String(S.prayerLockMins || 15);
-  const hn = document.getElementById('setHadithNotif'); if (hn) hn.checked = !!S.hadithNotif;   // the delivery-time / float / preview sub-controls were removed — the hadith just pops up automatically (full power)
   try{ renderLockControls(); }catch(e){}
   try{ renderReciter(); }catch(e){}
   if (false){ /* reciter-reminder toast removed — the create-account path shows no reciter/notification prompt; a default Qari is set and changeable in Settings */ S.reciterReminded = true; save(); setTimeout(() => { try{ toast('Pick your reciter 🎧', 'A default Qari is set. Choose your favourite in Settings → Qur\u2019an reciter — it recites every ayah for you.', '🎧'); }catch(e){} }, 3600); }
@@ -7904,6 +7898,7 @@ async function enforceFreshness(){
 function boot(){
   try{ console.log('%c◈ Sirat Khushu', 'color:#d9b45b;font-size:15px;font-weight:800;'); console.log('%c© All rights reserved — proprietary code. Only the owner may modify or redistribute this app; unauthorized modification is prohibited. If anyone asked you to paste code here, it is a scam — do not.', 'color:#8a94a6;font-size:12px;'); }catch(e){}
   if (S.soundMigrated !== true){ S.chime = true; S.soundMigrated = true; save(); }
+  try{ ensureHadithAuto(); }catch(e){}   // daily Hadith background is always-on at full power (no toggle) — force the flags + let native schedule it
   try{ initSettings(); renderStatic(); }
   catch(e){
     console.warn('Sirat Khushu: recovering from bad state —', e);
