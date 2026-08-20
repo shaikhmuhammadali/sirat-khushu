@@ -845,6 +845,42 @@
   .aform .autherr,.aform .wq{text-align:left}
   .aterms{display:flex;align-items:flex-start;gap:10px;margin:4px 2px 12px;color:var(--au-mid);font-size:.82rem;line-height:1.45;cursor:pointer;text-align:left}
   .aterms input{width:18px;height:18px;margin-top:1px;accent-color:var(--au-gold);flex:none;cursor:pointer}
+  /* ── Rules modal (Wifqan li-Khushu — the Terms & Conditions) ── */
+  #rulesModal .sheet{max-height:88vh;overflow-y:auto;text-align:left}
+  #rulesBody{font-size:15px;line-height:1.6}
+  .rules-h{text-align:center;padding:2px 0 14px}
+  .rules-h .rtitle-ar{font-size:1.75rem;color:var(--au-gold,#e6c96f);margin-bottom:4px;line-height:1.4}
+  .rules-h .rtitle{font-size:.8rem;letter-spacing:.14em;text-transform:uppercase;color:var(--au-dim,#8a94a6)}
+  .rgloss{font-style:italic;color:var(--au-dim,#8a94a6);font-size:.85rem;line-height:1.6}
+  .rules-h .rgloss{max-width:40ch;margin:8px auto 0}
+  .rules-cov{display:grid;grid-template-columns:1fr 1fr;gap:18px;border-top:1px solid rgba(230,201,111,.18);border-bottom:1px solid rgba(230,201,111,.18);padding:16px 0;margin:6px 0 4px}
+  @media(max-width:560px){.rules-cov{grid-template-columns:1fr;gap:14px}}
+  .rules-cov h5{font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--au-gold,#e6c96f);margin:0 0 10px}
+  .rules-cov ul{list-style:none;margin:0;padding:0}
+  .rules-cov li{position:relative;padding-left:16px;margin-bottom:8px;color:var(--au-dim,#8a94a6);font-size:.84rem;line-height:1.55}
+  .rules-cov li::before{content:'◦';position:absolute;left:0;color:var(--au-gold,#e6c96f)}
+  .rules-cov li b,.rules-art>p b{color:var(--au-ink,#ece6d8)}
+  .rules-art{padding:16px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+  .rart-head{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+  .rart-num{font-size:.64rem;letter-spacing:.24em;color:var(--au-gold,#e6c96f);white-space:nowrap}
+  .rart-head h4{margin:0;font-size:1.14rem;font-weight:600;color:var(--au-ink,#ece6d8)}
+  .rart-ar{margin-left:auto;font-size:1rem;color:var(--au-gold,#e6c96f);opacity:.75}
+  .rules-art>p{color:var(--au-dim,#8a94a6);font-size:.87rem;line-height:1.62;margin:0 0 10px}
+  .rules-ol{list-style:none;margin:0;padding:0}
+  .rules-ol>li{margin-bottom:9px;color:var(--au-dim,#8a94a6);font-size:.86rem;line-height:1.6}
+  .rules-ol>li>b:first-child{color:var(--au-gold,#e6c96f);margin-right:5px;font-variant-numeric:tabular-nums}
+  .rules-ol>li b{color:var(--au-ink,#ece6d8)}
+  .rules-hard{border-left:2px solid #e0687f;padding-left:14px}
+  .rules-hard .rlabel{font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:#e0687f;display:block;margin-bottom:10px}
+  .rules-note{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:13px 14px;margin:14px 0}
+  .rules-note .rlabel{font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;color:var(--au-gold,#e6c96f);display:block;margin-bottom:6px}
+  .rules-note p{margin:0;font-size:.82rem;color:var(--au-dim,#8a94a6);line-height:1.6}
+  .rules-ayah{display:block;font-size:1.15rem;line-height:1.9;color:var(--au-ink,#ece6d8);margin-bottom:4px}
+  .rules-ayah-src{display:block;font-size:.74rem;color:var(--au-gold,#e6c96f);margin-bottom:8px;line-height:1.5}
+  .rules-khatimah{text-align:center;padding:22px 0 6px;border-top:1px solid rgba(230,201,111,.18);margin-top:6px}
+  .rules-ayah-big{font-size:1.2rem;line-height:1.95;color:var(--au-ink,#ece6d8);max-width:30ch;margin:0 auto}
+  .rules-ref{font-size:.72rem;letter-spacing:.1em;color:var(--au-gold,#e6c96f);margin:6px 0 0}
+  .rules-actions{position:sticky;bottom:0;padding:14px 0 4px;margin-top:8px;background:linear-gradient(180deg,rgba(15,20,28,0),rgba(15,20,28,.97) 35%)}
   .arow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 2px 12px}
   .arow label{display:flex;align-items:center;gap:8px;color:var(--au-mid);font-size:.82rem;cursor:pointer}
   .arow label input{width:17px;height:17px;accent-color:var(--au-gold);cursor:pointer}
@@ -1721,6 +1757,7 @@
 
   <div class="glass">
     <h2 class="sec">Your data — an amanah</h2>
+    <p style="margin:0 0 12px"><button type="button" class="lk" style="display:inline;margin:0;padding:0;font-size:.9rem" onclick="showRules(event)">📜 Read the Rules — Wifqan li-Khushu</button></p>
     <p class="small muted">Your data is an <b>amanah</b> — a sacred trust. As humble servants of Allah ﷻ, we guard what He has given us the honour to keep: everything you write, log and search stays on <b>your own device</b>, and — only if you turn on cloud login — on <b>your own server</b>. We never sell it, never share it, and never look into what is yours. It remains yours alone, in shā’ Allah — kept the way an amanah deserves to be kept.</p>
   </div>
 
@@ -1749,6 +1786,7 @@
 
 <!-- hadith popup (daily + after prayer log) -->
 <div id="hadithPop" class="modal"><div class="sheet"><div id="hadithPopBody"></div><button class="btn ghost modal-x" onclick="closeHadithPop()">Close</button></div></div>
+<div id="rulesModal" class="modal" role="dialog" aria-modal="true" aria-label="The Rules — Wifqan li-Khushu"><div class="sheet"><div id="rulesBody"></div><button class="btn ghost modal-x" onclick="closeModal('rulesModal')">Close</button></div></div>
 <div id="featuresModal" class="modal"><div class="sheet">
   <h2 class="sec" style="margin-top:0">Enable app features</h2>
   <p class="small dim" style="margin:-8px 0 8px">Allow each below to unlock its feature. Everything is optional and private — nothing is shared without your say-so, in shā’ Allah.</p>
@@ -4778,9 +4816,105 @@ function fh(title, subHTML){ return '<div class="aform-title">'+esc(title)+'</di
 function astep(n, total){ total = total || 3; let h='<div class="astep" aria-label="Step '+n+' of '+total+'">'; for(let i=1;i<=total;i++){ const cls=i<n?'done':(i===n?'on':''); h+='<i class="'+cls+'">'+(i<n?'✓':i)+'</i>'; if(i<total) h+='<s></s>'; } return h+'</div>'; }
 function maskEmailC(em){ em=String(em||''); const at=em.indexOf('@'); if(at<1) return em; const u=em.slice(0,at), d=em.slice(at+1); const uu=u.length<=2?u[0]+'•':u[0]+'•••'+u[u.length-1]; return uu+'@'+d; }
 function rememberTog(on){ S.lockEachLaunch=!on; if(on) S.staySignedIn=true; try{ save(); }catch(e){} }
-function privacyNote(e){ if(e&&e.preventDefault) e.preventDefault();
-  try{ toast('Your privacy','Your prayers, journal and streaks stay on this device. Only anonymous, non-identifying usage & crash diagnostics are sent to the app’s own server to keep it reliable — never your name or content, never sold or shared. Optional cloud login syncs your data only to the server you deploy.','🔒'); }
-  catch(_){ try{ alert('Your prayers, journal and streaks stay on your device. Only anonymous, non-identifying usage and crash diagnostics are sent to the app’s own server to keep it reliable — never your name or content, never sold or shared. Optional cloud login syncs your data only to the server you deploy.'); }catch(__){} } }
+function privacyNote(e){ showRules(e); }   // the "Terms & Privacy" link now opens the full Rules (Wifqan li-Khushu)
+// ── Wifqan li-Khushu — the Rules (the app's Terms & Conditions) ──────────────────────────────
+function showRules(e){
+  if(e&&e.preventDefault) e.preventDefault();
+  const body=document.getElementById('rulesBody');
+  if(body && !body.dataset.built){ body.innerHTML=rulesHTML(); body.dataset.built='1'; }
+  const showAccept = !!document.getElementById('acTerms');   // only offer the in-modal "I accept" during sign-up
+  const acc=document.getElementById('rulesAccept'); if(acc) acc.style.display = showAccept ? 'block' : 'none';
+  try{ openModal('rulesModal'); }catch(_){}
+  const sh=document.querySelector('#rulesModal .sheet'); if(sh) sh.scrollTop=0;
+}
+function acceptRulesFromModal(){
+  const c=document.getElementById('acTerms');
+  if(c){ c.checked=true; const b=document.getElementById('acBtn'); if(b) b.disabled=false; }
+  try{ closeModal('rulesModal'); }catch(_){}
+  try{ toast('Rules accepted','Jazākumullāhu khayran — you may now create your account.','🤝'); }catch(_){}
+}
+function rulesHTML(){
+  const cov=(h,items)=>'<div><h5>'+h+'</h5><ul>'+items.map(x=>'<li>'+x+'</li>').join('')+'</ul></div>';
+  const art=(num,title,ar,intro,items,extra)=>'<div class="rules-art'+(extra&&extra.hard?' rhard-wrap':'')+'">'+
+    '<div class="rart-head"><span class="rart-num">'+num+'</span><h4>'+title+'</h4><span class="rart-ar ar" dir="rtl">'+ar+'</span></div>'+
+    (intro?'<p>'+intro+'</p>':'')+
+    (extra&&extra.hard?'<div class="rules-hard"><span class="rlabel">Removed at once · no warning stage</span>':'')+
+    '<ol class="rules-ol">'+items.map(x=>'<li><b>'+x[0]+'</b> '+x[1]+'</li>').join('')+'</ol>'+
+    (extra&&extra.hard?'</div>':'')+
+    (extra&&extra.note?'<div class="rules-note"><span class="rlabel">'+extra.note[0]+'</span><p>'+extra.note[1]+'</p></div>':'')+'</div>';
+  return ''+
+  '<div class="rules-h"><div class="rtitle-ar ar" dir="rtl">وِفْقًا لِلْخُشُوع</div>'+
+    '<div class="rtitle">Wifqan li-Khushu — the Rules</div>'+
+    '<p class="rgloss">“In accordance with khushuʿ.” Using Sirat Khushu means accepting these — and they bind us exactly as much as they bind you.</p></div>'+
+  '<div class="rules-cov">'+
+    cov('We promise',[
+      '<b>Your worship is shown to no one, except Allah.</b> No leaderboards, no ranks, no sharing.',
+      '<b>Your journal is encrypted on your device.</b> We cannot read it.',
+      '<b>No ads, no trackers, nothing sold</b> — not to any future owner either.',
+      '<b>Prayer times, Qibla and the Qurʾān stay free.</b> Always.',
+      '<b>No guilt.</b> Every lock exits in one tap.',
+      '<b>We remind; we never rule.</b>'])+
+    cov('You promise',[
+      'Use it for <b>your own prayer</b> — never to watch or pressure anyone else’s.',
+      'Quote <b>nothing you cannot source</b> from the Qurʾān or the Prophet ﷺ.',
+      'Give <b>no rulings</b> to others through this app.',
+      'Call <b>no Muslim a disbeliever</b>; attack no madhhab.',
+      'Bring <b>no politics, fundraising or recruitment</b> here.',
+      '<b>Report what is wrong</b> rather than spreading it.'])+
+  '</div>'+
+  art('ONE','Your data','الأمانة','What you write here is an <b>amānah</b> — a trust. We built the app so that we <em>cannot</em> break it, rather than only promising not to.',[
+    ['1.1','Prayer times, Qibla, Hijrī date and your logs are computed <b>on your device</b>. The app works offline.'],
+    ['1.2','Your journal is <b>encrypted on your device</b>. With cloud login, the server stores text it cannot read.'],
+    ['1.3','No staff, moderator or automated system reads your content. <b>There is no path in the software by which they could.</b>'],
+    ['1.4','We never sell, rent or transfer your data — not to advertisers, brokers, or any future owner.'],
+    ['1.5','No third-party trackers or ad code. The build is checked automatically before every release.'],
+    ['1.6','Deleting your account deletes your data in full. If there is ever a breach, you are told within <b>72 hours</b>.'],
+    ['1.7','If this app is ever sold, transferred or shut down, <b>these rules go with it</b> — and you get a full export and <b>90 days’ notice</b> first.']])+
+  art('TWO','Young users','حفظ النشء','These sit above every other rule here.',[
+    ['2.1','<b>There is no messaging in this app.</b> No DMs, comments, profiles, photo, voice or file sharing between users. Not a setting — the capability is not built.'],
+    ['2.2','<b>No user is ever paired with another</b> for accountability, mentorship or guidance.'],
+    ['2.3','<b>No location is shared with anyone.</b> GPS is used on your device, for times and Qibla only.'],
+    ['2.4','<b>No advertising, no purchase pressure</b>, and nothing designed to keep you on the screen longer.'],
+    ['2.5','If you are under the age of majority where you live, use the app <b>with your guardian’s knowledge</b>.'],
+    ['2.6','Any report involving a minor is acted on <b>immediately</b>.']],
+    {note:['Why there is no parent dashboard','Parents ask, and the intention is good. But an app that reports a child’s missed prayers turns a private matter between a servant and their Lord into something audited — and it teaches a young person to hide rather than to pray. A guardian instructs and encourages in person. This app helps you remind. It will not help you check.']})+
+  art('THREE','Religious content','المحتوى الشرعي','',[
+    ['3.1','<b>Prayer times are a calculation, not a ruling.</b> Your local masjid and authority take precedence. Where a time is uncertain, the app shows the later, safer start.'],
+    ['3.2','<b>The Qibla arrow is an aid</b> to your own ijtihād. <b>The Hijrī date is an estimate</b> (±~1 day) — the local sighting decides the month.'],
+    ['3.3','Every ḥadīth carries its <b>collection, number and grading</b>. Weak reports are not shown at all.'],
+    ['3.4','The Qurʾānic text comes from a verified Uthmānī source and is <b>never generated, paraphrased or edited</b>. Translations are named human works, shown as interpretation.'],
+    ['3.5','<b>The app issues no fatwā</b> and runs no AI over questions of ḥalāl and ḥarām.'],
+    ['3.6','On matters of recognised difference — calculation method, Asr, high latitudes, moonsighting — the app <b>offers the positions and follows your choice</b>.']])+
+  art('FOUR','Never permitted','المحظورات','',[
+    ['4.1','<b>Any approach to a minor</b> — for “mentorship,” friendship, or otherwise.'],
+    ['4.2','<b>Sexual, violent or extremist content</b>, or recruitment for any group, movement, party or state body.'],
+    ['4.3','<b>Declaring a Muslim a disbeliever</b>, or attacking a school of Islamic law.'],
+    ['4.4','<b>Fabricating words of the Prophet ﷺ</b> or of the Qurʾān.'],
+    ['4.5','<b>Using the app to surveil or coerce</b> another person’s worship.'],
+    ['4.6','<b>Altering the Qurʾānic text</b> in any copy or fork of this app.']],
+    {hard:true})+
+  art('FIVE','Reporting, and what this is not','الحسبة وحدود',
+    '<span class="ar rules-ayah" dir="rtl">فَذَكِّرْ إِنَّمَا أَنتَ مُذَكِّرٌ ۝ لَّسْتَ عَلَيْهِم بِمُصَيْطِرٍ</span><span class="rules-ayah-src">al-Ghāshiyah 88:21–22 — “So remind; you are only one who reminds. You are not over them a controller.”</span>',[
+    ['5.1','Report from any screen, in two taps. A person reviews within <b>72 hours</b>; safeguarding immediately.'],
+    ['5.2','We correct gently and privately first. We do <b>not</b> search anyone’s content looking for breaches — and Article One makes it impossible.'],
+    ['5.3','You may appeal, and a different person reviews it. Someone who returns after a suspension <b>returns clean</b>.'],
+    ['5.4','You may report <b>us</b> for breaking these rules, publicly. We answer publicly.'],
+    ['5.5','The app must never stand between you and an emergency. <b>If you need your phone, take it</b> — nothing is recorded against you.'],
+    ['5.6','This app is <b>not a muftī</b> — ask a scholar. <b>Not an authority on times or Qibla</b> — your masjid is. <b>Not a doctor or a crisis line</b> — if you are struggling, speak to someone you trust and to a professional.'],
+    ['5.7','It is <b>not a measure of your standing with Allah</b>, and neither its stars nor its streaks are.']])+
+  '<div class="rules-khatimah">'+
+    '<div class="ar" dir="rtl" style="font-size:1.7rem;color:var(--au-gold,#e6c96f);margin-bottom:12px">﷽</div>'+
+    '<div class="ar rules-ayah-big" dir="rtl">ثُمَّ جَعَلْنَاكَ عَلَىٰ شَرِيعَةٍ مِّنَ الْأَمْرِ فَاتَّبِعْهَا وَلَا تَتَّبِعْ أَهْوَاءَ الَّذِينَ لَا يَعْلَمُونَ</div>'+
+    '<p class="rgloss" style="max-width:46ch;margin:10px auto 0">“Then We placed you upon an ordained way of the matter — so follow it, and follow not the desires of those who know not.”</p>'+
+    '<p class="rules-ref">al-Jāthiyah 45:18</p>'+
+    '<p style="color:var(--au-dim,#8a94a6);font-size:.84rem;max-width:44ch;margin:14px auto;line-height:1.65">The Sharīʿah is Allah’s alone — revealed in His Qurʾān, taught by His Messenger ﷺ. Nothing in these rules is added to it. A servant only carries what he was lent, and handles it with care.</p>'+
+    '<div class="ar" dir="rtl" style="color:var(--au-gold,#e6c96f);font-size:1.25rem;margin:12px 0 8px">وَمَا تَوْفِيقِي إِلَّا بِاللَّهِ</div>'+
+    '<p style="color:var(--au-dim,#8a94a6);font-size:.76rem;font-style:italic;margin:0">Handled with care by the servant</p>'+
+    '<div class="ar" dir="rtl" style="font-size:1.2rem;margin:4px 0 2px">زيشان راجا شيخ</div>'+
+    '<p style="letter-spacing:.16em;font-size:.74rem;color:var(--au-dim,#8a94a6);text-transform:uppercase;margin:0">Zeeshan Raja Shaikh</p>'+
+  '</div>'+
+  '<div id="rulesAccept" class="rules-actions"><button class="btn wbtn" style="width:100%" onclick="acceptRulesFromModal()">I have read &amp; I accept the Rules</button></div>';
+}
 let _resendTimer=null;
 function startResend(){
   clearInterval(_resendTimer);
@@ -4813,7 +4947,7 @@ function showAuth(mode){
       + `<div class="wgender"><button type="button" class="gchip" id="gMale" onclick="setAcGender('male')">Brother</button><button type="button" class="gchip" id="gFemale" onclick="setAcGender('female')">Sister</button></div>`
       + apwfield('acPass','Create a password',{meter:true})
       + apwfield('acPass2','Confirm password',{onenter:'createAccount()'})
-      + `<label class="aterms"><input type="checkbox" id="acTerms" onchange="var b=document.getElementById('acBtn');if(b)b.disabled=!this.checked"><span>I agree to keep my data private and accept the <span class="lk" onclick="privacyNote(event)">Terms &amp; Privacy</span>.</span></label>`
+      + `<label class="aterms"><input type="checkbox" id="acTerms" onchange="var b=document.getElementById('acBtn');if(b)b.disabled=!this.checked"><span>I have read and accept the <span class="lk" onclick="showRules(event)"><b>Rules — Wifqan li-Khushu</b></span> (the Terms &amp; Privacy of Sirat Khushu).</span></label>`
       + `<div class="autherr" id="acErr"></div>`
       + `<button class="btn wbtn" id="acBtn" onclick="createAccount()" disabled>Sign up</button>`
       + (AUTH_REQUIRED ? `` : `<button class="wlink" onclick="continueAsGuest()">Not now — continue without an account</button>`);
