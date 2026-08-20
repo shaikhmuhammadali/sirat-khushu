@@ -1750,11 +1750,11 @@
     <div id="journalHistory" style="margin-top:12px"></div>
   </div>
 
-  <div class="glass" data-sec="settings">
-    <h2 class="sec">Account &amp; sign-in</h2>
-    <p class="small dim">Your account keeps your prayers, journal and progress — on this device, and (if you turn on cloud login) on your own server so you can sign in on another phone.</p>
-    <div id="lockControls" style="margin-top:12px"></div>
-  </div>
+  <!-- Account & sign-in card removed from Settings by request (v3.159). You stay signed in
+       automatically; the account "just works". The underlying actions (deleteAccount / lockNow /
+       cloud login) remain defined in code and reachable if ever re-exposed, and the backend
+       /auth/delete endpoint still works — so data deletion is still possible server-side.
+       renderLockControls() targets #lockControls, which no longer exists, so it safely no-ops. -->
 
   <div class="glass">
     <h2 class="sec">Your data — an amanah</h2>
