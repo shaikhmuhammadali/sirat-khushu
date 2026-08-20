@@ -3381,10 +3381,13 @@ const DUAKW = {
   25:['guidance','guide','guided','lost','confused','confusion','direction','right path','straight path','decision','decide','choice','choose','uncertain','unsure','undecided','doubt','doubtful','which way','istikhara','crossroads'],
   26:['home','house','coming home','arriving home','arrive home','return home','entering home','back home','reached home','inside']
 };
+// A few very common words that would otherwise drag every query off-topic ("i feel so tired and sad").
+const DUA_STOP = {the:1,and:1,for:1,you:1,are:1,was:1,but:1,not:1,too:1,her:1,him:1,its:1,our:1,out:1,who:1,why:1,how:1,when:1,what:1,that:1,this:1,with:1,from:1,have:1,feel:1,feeling:1,really:1,very:1,just:1,about:1,some:1,any:1,now:1,today:1,please:1,make:1,dua:1,duaa:1,prayer:1};
 function duaSearch(q){
   q = (q || '').trim().toLowerCase();
-  if (!q) return [];                                // empty -> show nothing (search-first; keeps the space clean)
-  const toks = q.split(/\s+/).filter(t => t.length >= 3);   // ignore trivial words (of, a, my, i, to…)
+  if (!q) return [];                                // empty -> renderDuaResults shows the universal set
+  let toks = q.split(/[^a-z']+/).filter(t => t.length >= 3 && !DUA_STOP[t]);   // drop trivial + filler words
+  if (!toks.length) toks = q.split(/\s+/).filter(t => t.length >= 2);          // …but never end up with NOTHING to match on
   if (!toks.length) return [];
   const scored = [];
   DUASIT.forEach((d,i) => {
@@ -3393,16 +3396,20 @@ function duaSearch(q){
     let sc = 0, matched = 0;
     toks.forEach(t => {
       let hit = 0;
-      if (cat.indexOf(t) !== -1) hit = 3;           // the state / moment name itself
-      else if (kws.some(k => k === t || k.split(/\s+/).indexOf(t) !== -1 || k.indexOf(t) === 0 || t.indexOf(k) === 0)) hit = 2;  // keyword / phrase-word / prefix
-      if (hit) { sc += hit; matched++; }
+      if (cat === t) hit = 8;                                                   // exact moment name
+      else if (cat.split(/[^a-z]+/).indexOf(t) !== -1) hit = 5;                 // a whole word of the moment name
+      else if (kws.some(k => k === t)) hit = 4;                                 // exact keyword
+      else if (kws.some(k => k.split(/\s+/).indexOf(t) !== -1)) hit = 3;        // a word inside a keyword phrase
+      else if (t.length >= 4 && (cat.indexOf(t) !== -1 || kws.some(k => k.indexOf(t) === 0 || t.indexOf(k) === 0))) hit = 2;  // prefix / substring (≥4 chars, avoids noise)
+      if (hit){ sc += hit; matched++; }
     });
-    // AND semantics: EVERY search word must relate to this dua, so results stay strictly on-topic
-    // ("no extra one"). A single word still matches broadly; multi-word queries get precise.
-    if (matched === toks.length && sc > 0) scored.push([i, sc]);
+    // RELEVANCE RANKING (not all-or-nothing): a dua surfaces if it matches ANY word, but covering MORE of
+    // the query ranks it higher, and matching EVERY word gets a strong bonus — so a natural phrase like
+    // "anxious about my exam" now returns Anxiety + Study, instead of the old strict-AND dead end.
+    if (matched){ scored.push([i, sc + matched*3 + (matched === toks.length ? 6 : 0)]); }
   });
-  scored.sort((a,b) => b[1] - a[1]);
-  return scored.map(s => s[0]);
+  scored.sort((a,b) => b[1] - a[1] || a[0] - b[0]);
+  return scored.map(s => s[0]).slice(0, 14);        // lead with the strongest matches
 }
 const QAYAH = {"وَهُوَ ٱلَّذِىٓ أَرْسَلَ ٱلرِّيَٰحَ بُشْرًۢا بَيْنَ يَدَىْ رَحْمَتِهِۦ ۚ وَأَنزَلْنَا مِنَ ٱلسَّمَآءِ مَآءًۭ طَهُورًۭا": [25, 48, 2903], "وَمَا كَانَ قَوْلَهُمْ إِلَّآ أَن قَالُوا۟ رَبَّنَا ٱغْفِرْ لَنَا ذُنُوبَنَا وَإِسْرَافَنَا فِىٓ أَمْرِنَا وَثَبِّتْ أَقْدَامَنَا وَٱنصُرْنَا عَلَى ٱلْقَوْمِ ٱلْكَٰفِرِينَ": [3, 147, 440], "وَذَا ٱلنُّونِ إِذ ذَّهَبَ مُغَٰضِبًۭا فَظَنَّ أَن لَّن نَّقْدِرَ عَلَيْهِ فَنَادَىٰ فِى ٱلظُّلُمَٰتِ أَن لَّآ إِلَٰهَ إِلَّآ أَنتَ سُبْحَٰنَكَ إِنِّى كُنتُ مِنَ ٱلظَّٰلِمِينَ": [21, 87, 2570], "قَالَ رَبِّ إِنِّى ظَلَمْتُ نَفْسِى فَٱغْفِرْ لِى فَغَفَرَ لَهُۥٓ ۚ إِنَّهُۥ هُوَ ٱلْغَفُورُ ٱلرَّحِيمُ": [28, 16, 3268], "قَالَ رَبِّ ٱشْرَحْ لِى صَدْرِى": [20, 25, 2373], "وَقُل رَّبِّ أَدْخِلْنِى مُدْخَلَ صِدْقٍۢ وَأَخْرِجْنِى مُخْرَجَ صِدْقٍۢ وَٱجْعَل لِّى مِن لَّدُنكَ سُلْطَٰنًۭا نَّصِيرًۭا": [17, 80, 2109], "وَقُل رَّبِّ ٱغْفِرْ وَٱرْحَمْ وَأَنتَ خَيْرُ ٱلرَّٰحِمِينَ": [23, 118, 2791], "رَبِّ ٱجْعَلْنِى مُقِيمَ ٱلصَّلَوٰةِ وَمِن ذُرِّيَّتِى ۚ رَبَّنَا وَتَقَبَّلْ دُعَآءِ": [14, 40, 1790], "وَٱخْفِضْ لَهُمَا جَنَاحَ ٱلذُّلِّ مِنَ ٱلرَّحْمَةِ وَقُل رَّبِّ ٱرْحَمْهُمَا كَمَا رَبَّيَانِى صَغِيرًۭا": [17, 24, 2053], "رَبَّنَا ٱغْفِرْ لِى وَلِوَٰلِدَىَّ وَلِلْمُؤْمِنِينَ يَوْمَ يَقُومُ ٱلْحِسَابُ": [14, 41, 1791], "فَتَعَٰلَى ٱللَّهُ ٱلْمَلِكُ ٱلْحَقُّ ۗ وَلَا تَعْجَلْ بِٱلْقُرْءَانِ مِن قَبْلِ أَن يُقْضَىٰٓ إِلَيْكَ وَحْيُهُۥ ۖ وَقُل رَّبِّ زِدْنِى عِلْمًۭا": [20, 114, 2462], "لَّيْسَ عَلَى ٱلْأَعْمَىٰ حَرَجٌۭ وَلَا عَلَى ٱلْأَعْرَجِ حَرَجٌۭ وَلَا عَلَى ٱلْمَرِيضِ حَرَجٌۭ وَلَا عَلَىٰٓ أَنفُسِكُمْ أَن تَأْكُلُوا۟ مِنۢ بُيُوتِكُمْ أَوْ بُيُوتِ ءَابَآئِكُمْ أَوْ بُيُوتِ أُمَّهَٰتِكُمْ أَوْ بُيُوتِ إِخْوَٰنِكُمْ أَوْ بُيُوتِ أَخَوَٰتِكُمْ أَوْ بُيُوتِ أَعْمَٰمِكُمْ أَوْ بُيُوتِ عَمَّٰتِكُمْ أَوْ بُيُوتِ أَخْوَٰلِكُمْ أَوْ بُيُوتِ خَٰلَٰتِكُمْ أَوْ مَا مَلَكْتُم مَّفَاتِحَهُۥٓ أَوْ صَدِيقِكُمْ ۚ لَيْسَ عَلَيْكُمْ جُنَاحٌ أَن تَأْكُلُوا۟ جَمِيعًا أَوْ أَشْتَاتًۭا ۚ فَإِذَا دَخَلْتُم بُيُوتًۭا فَسَلِّمُوا۟ عَلَىٰٓ أَنفُسِكُمْ تَحِيَّةًۭ مِّنْ عِندِ ٱللَّهِ مُبَٰرَكَةًۭ طَيِّبَةًۭ ۚ كَذَٰلِكَ يُبَيِّنُ ٱللَّهُ لَكُمُ ٱلْءَايَٰتِ لَعَلَّكُمْ تَعْقِلُونَ": [24, 61, 2852], "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ": [1, 1, 1], "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ": [1, 2, 2], "ٱلرَّحْمَٰنِ ٱلرَّحِيمِ": [1, 3, 3], "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ": [1, 5, 5], "ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ": [1, 6, 6], "صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ": [1, 7, 7], "ٱللَّهُ لَآ إِلَٰهَ إِلَّا هُوَ ٱلْحَىُّ ٱلْقَيُّومُ ۚ لَا تَأْخُذُهُۥ سِنَةٌ وَلَا نَوْمٌ ۚ لَّهُۥ مَا فِى ٱلسَّمَٰوَٰتِ وَمَا فِى ٱلْأَرْضِ ۗ مَن ذَا ٱلَّذِى يَشْفَعُ عِندَهُۥٓ إِلَّا بِإِذْنِهِۦ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ بِشَىْءٍ مِّنْ عِلْمِهِۦٓ إِلَّا بِمَا شَآءَ ۚ وَسِعَ كُرْسِيُّهُ ٱلسَّمَٰوَٰتِ وَٱلْأَرْضَ ۖ وَلَا يَـُٔودُهُۥ حِفْظُهُمَا ۚ وَهُوَ ٱلْعَلِىُّ ٱلْعَظِيمُ": [2, 255, 262], "إِنَّ ٱلْإِنسَـٰنَ لَفِى خُسْرٍ": [103, 2, 6178], "إِلَّا ٱلَّذِينَ ءَامَنُوا۟ وَعَمِلُوا۟ ٱلصَّـٰلِحَـٰتِ وَتَوَاصَوْا۟ بِٱلْحَقِّ وَتَوَاصَوْا۟ بِٱلصَّبْرِ": [103, 3, 6179], "وَيْلٌ لِّكُلِّ هُمَزَةٍ لُّمَزَةٍ": [104, 1, 6180], "ٱلَّذِى جَمَعَ مَالًا وَعَدَّدَهُۥ": [104, 2, 6181], "يَحْسَبُ أَنَّ مَالَهُۥٓ أَخْلَدَهُۥ": [104, 3, 6182], "كَلَّا ۖ لَيُنۢبَذَنَّ فِى ٱلْحُطَمَةِ": [104, 4, 6183], "وَمَآ أَدْرَىٰكَ مَا ٱلْحُطَمَةُ": [104, 5, 6184], "نَارُ ٱللَّهِ ٱلْمُوقَدَةُ": [104, 6, 6185], "ٱلَّتِى تَطَّلِعُ عَلَى ٱلْأَفْـِٔدَةِ": [104, 7, 6186], "إِنَّهَا عَلَيْهِم مُّؤْصَدَةٌ": [104, 8, 6187], "أَلَمْ تَرَ كَيْفَ فَعَلَ رَبُّكَ بِأَصْحَـٰبِ ٱلْفِيلِ": [105, 1, 6189], "أَلَمْ يَجْعَلْ كَيْدَهُمْ فِى تَضْلِيلٍ": [105, 2, 6190], "وَأَرْسَلَ عَلَيْهِمْ طَيْرًا أَبَابِيلَ": [105, 3, 6191], "تَرْمِيهِم بِحِجَارَةٍ مِّن سِجِّيلٍ": [105, 4, 6192], "فَجَعَلَهُمْ كَعَصْفٍ مَّأْكُولٍۭ": [105, 5, 6193], "إِۦلَـٰفِهِمْ رِحْلَةَ ٱلشِّتَآءِ وَٱلصَّيْفِ": [106, 2, 6195], "فَلْيَعْبُدُوا۟ رَبَّ هَـٰذَا ٱلْبَيْتِ": [106, 3, 6196], "ٱلَّذِىٓ أَطْعَمَهُم مِّن جُوعٍ وَءَامَنَهُم مِّنْ خَوْفٍۭ": [106, 4, 6197], "أَرَءَيْتَ ٱلَّذِى يُكَذِّبُ بِٱلدِّينِ": [107, 1, 6198], "فَذَٰلِكَ ٱلَّذِى يَدُعُّ ٱلْيَتِيمَ": [107, 2, 6199], "وَلَا يَحُضُّ عَلَىٰ طَعَامِ ٱلْمِسْكِينِ": [69, 34, 5357], "ٱلَّذِينَ هُمْ عَن صَلَاتِهِمْ سَاهُونَ": [107, 5, 6202], "ٱلَّذِينَ هُمْ يُرَآءُونَ": [107, 6, 6203], "وَيَمْنَعُونَ ٱلْمَاعُونَ": [107, 7, 6204], "إِنَّآ أَعْطَيْنَـٰكَ ٱلْكَوْثَرَ": [108, 1, 6205], "فَصَلِّ لِرَبِّكَ وَٱنْحَرْ": [108, 2, 6206], "إِنَّ شَانِئَكَ هُوَ ٱلْأَبْتَرُ": [108, 3, 6207], "قُلْ يَـٰٓأَيُّهَا ٱلْكَـٰفِرُونَ": [109, 1, 6208], "لَآ أَعْبُدُ مَا تَعْبُدُونَ": [109, 2, 6209], "وَلَآ أَنتُمْ عَـٰبِدُونَ مَآ أَعْبُدُ": [109, 3, 6210], "وَلَآ أَنَا۠ عَابِدٌ مَّا عَبَدتُّمْ": [109, 4, 6211], "لَكُمْ دِينُكُمْ وَلِىَ دِينِ": [109, 6, 6213], "إِذَا جَآءَ نَصْرُ ٱللَّهِ وَٱلْفَتْحُ": [110, 1, 6214], "وَرَأَيْتَ ٱلنَّاسَ يَدْخُلُونَ فِى دِينِ ٱللَّهِ أَفْوَاجًا": [110, 2, 6215], "فَسَبِّحْ بِحَمْدِ رَبِّكَ وَٱسْتَغْفِرْهُ ۚ إِنَّهُۥ كَانَ تَوَّابًۢا": [110, 3, 6216], "تَبَّتْ يَدَآ أَبِى لَهَبٍ وَتَبَّ": [111, 1, 6217], "مَآ أَغْنَىٰ عَنْهُ مَالُهُۥ وَمَا كَسَبَ": [111, 2, 6218], "سَيَصْلَىٰ نَارًا ذَاتَ لَهَبٍ": [111, 3, 6219], "وَٱمْرَأَتُهُۥ حَمَّالَةَ ٱلْحَطَبِ": [111, 4, 6220], "فِى جِيدِهَا حَبْلٌ مِّن مَّسَدٍۭ": [111, 5, 6221], "لَمْ يَلِدْ وَلَمْ يُولَدْ": [112, 3, 6224], "وَلَمْ يَكُن لَّهُۥ كُفُوًا أَحَدٌۢ": [112, 4, 6225], "قُلْ أَعُوذُ بِرَبِّ ٱلْفَلَقِ": [113, 1, 6226], "وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ": [113, 3, 6228], "وَمِن شَرِّ ٱلنَّفَّٰثَٰتِ فِى ٱلْعُقَدِ": [113, 4, 6229], "وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ": [113, 5, 6230], "قُلْ أَعُوذُ بِرَبِّ ٱلنَّاسِ": [114, 1, 6231], "مِن شَرِّ ٱلْوَسْوَاسِ ٱلْخَنَّاسِ": [114, 4, 6234], "ٱلَّذِى يُوَسْوِسُ فِى صُدُورِ ٱلنَّاسِ": [114, 5, 6235], "مِنَ ٱلْجِنَّةِ وَٱلنَّاسِ": [114, 6, 6236], "ٱلَّذِينَ ءَامَنُوا۟ وَتَطْمَئِنُّ قُلُوبُهُم بِذِكْرِ ٱللَّهِ ۗ أَلَا بِذِكْرِ ٱللَّهِ تَطْمَئِنُّ ٱلْقُلُوبُ": [13, 28, 1735], "فَإِنَّ مَعَ ٱلْعُسْرِ يُسْرًا": [94, 5, 6095], "وَيَرْزُقْهُ مِنْ حَيْثُ لَا يَحْتَسِبُ ۚ وَمَن يَتَوَكَّلْ عَلَى ٱللَّهِ فَهُوَ حَسْبُهُۥٓ ۚ إِنَّ ٱللَّهَ بَٰلِغُ أَمْرِهِۦ ۚ قَدْ جَعَلَ ٱللَّهُ لِكُلِّ شَىْءٍۢ قَدْرًۭا": [65, 3, 5220], "۞ قُلْ يَٰعِبَادِىَ ٱلَّذِينَ أَسْرَفُوا۟ عَلَىٰٓ أَنفُسِهِمْ لَا تَقْنَطُوا۟ مِن رَّحْمَةِ ٱللَّهِ ۚ إِنَّ ٱللَّهَ يَغْفِرُ ٱلذُّنُوبَ جَمِيعًا ۚ إِنَّهُۥ هُوَ ٱلْغَفُورُ ٱلرَّحِيمُ": [39, 53, 4111], "ٱتْلُ مَآ أُوحِىَ إِلَيْكَ مِنَ ٱلْكِتَٰبِ وَأَقِمِ ٱلصَّلَوٰةَ ۖ إِنَّ ٱلصَّلَوٰةَ تَنْهَىٰ عَنِ ٱلْفَحْشَآءِ وَٱلْمُنكَرِ ۗ وَلَذِكْرُ ٱللَّهِ أَكْبَرُ ۗ وَٱللَّهُ يَعْلَمُ مَا تَصْنَعُونَ": [29, 45, 3385], "وَٱسْتَعِينُوا۟ بِٱلصَّبْرِ وَٱلصَّلَوٰةِ ۚ وَإِنَّهَا لَكَبِيرَةٌ إِلَّا عَلَى ٱلْخَٰشِعِينَ": [2, 45, 52], "فَٱذْكُرُونِىٓ أَذْكُرْكُمْ وَٱشْكُرُوا۟ لِى وَلَا تَكْفُرُونِ": [2, 152, 159], "وَلَسَوْفَ يُعْطِيكَ رَبُّكَ فَتَرْضَىٰٓ": [93, 5, 6084], "وَلَقَدْ خَلَقْنَا ٱلْإِنسَٰنَ وَنَعْلَمُ مَا تُوَسْوِسُ بِهِۦ نَفْسُهُۥ ۖ وَنَحْنُ أَقْرَبُ إِلَيْهِ مِنْ حَبْلِ ٱلْوَرِيدِ": [50, 16, 4646], "لَا يُكَلِّفُ ٱللَّهُ نَفْسًا إِلَّا وُسْعَهَا ۚ لَهَا مَا كَسَبَتْ وَعَلَيْهَا مَا ٱكْتَسَبَتْ ۗ رَبَّنَا لَا تُؤَاخِذْنَآ إِن نَّسِينَآ أَوْ أَخْطَأْنَا ۚ رَبَّنَا وَلَا تَحْمِلْ عَلَيْنَآ إِصْرًۭا كَمَا حَمَلْتَهُۥ عَلَى ٱلَّذِينَ مِن قَبْلِنَا ۚ رَبَّنَا وَلَا تُحَمِّلْنَا مَا لَا طَاقَةَ لَنَا بِهِۦ ۖ وَٱعْفُ عَنَّا وَٱغْفِرْ لَنَا وَٱرْحَمْنَآ ۚ أَنتَ مَوْلَىٰنَا فَٱنصُرْنَا عَلَى ٱلْقَوْمِ ٱلْكَٰفِرِينَ": [2, 286, 293]};
 function renderDuas(){
@@ -3416,24 +3423,34 @@ function renderDuas(){
     '<div id="duaResults"></div>';
   renderDuaResults();
 }
+// Comprehensive duas that fit ANY moment — shown when the search is empty or finds no exact category,
+// so the section is NEVER a dead end. All authentic.
+const DUA_UNIVERSAL = [
+  {cat:'For all good — the most comprehensive dua', ic:'🤲', duas:[
+    {ar:'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ', tr:'"Our Lord, give us good in this world and good in the Hereafter, and protect us from the punishment of the Fire."', ref:'Quran 2:201'}]},
+  {cat:"When you don't know what to ask for", ic:'💛', duas:[
+    {ar:'اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنْ خَيْرِ مَا سَأَلَكَ مِنْهُ نَبِيُّكَ مُحَمَّدٌ ﷺ، وَأَعُوذُ بِكَ مِنْ شَرِّ مَا اسْتَعَاذَ مِنْهُ نَبِيُّكَ مُحَمَّدٌ ﷺ', tr:'"O Allah, I ask You for all the good Your Prophet Muhammad ﷺ asked You for, and I seek refuge in You from all the evil he sought refuge from."', ref:"Jami' at-Tirmidhi 3521"}]},
+  {cat:'Reliance in any hardship', ic:'🛡️', duas:[
+    {ar:'حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ', tr:'"Allah is sufficient for us, and He is the best Disposer of affairs."', ref:'Quran 3:173'}]},
+  {cat:'Ease for anything difficult', ic:'🌿', duas:[
+    {ar:'اللَّهُمَّ لَا سَهْلَ إِلَّا مَا جَعَلْتَهُ سَهْلًا، وَأَنْتَ تَجْعَلُ الْحَزْنَ إِذَا شِئْتَ سَهْلًا', tr:'"O Allah, there is no ease except in what You make easy, and You make the difficult easy if You will."', ref:'Ibn Hibban 2427 (Sahih)'}]},
+];
+function _duaGroupHTML(d){
+  const body = d.duas.map(x =>
+    '<div class="adh"><div class="ar" lang="ar" dir="rtl">'+x.ar+'</div><div class="small muted" style="margin-top:6px">'+esc(x.tr)+'</div>' +
+    (x.ref ? '<div style="margin-top:7px"><span class="badge ref">'+esc(fmtRef(x.ref))+'</span> '+reciteBtn(x.ar)+'</div>' : '<div style="margin-top:7px">'+reciteBtn(x.ar)+'</div>') +
+    '</div>').join('');
+  return '<div class="duagroup"><div class="duagroup-h">' + d.ic + ' ' + esc(d.cat) + '</div>' + body + '</div>';
+}
 function renderDuaResults(){
   const box = document.getElementById('duaResults'); if (!box) return;
   const idxs = duaSearch(duaQuery);
-  if (!idxs.length){
-    box.innerHTML = duaQuery.trim()
-      ? '<p class="small muted" style="padding:12px 0">No dua matches &ldquo;' + esc(duaQuery) +
-        '&rdquo;. Try a feeling or moment — like &ldquo;anxious&rdquo;, &ldquo;grateful&rdquo;, &ldquo;forgiveness&rdquo;, or &ldquo;travel&rdquo;.</p>'
-      : '<p class="small dim" style="padding:18px 2px;text-align:center;line-height:1.7">Type a feeling, moment, or need — like &ldquo;anxious&rdquo;, &ldquo;grateful&rdquo;, &ldquo;forgiveness&rdquo;, &ldquo;pain&rdquo;, or &ldquo;travel&rdquo; — and its dua will appear here.</p>';
-    return;
-  }
-  box.innerHTML = idxs.map(i => {
-    const d = DUASIT[i];
-    const body = d.duas.map(x =>
-      '<div class="adh"><div class="ar" lang="ar" dir="rtl">'+x.ar+'</div><div class="small muted" style="margin-top:6px">'+esc(x.tr)+'</div>' +
-      (x.ref ? '<div style="margin-top:7px"><span class="badge ref">'+esc(fmtRef(x.ref))+'</span></div>' : '') +
-      '</div>').join('');
-    return '<div class="duagroup"><div class="duagroup-h">' + d.ic + ' ' + esc(d.cat) + '</div>' + body + '</div>';
-  }).join('');
+  if (idxs.length){ box.innerHTML = idxs.map(i => _duaGroupHTML(DUASIT[i])).join(''); return; }
+  // No category matched → NEVER dead-end: offer duas good for any moment, labelled honestly.
+  const head = duaQuery.trim()
+    ? '<p class="small muted" style="padding:10px 0 4px;line-height:1.6">No exact match for &ldquo;' + esc(duaQuery) + '&rdquo; — here are duas that fit <b>any</b> moment. Or try a feeling like &ldquo;anxious&rdquo;, &ldquo;grateful&rdquo;, or &ldquo;guidance&rdquo;.</p>'
+    : '<p class="small dim" style="padding:8px 2px 4px;text-align:center;line-height:1.7">Type a feeling, moment, or need — or reach for one of these, good for <b>any</b> moment.</p>';
+  box.innerHTML = head + DUA_UNIVERSAL.map(_duaGroupHTML).join('');
 }
 
 /* ═══════════════════ Islamic calendar — month grid + important days + at-prayer prompt ═══════════════════ */
