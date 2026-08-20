@@ -511,6 +511,7 @@
   .jh-mcount{flex:none;color:var(--dim);font-size:.62rem;font-weight:800;letter-spacing:.08em;min-width:20px;height:20px;padding:0 7px;display:grid;place-items:center;border-radius:999px;border:1px solid var(--stroke-gold);background:var(--gold-soft)}
   /* modal + focus overlays */
   .modal{position:fixed;inset:0;z-index:120;display:none;align-items:flex-end;justify-content:center;background:rgba(3,6,10,.72);backdrop-filter:blur(4px)}
+  #rulesModal{z-index:240}   /* the Rules must sit ABOVE the welcome/create-account overlay (z160), tour (175) and lock (200) — the checkbox opens it from that screen */
   .modal.open{display:flex;animation:fade .3s ease}
   .sheet{background:var(--bg2);border:1px solid var(--stroke-gold);border-radius:22px 22px 0 0;max-width:560px;width:100%;max-height:88vh;overflow-y:auto;padding:22px 20px calc(22px + env(safe-area-inset-bottom));box-shadow:0 -12px 50px rgba(0,0,0,.5)}
   @media(min-width:560px){.modal{align-items:center}.sheet{border-radius:22px}}
@@ -845,6 +846,9 @@
   .aform .autherr,.aform .wq{text-align:left}
   .aterms{display:flex;align-items:flex-start;gap:10px;margin:4px 2px 12px;color:var(--au-mid);font-size:.82rem;line-height:1.45;cursor:pointer;text-align:left}
   .aterms input{width:18px;height:18px;margin-top:1px;accent-color:var(--au-gold);flex:none;cursor:pointer}
+  .aterms .lk{color:var(--au-gold-soft);font-weight:700;cursor:pointer;text-decoration:underline;text-decoration-color:rgba(231,207,147,.45);text-underline-offset:2px;text-shadow:0 0 14px rgba(217,180,91,.18)}
+  .aterms .lk b{color:inherit}
+  .aterms .lk:hover{color:var(--au-gold);text-decoration-color:var(--au-gold)}
   /* ── Rules modal (Wifqan li-Khushu — the Terms & Conditions) ── */
   #rulesModal .sheet{max-height:88vh;overflow-y:auto;text-align:left}
   #rulesBody{font-size:15px;line-height:1.6}
@@ -1757,7 +1761,6 @@
 
   <div class="glass">
     <h2 class="sec">Your data — an amanah</h2>
-    <p style="margin:0 0 12px"><button type="button" class="lk" style="display:inline;margin:0;padding:0;font-size:.9rem" onclick="showRules(event)">📜 Read the Rules — Wifqan li-Khushu</button></p>
     <p class="small muted">Your data is an <b>amanah</b> — a sacred trust. As humble servants of Allah ﷻ, we guard what He has given us the honour to keep: everything you write, log and search stays on <b>your own device</b>, and — only if you turn on cloud login — on <b>your own server</b>. We never sell it, never share it, and never look into what is yours. It remains yours alone, in shā’ Allah — kept the way an amanah deserves to be kept.</p>
   </div>
 
@@ -4955,8 +4958,8 @@ function rulesHTML(){
     '<p style="color:var(--au-dim,#8a94a6);font-size:.84rem;max-width:44ch;margin:14px auto;line-height:1.65">The Sharīʿah is Allah’s alone — revealed in His Qurʾān, taught by His Messenger ﷺ. Nothing in these rules is added to it. A servant only carries what he was lent, and handles it with care.</p>'+
     '<div class="ar" dir="rtl" style="color:var(--au-gold,#e6c96f);font-size:1.25rem;margin:12px 0 8px">وَمَا تَوْفِيقِي إِلَّا بِاللَّهِ</div>'+
     '<p style="color:var(--au-dim,#8a94a6);font-size:.76rem;font-style:italic;margin:0">Handled with care by the servant</p>'+
-    '<div class="ar" dir="rtl" style="font-size:1.2rem;margin:4px 0 2px">زيشان راجا شيخ</div>'+
-    '<p style="letter-spacing:.16em;font-size:.74rem;color:var(--au-dim,#8a94a6);text-transform:uppercase;margin:0">Zeeshan Raja Shaikh</p>'+
+    '<div class="ar" dir="rtl" style="font-size:1.35rem;font-weight:700;color:var(--au-gold,#e6c96f);margin:6px 0 2px;text-shadow:0 0 18px rgba(217,180,91,.22)">زيشان راجا شيخ</div>'+
+    '<p style="letter-spacing:.18em;font-size:.82rem;font-weight:700;color:var(--au-gold-soft,#e7cf93);text-transform:uppercase;margin:0">Zeeshan Raja Shaikh</p>'+
   '</div>'+
   '<div id="rulesAccept" class="rules-actions"></div>';   // filled by _renderRulesActions() per mode (accept / reaccept / view)
 }
