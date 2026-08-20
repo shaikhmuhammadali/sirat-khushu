@@ -758,6 +758,9 @@
   .afield{position:relative;margin-bottom:12px;text-align:left}
   .afhint{font-size:.72rem;color:var(--au-dim,#8a94a6);margin:-6px 2px 12px;letter-spacing:.01em}
   .afhint.ok{color:#4ec98b;font-weight:600} .afhint.bad{color:#e2685f;font-weight:600}
+  .afhint.checking{color:var(--gold,#e6c96f);font-weight:600}
+  .uspin{display:inline-block;width:10px;height:10px;margin-right:6px;vertical-align:-1px;border:2px solid rgba(230,201,111,.28);border-top-color:var(--gold,#e6c96f);border-radius:50%;animation:uspin .7s linear infinite}
+  @keyframes uspin{to{transform:rotate(360deg)}}
   .afield>input{width:100%;padding:22px 15px 8px;border-radius:14px;border:1px solid var(--au-line);background:var(--au-glass);
     color:var(--au-hi);font-family:var(--font);font-size:1rem;outline:none;transition:border-color .2s,box-shadow .2s,background .2s}
   .afield.pw>input{padding-right:46px}
@@ -4671,33 +4674,45 @@ function usernameFilter(el){
   try{ const p=Math.max(0,s-removedBeforeCaret); el.setSelectionRange(p,p); }catch(e){}
 }
 // Live username availability (Instagram/Snapchat style): filter, then debounce-check the server.
-let _unameTimer=null, _unameTaken=false, _unameSeq=0;
-function unameSetStatus(txt, cls){ const st=document.getElementById('acUserStatus'); if(st){ st.textContent=txt; st.className='afhint'+(cls?(' '+cls):''); } }
+let _unameTimer=null, _unameTaken=false, _unameSeq=0, _unameCache=Object.create(null), _unameWarmed=false;
+function unameSetStatus(txt, cls){ const st=document.getElementById('acUserStatus'); if(st){ st.innerHTML=(cls==='checking'?'<span class="uspin" aria-hidden="true"></span>':'')+esc(txt); st.className='afhint'+(cls?(' '+cls):''); } }
+// Wake the (free-tier, sleep-prone) backend the moment the sign-up screen opens, so the FIRST availability
+// check is fast instead of waiting on a ~50s cold start. Fire-and-forget, once per session.
+function unameWarm(){
+  if(_unameWarmed) return; _unameWarmed=true;
+  try{ const base=(typeof cloudUrl==='function')?cloudUrl():''; if(base && navigator.onLine){ fetch(base+'/auth/username-available?u=aaa', {cache:'no-store'}).catch(function(){}); } }catch(e){}
+}
 function unameLiveCheck(el){
   usernameFilter(el);
   const u = el.value; _unameTaken=false;
   if(_unameTimer){ clearTimeout(_unameTimer); _unameTimer=null; }
   if(!/^[A-Za-z0-9_]{3,20}$/.test(u)){ unameSetStatus('Letters, numbers and _ only · 3–20 characters',''); return; }
-  unameSetStatus('Checking availability…','');
+  const key = u.toLowerCase();
+  // your OWN current username is trivially "yours", not taken-by-someone-else
+  if(S.account && String(S.account.username||'').toLowerCase()===key){ _unameTaken=false; unameSetStatus('✓ That’s your current name','ok'); return; }
+  // INSTANT answer if we already checked this name this session — no flicker, no network round-trip
+  if(key in _unameCache){ const avail=_unameCache[key]; _unameTaken=!avail; unameSetStatus(avail?'✓ Username available':'✗ Already taken — choose another', avail?'ok':'bad'); return; }
+  unameSetStatus('Checking availability…','checking');
   const seq = ++_unameSeq;
-  _unameTimer = setTimeout(function(){ unameCheckNow(u, seq); }, 500);
+  _unameTimer = setTimeout(function(){ unameCheckNow(u, seq); }, 320);   // snappier than before
 }
 async function unameCheckNow(u, seq){
   const base = (typeof cloudUrl==='function') ? cloudUrl() : '';
   if(!base || !navigator.onLine){ unameSetStatus('Letters, numbers and _ only · 3–20 characters',''); return; }
   try{
-    const ctrl = new AbortController(); const to = setTimeout(function(){ try{ctrl.abort();}catch(e){} }, 7000);
-    const r = await fetch(base + '/auth/username-available?u=' + encodeURIComponent(u), { signal: ctrl.signal });
+    const ctrl = new AbortController(); const to = setTimeout(function(){ try{ctrl.abort();}catch(e){} }, 12000);   // allow for a cold-start wake
+    const r = await fetch(base + '/auth/username-available?u=' + encodeURIComponent(u), { signal: ctrl.signal, cache:'no-store' });
     clearTimeout(to);
     const j = r.ok ? await r.json().catch(function(){ return null; }) : null;
     const cur = document.getElementById('acUser');
-    if(seq !== _unameSeq || !cur || cur.value !== u) return;   // superseded by newer keystroke
-    // Only trust an explicit boolean verdict. Anything else (endpoint not deployed → 404 {error},
-    // offline, malformed) degrades to the neutral hint and NEVER blocks — the app is local-first, so
-    // a missing cloud must not stop account creation or falsely cry "taken".
+    if(seq !== _unameSeq || !cur || cur.value !== u) return;   // superseded by a newer keystroke — drop this stale result
+    // Only trust an explicit boolean verdict. Anything else (endpoint not deployed → 404 {error}, offline,
+    // malformed) degrades to the neutral hint and NEVER blocks — the app is local-first, so a missing cloud
+    // must not stop account creation or falsely cry "taken".
     if(!j || typeof j.available !== 'boolean'){ _unameTaken=false; unameSetStatus('Letters, numbers and _ only · 3–20 characters',''); return; }
+    _unameCache[u.toLowerCase()] = j.available;   // remember the verdict → instant on re-type
     if(j.available){ _unameTaken=false; unameSetStatus('✓ Username available','ok'); }
-    else { _unameTaken=true; unameSetStatus('✗ Username already taken','bad'); }
+    else { _unameTaken=true; unameSetStatus('✗ Already taken — choose another','bad'); }
   }catch(e){ if(seq===_unameSeq) unameSetStatus('Letters, numbers and _ only · 3–20 characters',''); }
 }
 function apwfield(id,label,opts){
@@ -4855,7 +4870,8 @@ function showAuth(mode){
   box.innerHTML = '<div class="aform-body">' + html + '</div>';
   document.documentElement.classList.add('locked');   // auth pages are full-screen — the app stays hidden behind them
   document.getElementById('welcome').classList.add('open');
-  if (mode === 'create'){ setAcGender(S.gender || 'male'); ['acEmail','acPass','acPass2'].forEach(function(id){ const e = document.getElementById(id); if (e) e.addEventListener('input', acLive); }); }
+  if (mode === 'create'){ setAcGender(S.gender || 'male'); ['acEmail','acPass','acPass2'].forEach(function(id){ const e = document.getElementById(id); if (e) e.addEventListener('input', acLive); }); try{ unameWarm(); }catch(e){}   /* wake the backend early so the first username check is instant */
+    try{ const uu=document.getElementById('acUser'); if(uu) uu.addEventListener('focus', unameWarm, {once:true}); }catch(e){} }
   if (mode === 'lock'){ const lu = document.getElementById('lkUser'); if (lu){ lu.value = (S.account && S.account.username) || ''; } }
   if (mode === 'forgot'){ const fe = document.getElementById('feEmail'); if (fe && !fe.value){ fe.value = _feEmail || ''; } }   // don't pre-fill a real address — let the user enter their own (example shown as a hint)
   // a11y: land the keyboard on this screen's primary control so the focus-trap has an anchor and a keyboard/SR
