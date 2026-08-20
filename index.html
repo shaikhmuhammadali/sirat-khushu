@@ -4429,6 +4429,7 @@ function afterAuth(isNewSignup){
   if (S.greetSeen !== k){ S.greetSeen = k; save(); setTimeout(greetUser, 550); }
   else { renderGreetline(); }
   setTimeout(function(){ try{ maybeAskName(); }catch(e){} }, 1100);
+  if (!isNewSignup) setTimeout(function(){ try{ enforceRulesAcceptance(); }catch(e){} }, 1400);   // existing user just logged in → if the Rules changed since they accepted, require re-acceptance (or log out)
   if (_pendingPrompt){ const p = _pendingPrompt; _pendingPrompt = null; if (!todayLogs()[p.k]) setTimeout(() => p.lock ? openPrayerLock(p.k, p.e, p.tz) : showPrayerPrompt(p.k, p.e, p.tz), 500); }
   setTimeout(function(){ try{ if (_pendingPw) cloudPushPassword(); else if (S.cloud && S.cloud.pwPending){ delete S.cloud.pwPending; persistCloudMeta(); } cloudSyncNow(); }catch(e){} }, 4000);   // quiet mirror-to-cloud on open (no-op unless connected)
   // The guided tour is tied to the ACCOUNT, not the device: it runs ONLY at genuine account creation
@@ -4818,20 +4819,64 @@ function maskEmailC(em){ em=String(em||''); const at=em.indexOf('@'); if(at<1) r
 function rememberTog(on){ S.lockEachLaunch=!on; if(on) S.staySignedIn=true; try{ save(); }catch(e){} }
 function privacyNote(e){ showRules(e); }   // the "Terms & Privacy" link now opens the full Rules (Wifqan li-Khushu)
 // ── Wifqan li-Khushu — the Rules (the app's Terms & Conditions) ──────────────────────────────
-function showRules(e){
+// BUMP this whenever the Rules text is amended → every signed-in user is notified and must re-accept
+// the current Rules to continue (or log out). Stored per-user as S.rulesVer.
+const RULES_VERSION = 1;
+let _rulesMode='view';
+function showRules(e){ _rulesMode = document.getElementById('acTerms') ? 'accept' : 'view'; _openRules(e); }
+function showRulesReaccept(){ _rulesMode='reaccept'; _openRules(); }
+function _openRules(e){
   if(e&&e.preventDefault) e.preventDefault();
   const body=document.getElementById('rulesBody');
   if(body && !body.dataset.built){ body.innerHTML=rulesHTML(); body.dataset.built='1'; }
-  const showAccept = !!document.getElementById('acTerms');   // only offer the in-modal "I accept" during sign-up
-  const acc=document.getElementById('rulesAccept'); if(acc) acc.style.display = showAccept ? 'block' : 'none';
+  _renderRulesActions();
   try{ openModal('rulesModal'); }catch(_){}
   const sh=document.querySelector('#rulesModal .sheet'); if(sh) sh.scrollTop=0;
+  const x=document.querySelector('#rulesModal .modal-x'); if(x) x.style.display=(_rulesMode==='reaccept')?'none':'';   // a mandatory re-accept can't be silently dismissed
 }
-function acceptRulesFromModal(){
+function _renderRulesActions(){
+  const a=document.getElementById('rulesAccept'); if(!a) return;
+  if(_rulesMode==='reaccept'){
+    a.style.display='block';
+    a.innerHTML='<button class="btn wbtn" style="width:100%" onclick="acceptRulesUpdate()">I accept the updated Rules</button>'+
+                '<button class="btn ghost" style="width:100%;margin-top:8px" onclick="declineRulesUpdate()">Decline &amp; log out</button>';
+  } else if(_rulesMode==='accept'){
+    a.style.display='block';
+    a.innerHTML='<button class="btn wbtn" style="width:100%" onclick="acceptRulesFromModal()">I have read &amp; I accept the Rules</button>';
+  } else { a.style.display='none'; }   // view-only (from Settings)
+}
+function acceptRulesFromModal(){   // sign-up flow: tick the consent box + enable Sign up
   const c=document.getElementById('acTerms');
   if(c){ c.checked=true; const b=document.getElementById('acBtn'); if(b) b.disabled=false; }
   try{ closeModal('rulesModal'); }catch(_){}
   try{ toast('Rules accepted','Jazākumullāhu khayran — you may now create your account.','🤝'); }catch(_){}
+}
+function acceptRulesUpdate(){   // existing user re-accepting after a Rules change
+  S.rulesVer=RULES_VERSION; save();
+  try{ closeModal('rulesModal'); }catch(_){}
+  try{ toast('Thank you','You’ve accepted the current Rules of Sirat Khushu.','🤝'); }catch(_){}
+}
+function declineRulesUpdate(){   // declining → log out (they can log back in and accept anytime)
+  try{ closeModal('rulesModal'); }catch(_){}
+  try{ lockNow(); }catch(_){}
+  try{ toast('Signed out','Accept the current Rules to continue using Sirat Khushu.','🔒'); }catch(_){}
+}
+// The consent box can NEVER be ticked blindly: clicking it (to accept) opens the full Rules FIRST, and
+// only the modal's "I have read & I accept" actually ticks it. Un-ticking (withdrawing) is allowed directly.
+function termsCheckClick(cb){
+  if(cb.checked){ cb.checked=false; showRules(); }                                   // trying to accept → read first
+  else { const b=document.getElementById('acBtn'); if(b) b.disabled=true; }          // un-ticked → withdraw acceptance
+}
+// When the owner amends the Rules (RULES_VERSION bump), notify every signed-in user and require
+// re-acceptance — declining logs them out. Runs after the app is in view (never over the lock screen).
+function enforceRulesAcceptance(){
+  try{
+    if(!S.account) return;                                   // gate applies to signed-in accounts
+    if((S.rulesVer||0) >= RULES_VERSION) return;             // already accepted the current Rules
+    const w=document.getElementById('welcome'); if(w && w.classList.contains('open')) return;   // still on the lock/auth screen — wait until they're in
+    try{ toast('Please review the Rules','The Rules of Sirat Khushu apply to your account — review and accept them to continue.','📜'); }catch(_){}
+    setTimeout(function(){ try{ showRulesReaccept(); }catch(e){} }, 1000);   // let the app paint, then the mandatory gate
+  }catch(e){}
 }
 function rulesHTML(){
   const cov=(h,items)=>'<div><h5>'+h+'</h5><ul>'+items.map(x=>'<li>'+x+'</li>').join('')+'</ul></div>';
@@ -4913,7 +4958,7 @@ function rulesHTML(){
     '<div class="ar" dir="rtl" style="font-size:1.2rem;margin:4px 0 2px">زيشان راجا شيخ</div>'+
     '<p style="letter-spacing:.16em;font-size:.74rem;color:var(--au-dim,#8a94a6);text-transform:uppercase;margin:0">Zeeshan Raja Shaikh</p>'+
   '</div>'+
-  '<div id="rulesAccept" class="rules-actions"><button class="btn wbtn" style="width:100%" onclick="acceptRulesFromModal()">I have read &amp; I accept the Rules</button></div>';
+  '<div id="rulesAccept" class="rules-actions"></div>';   // filled by _renderRulesActions() per mode (accept / reaccept / view)
 }
 let _resendTimer=null;
 function startResend(){
@@ -4947,7 +4992,7 @@ function showAuth(mode){
       + `<div class="wgender"><button type="button" class="gchip" id="gMale" onclick="setAcGender('male')">Brother</button><button type="button" class="gchip" id="gFemale" onclick="setAcGender('female')">Sister</button></div>`
       + apwfield('acPass','Create a password',{meter:true})
       + apwfield('acPass2','Confirm password',{onenter:'createAccount()'})
-      + `<label class="aterms"><input type="checkbox" id="acTerms" onchange="var b=document.getElementById('acBtn');if(b)b.disabled=!this.checked"><span>I have read and accept the <span class="lk" onclick="showRules(event)"><b>Rules — Wifqan li-Khushu</b></span> (the Terms &amp; Privacy of Sirat Khushu).</span></label>`
+      + `<label class="aterms"><input type="checkbox" id="acTerms" onclick="termsCheckClick(this)"><span>I have read and accept the <span class="lk" onclick="showRules(event)"><b>Rules — Wifqan li-Khushu</b></span> (the Terms &amp; Privacy of Sirat Khushu). <em>Tap to read them first.</em></span></label>`
       + `<div class="autherr" id="acErr"></div>`
       + `<button class="btn wbtn" id="acBtn" onclick="createAccount()" disabled>Sign up</button>`
       + (AUTH_REQUIRED ? `` : `<button class="wlink" onclick="continueAsGuest()">Not now — continue without an account</button>`);
@@ -5045,6 +5090,7 @@ async function createAccount(){
   }
   if (!acct.passHash){ setBtnLoading(_btn, false); err.textContent = 'Could not secure the password on this device — please open over https:// and try again.'; return; }
   S.account = acct;
+  S.rulesVer = RULES_VERSION;   // they accepted the current Rules to create the account (the consent box required it)
   S.gender = _acGender; S.profile = {name:dn, since: todayKey() || ''}; S.lockEnabled = true; S.guestMode = false; S.staySignedIn = true;
   save(); sessionUnlock(); afterAuth(true); try{ renderLockControls(); }catch(e){}   // afterAuth(true): this is the ONE genuine new-account moment → the guided tour runs here (and only here). Notification prompt is deferred to endTour() so it lands AFTER the tour.
   // PRIVACY — cloud sync is OPT-IN. We deliberately do NOT auto-upload on sign-up: a new account stays
@@ -7880,6 +7926,7 @@ function boot(){
   try{ setTimeout(function(){ trackVisit(); }, 3000); }catch(e){}   // anonymous visit ping — no-op unless opted in
   try{ setTimeout(function(){ checkForUpdate(); }, 4200); }catch(e){}   // quietly show the "update available" banner if a newer build is live
   try{ setTimeout(function(){ enforceFreshness(); }, 5200); }catch(e){}   // "circular update": force a fresh re-pull at least every 3 months, even if nothing new shipped
+  try{ setTimeout(function(){ enforceRulesAcceptance(); }, 2200); }catch(e){}   // no-lock returning users: enforce Rules re-acceptance if the Rules changed (guarded off the lock screen)
   try{ setTimeout(function(){ if (S.push && S.push.on) syncPush(); }, 2500); document.addEventListener('visibilitychange', function(){ if (document.visibilityState!=='visible') return; try{ renderTick(); rollDaily('hadith'); rollDaily('ayah'); qadaReconcile(); renderAppFeatures(); renderReflection(); renderTopAyah(); maybeDailyHadith(); if (S.loc){ var _s = currentSet(); var _td = _s.today; lastDayKey = _td.y + '-' + _td.m + '-' + _td.d; lastPrayerKey = currentPrayerKey(prayerWindows(_s), Date.now()); } }catch(e){} try{ refreshLocation(); }catch(e){} if (S.push && S.push.on) syncPush(); }); }catch(e){}
   // Native Android splash: hide it now that the app has actually painted (config sets launchAutoHide:false),
   // with a 3s idempotent failsafe so a stalled boot can never strand the user on the splash.
