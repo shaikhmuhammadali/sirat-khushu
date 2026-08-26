@@ -345,6 +345,7 @@
   .srow{display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 0; border-bottom:1px solid var(--stroke)}
   .srow:last-child{border:none}
   .srow .lbl b{display:block; font-size:.9rem} .srow .lbl span{font-size:.74rem; color:var(--dim)}
+  .pill-on{flex:none; align-self:center; white-space:nowrap; font-size:.72rem; font-weight:800; letter-spacing:.05em; text-transform:uppercase; color:var(--gold-ink); background:var(--gold-soft); border:1px solid var(--stroke-gold); border-radius:999px; padding:5px 11px}
   select,input[type=number]{background:var(--bg2); border:1px solid var(--stroke); border-radius:12px; color:var(--text); font-family:var(--font); font-size:.84rem; padding:9px 12px; min-width:150px}
   .switch{position:relative; width:48px; height:27px; flex:none}
   .switch input{position:absolute; inset:-9px; width:auto; height:auto; opacity:0; margin:0; cursor:pointer; z-index:2}   /* slider visual unchanged; ~45px tall touch target */
@@ -1705,35 +1706,14 @@
          auto-requested after the guided tour (onboardNotifications), so no manual switch is needed. -->
   </div>
 
-  <div class="glass">
-    <h2 class="sec">Your practice</h2>
-    <!-- "Preview Ramadan mode" removed: the Ramadan super-mode now begins & ends AUTOMATICALLY on the real
-         Hijri date (ramadanActive() → Umm al-Qura month 9), so a manual preview toggle is no longer needed. -->
-    <div class="srow">
-      <div class="lbl"><b>Prayer-time prompt</b><span>A gentle full-screen reminder the moment each prayer enters</span></div>
-      <label class="switch"><input type="checkbox" id="setPrayerPopup" onchange="togglePrayerPopup()" aria-label="Prayer-time prompt"><span class="sl"></span></label>
-    </div>
-    <div class="srow">
-      <div class="lbl"><b>Preview the prompt</b><span>See how the prayer-time reminder looks</span></div>
-      <button class="btn ghost" onclick="previewPrayerPrompt()">Preview</button>
-    </div>
-    <div class="srow">
-      <div class="lbl"><b>Prayer Lock 🔒</b><span>At each prayer, a full-screen lock — azan, an ayah, and a focus timer — until you pray. (Locks within the app; a web app can&rsquo;t lock other phone apps.)</span></div>
-      <label class="switch"><input type="checkbox" id="setPrayerLock" onchange="togglePrayerLock()" aria-label="Prayer Lock"><span class="sl"></span></label>
-    </div>
-    <div class="srow" id="plMinsRow" style="display:none">
-      <div class="lbl"><b>Lock length</b><span>How long the focus timer runs</span></div>
-      <select id="setPlMins" onchange="setPlMins(this.value)" aria-label="Lock length"><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option></select>
-    </div>
-    <div class="srow">
-      <div class="lbl"><b>Preview the lock</b><span>See how the Prayer Lock looks</span></div>
-      <button class="btn ghost" onclick="previewPrayerLock()">Preview</button>
-    </div>
-    <!-- Hadith of the Day — background: the toggle was removed by request. It now runs ALWAYS, fully
-         automatic at full power (a morning notification + a floating card on Android, even while you're
-         in another app). Forced on at boot (ensureHadithAuto) and scheduled by the native bridge. -->
-    <!-- "Guided tour · Replay" removed: the tour runs AUTOMATICALLY on first launch. -->
-  </div>
+  <!-- "Your practice" card removed from Settings by request (v3.162). Everything in it now runs
+       AUTOMATICALLY at full power with no controls to manage:
+        • Prayer Lock — always on: the app locks into a full-screen focus (azan + ayah + focus timer)
+          the moment each prayer enters; ensurePrayerLockAuto() forces it on at boot (focus length pinned
+          at 15 min via S.prayerLockMins) and the native bridge arms the phone-wide lock. renderTick opens
+          it at every prayer regardless of any toggle.
+        • Daily Hadith background + the guided tour + Ramadan super-mode were already automatic.
+       (previewPrayerLock/setPlMins remain defined and callable; only the Settings UI was removed.) -->
 
   <div class="glass" id="reciterCard">
     <h2 class="sec">Qur&rsquo;an reciter</h2>
@@ -1862,6 +1842,7 @@ const DEFAULTS = {
   journal:[], bookmarks:[], duas:[], hadithSeen:[], hadithToday:null,
   taraweeh:{}, hadithPopSeen:null,
   hadithNotif:true, hadithOverlay:true, hadithHour:8, hadithMin:0,   // daily Hadith background: always-on at full power (no toggle) — also forced each boot by ensureHadithAuto()
+  prayerLock:true, prayerLockMins:15,   // Prayer Lock: always-on automatic focus-lock at every prayer (no toggle) — also forced each boot by ensurePrayerLockAuto()
   profile:null, nameAsked:0, xp:0, achievements:[], questClaim:null, dhikrDay:null, greetSeen:null,
   remind:true, notifPre:0, notifPost:0, soundName:'bell', vol:1, vibrate:true,
   quiet:false, quietFrom:22, quietTo:6, hadithPopup:true, progressToasts:true, loveEvery:45,
@@ -2598,9 +2579,11 @@ function handleNotifications(win, now, tz){
         if (!todayLogs()[w.k]){
           buzz([40,60,80]);
           osNotify(w.k, 'It is time for ' + w.k + ' — ' + fmtT(w.e, tz));
-          if (S.prayerLock){ if (document.documentElement.classList.contains('locked')) _pendingPrompt = {k:w.k, e:w.e, tz, lock:true}; else openPrayerLock(w.k, w.e, tz); }
-          else if (S.prayerPopup !== false){ chime(); if (document.documentElement.classList.contains('locked')) _pendingPrompt = {k:w.k, e:w.e, tz}; else showPrayerPrompt(w.k, w.e, tz); }
-          else { toast('It is time for ' + w.k, 'Protect this moment · ' + fmtT(w.e, tz), '🕌', true); }
+          // Prayer Lock is AUTOMATIC (always on): the moment a prayer enters, the app locks into a
+          // full-screen focus — azan, an ayah and a focus timer — until you pray. If the app is on the
+          // login/lock screen right now, defer it and open the moment the user is back in (afterAuth).
+          if (document.documentElement.classList.contains('locked')) _pendingPrompt = {k:w.k, e:w.e, tz, lock:true};
+          else openPrayerLock(w.k, w.e, tz);
         }
       }
     }
@@ -2730,9 +2713,16 @@ const SOUNDFX = {
   nightingale:{ label:'Nightingale 🌙', build:function(c,m,n,v){ _birds(c,m,n,v,'nightingale'); } },
   dawn:{ label:'Dawn chorus 🌅', build:function(c,m,n,v){ _birds(c,m,n,v,'dawn'); } }
 };
+// The current wall-clock hour (0–23) in the SAVED LOCATION's timezone — so time-of-day decisions
+// (quiet hours, the morning/evening adhkar default) use the same clock as the prayer times, not the
+// device clock. Falls back to the device hour only when no location is set.
+function locHour(){
+  try{ const tz = S.loc && S.loc.tz; if (tz && isValidTz(tz)){ const p = tzPartsFmt(tz).formatToParts(new Date()); const h = p.find(x => x.type==='hour'); if (h) return Number(h.value); } }catch(e){}
+  return new Date().getHours();
+}
 function inQuietHours(){
   if (!S.quiet) return false;
-  const hr = new Date().getHours(), f = (S.quietFrom==null?22:S.quietFrom), t = (S.quietTo==null?6:S.quietTo);
+  const hr = locHour(), f = (S.quietFrom==null?22:S.quietFrom), t = (S.quietTo==null?6:S.quietTo);   // quiet window follows the location's clock, not the device's
   if (f === t) return false;
   return f < t ? (hr >= f && hr < t) : (hr >= f || hr < t);
 }
@@ -2840,7 +2830,8 @@ function pickNudge(){
   }
   if (r < 0.52){ const pn = prayerNudge(); if (pn) return pn; }
   let pool = LOVE;
-  if (new Date().getDay() === 5) pool = LOVE.filter(x => /Salawat|Durood/i.test(x.t)).concat(LOVE);  // Jumuʿah favours salawat
+  let isFri; try{ const c = currentSet().today; isFri = new Date(Date.UTC(c.y, c.m-1, c.d)).getUTCDay() === 5; }catch(e){ isFri = new Date().getDay() === 5; }   // Friday at the LOCATION, not the device
+  if (isFri) pool = LOVE.filter(x => /Salawat|Durood/i.test(x.t)).concat(LOVE);  // Jumuʿah favours salawat
   return pool[Math.floor(Math.random() * pool.length)];
 }
 function countLove(el){
@@ -3109,7 +3100,7 @@ function renderAdhkar(){
   const el = document.getElementById('adhkarCard'); if (!el) return;
   const dk = todayKey() || 'x';
   if (!S.adhkarCount || S.adhkarCount.date !== dk) S.adhkarCount = {date: dk};
-  if (!adhkarTab) adhkarTab = (new Date().getHours() < 15 ? 'morning' : 'evening');
+  if (!adhkarTab) adhkarTab = (locHour() < 15 ? 'morning' : 'evening');   // default tab by the location's time of day, matching the location-day count reset above
   el.className = 'glass';
   const TABS = [['morning','Morning'],['evening','Evening'],['prayer','After prayer'],['sleep','Before sleep'],['anytime','Anytime']];
   const inTab = (a) => adhkarTab==='morning' ? (a.cat==='morning'||a.cat==='both') : (adhkarTab==='evening' ? (a.cat==='evening'||a.cat==='both') : a.cat===adhkarTab);
@@ -3682,7 +3673,7 @@ function clearRecitingAyah(){
 }
 function stopReciteAudio(){
   _qaSeq++;
-  if (_qa){ try{ _qa.pause(); }catch(e){} _qa.onended = _qa.onerror = null; _qa = null; }
+  if (_qa){ try{ _qa.pause(); }catch(e){} _qa.onended = _qa.onerror = _qa.ontimeupdate = null; _qa = null; }   // _qaSeq bump already disarms every element's advance/lead-in; clearing listeners is belt-and-suspenders
   try{ _stopVoices(); }catch(e){}                 // a starting/stopping recitation also silences any short greeting clip, so the two never overlap
   if ('speechSynthesis' in window){ try{ speechSynthesis.cancel(); }catch(e){} }
   document.querySelectorAll('.recitebtn.playing').forEach(b => b.classList.remove('playing'));
@@ -3709,6 +3700,14 @@ function reciteAyah(surah, ayah, g, btn){
   a.onended = () => { if (seq === _qaSeq){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); stopReciteScroll(); } };
   a.playFallback(() => { if (seq === _qaSeq){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); stopReciteScroll(); reciteOfflineNotice(btn); } });
 }
+// Quick volume fade-out (then pause) of the OUTGOING ayah element during a gapless hand-off, so the
+// two ayahs cross-fade over ~160ms instead of one cutting to silence before the next starts.
+function _qCrossfade(outEl, ms){
+  try{
+    var steps = 8, k = steps, dt = Math.max(12, ms / steps);
+    var t = setInterval(function(){ k--; try{ outEl.volume = Math.max(0, k / steps); }catch(e){} if (k <= 0){ clearInterval(t); try{ outEl.pause(); }catch(e){} } }, dt);
+  }catch(e){}
+}
 function reciteSurahAudio(surah, count, firstG, btn){
   const wasThis = btn && btn.classList.contains('playing');
   stopReciteAudio();
@@ -3734,9 +3733,19 @@ function reciteSurahAudio(surah, count, firstG, btn){
     if (i >= items.length || !cur){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); stopReciteScroll(); return; }
     _qa = cur;
     const _an = hasBism ? i : i + 1; if (_an >= 1) setRecitingAyah(surah, _an, cur); else clearRecitingAyah();
-    const advance = () => { if (seq !== _qaSeq) return; i++; cur = nxt; nxt = (i + 1 < items.length) ? mk(i + 1) : null; if (nxt) nxt.warm(); play(); };
-    cur.onended = advance;
-    cur.playFallback(advance);                      // every source failed for this ayah → skip to next
+    const outgoing = cur, hasNext = !!nxt; let advanced = false;
+    const advance = (fade) => {
+      if (advanced || seq !== _qaSeq) return; advanced = true;
+      const leaving = outgoing;
+      i++; cur = nxt; nxt = (i + 1 < items.length) ? mk(i + 1) : null; if (nxt) nxt.warm();
+      play();                                       // promote + start the next ayah
+      if (fade) _qCrossfade(leaving, 170); else { try{ leaving.pause(); }catch(e){} }
+    };
+    outgoing.onended = () => advance(false);
+    // GAPLESS: hand off ~160ms before this ayah ends, cross-fading under its trailing reverb, so the
+    // Qari's voice flows on with no silent break. Skipped for very short ayahs and the final ayah.
+    outgoing.ontimeupdate = () => { if (!hasNext) return; const d = outgoing.duration; if (d && isFinite(d) && d > 0.7 && outgoing.currentTime >= d - 0.16) advance(true); };
+    outgoing.playFallback(() => advance(false));    // every source failed for this ayah → skip to next
   })();
 }
 function recitePassage(surah, fromAyah, count, firstG, btn){
@@ -3756,9 +3765,17 @@ function recitePassage(surah, fromAyah, count, firstG, btn){
     if (i >= count || !cur){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); stopReciteScroll(); return; }
     _qa = cur;
     setRecitingAyah(surah, fromAyah + i, cur);
-    const advance = () => { if (seq !== _qaSeq) return; i++; cur = nxt; nxt = (i + 1 < count) ? mk(i + 1) : null; if (nxt) nxt.warm(); play(); };
-    cur.onended = advance;
-    cur.playFallback(advance);                      // every source failed for this ayah → skip to next
+    const outgoing = cur, hasNext = !!nxt; let advanced = false;
+    const advance = (fade) => {
+      if (advanced || seq !== _qaSeq) return; advanced = true;
+      const leaving = outgoing;
+      i++; cur = nxt; nxt = (i + 1 < count) ? mk(i + 1) : null; if (nxt) nxt.warm();
+      play();                                       // promote + start the next ayah
+      if (fade) _qCrossfade(leaving, 170); else { try{ leaving.pause(); }catch(e){} }
+    };
+    outgoing.onended = () => advance(false);
+    outgoing.ontimeupdate = () => { if (!hasNext) return; const d = outgoing.duration; if (d && isFinite(d) && d > 0.7 && outgoing.currentTime >= d - 0.16) advance(true); };   // gapless cross-fade hand-off
+    outgoing.playFallback(() => advance(false));    // every source failed for this ayah → skip to next
   })();
 }
 const SAJDA = {'7:206':'obligatory','13:15':'recommended','16:50':'recommended','17:109':'recommended','19:58':'recommended','22:18':'recommended','25:60':'recommended','27:26':'recommended','32:15':'obligatory','38:24':'recommended','41:38':'obligatory','53:62':'obligatory','84:21':'recommended','96:19':'obligatory'};
@@ -6145,6 +6162,15 @@ function ensureHadithAuto(){
   try{ save(); }catch(e){}
   try{ if (window.SKNative && window.SKNative.pushHadith) window.SKNative.pushHadith(); }catch(e){}
 }
+function ensurePrayerLockAuto(){
+  // Prayer Lock is now ALWAYS ON (the on/off toggle was removed by request). The app automatically
+  // locks into a full-screen focus — azan, an ayah and a focus timer — the moment each prayer enters
+  // (renderTick), and on the Android app the native lock covers the whole phone. Here we force the flag
+  // on and arm the native schedule; native-bridge.js re-pushes on init, hourly and on resume.
+  S.prayerLock = true; if (S.prayerLockMins == null) S.prayerLockMins = 15;
+  try{ save(); }catch(e){}
+  try{ if (window.SKNative && window.SKNative.pushSchedule) window.SKNative.pushSchedule(); }catch(e){}
+}
 
 // [removed] toggleRamadanPreview — Ramadan super-mode is now purely Hijri-automatic (ramadanActive); no manual preview toggle exists.
 
@@ -6167,7 +6193,7 @@ const QADA_SVG = {
 // QADA_AYAT — tagged view of VERSES (see master library above).
 let _qadaBumpOnce = false;
 let _qadaLastPct = 0;   // remembered so the progress bar glides from its previous value, never a jarring reset
-function qadaAyahToday(){ try{ var d=new Date(); var i=(d.getFullYear()*372 + d.getMonth()*31 + d.getDate()) % QADA_AYAT.length; return QADA_AYAT[i]; }catch(e){ return QADA_AYAT[0]; } }
+function qadaAyahToday(){ try{ var c=currentSet().today; var i=(c.y*372 + (c.m-1)*31 + c.d) % QADA_AYAT.length; return QADA_AYAT[i]; }catch(e){ return QADA_AYAT[0]; } }   // rotate on the LOCATION's civil day (same boundary as the streak/qada), not the device's
 function qadaAyahHTML(){ var a=qadaAyahToday(); return '<div class="qverse"><div class="qverse-ar" lang="ar" dir="rtl">'+a.ar+'</div><div class="qverse-tr">'+esc(a.tr)+'</div><span class="badge ref qverse-ref">'+esc(a.ref)+'</span></div>'; }
 
 function qadaInit(){
@@ -7654,6 +7680,7 @@ function boot(){
   try{ console.log('%c◈ Sirat Khushu', 'color:#d9b45b;font-size:15px;font-weight:800;'); console.log('%c© All rights reserved — proprietary code. Only the owner may modify or redistribute this app; unauthorized modification is prohibited. If anyone asked you to paste code here, it is a scam — do not.', 'color:#8a94a6;font-size:12px;'); }catch(e){}
   if (S.soundMigrated !== true){ S.chime = true; S.soundMigrated = true; save(); }
   try{ ensureHadithAuto(); }catch(e){}   // daily Hadith background is always-on at full power (no toggle) — force the flags + let native schedule it
+  try{ ensurePrayerLockAuto(); }catch(e){}   // Prayer Lock is always-on: the app auto-locks into focus at every prayer time; native covers the whole phone
   try{ initSettings(); renderStatic(); }
   catch(e){
     console.warn('Sirat Khushu: recovering from bad state —', e);
