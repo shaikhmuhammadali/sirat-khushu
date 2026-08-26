@@ -1624,8 +1624,8 @@
         <b id="tdHijriYear">—</b><span>Hijri year</span></div>
     </div>
     <div class="igrid" style="margin-top:12px">
-      <div class="ig" title="Today’s day of the week (Friday is Jumuʿah)">
-        <b id="tdWeekday">—</b><span>Day of week</span></div>
+      <div class="ig" title="Which day of the Gregorian year this is (1–365, or 366 in a leap year)">
+        <b id="tdDoy">—</b><span>Day of year</span></div>
       <div class="ig" title="Time remaining until the next prayer or night-worship window (Tahajjud is in the last third of the night)">
         <b id="tdNextMs">—</b><span id="tdNextMsLbl">Next milestone</span></div>
       <div class="ig" title="The Islamic day begins at Maghrib (sunset), not midnight — so after sunset the date has already moved to the next day">
@@ -2475,21 +2475,20 @@ function renderTimeDetails(set, now, tz){
   // Purpose-built for a worshipper — the live Islamic day (Maghrib-aware), not developer calendar math.
   const hLive = hijriTodayLive(now);
   const pm = pastMaghribNow(now);
-  let wd = ''; try{ wd = new Intl.DateTimeFormat('en', {timeZone:tz, weekday:'long'}).format(new Date(now)); }catch(e){}
-  const wdShow = (wd === 'Friday') ? 'Jumuʿah' : wd;
+  const doyShow = dayOfYear(set.today) + ' / ' + (isLeap(set.today.y) ? 366 : 365);
   const g = id => document.getElementById(id);
   const E = set.t0.E, E1 = set.t1 ? set.t1.E : null, Ey = set.y0 ? set.y0.E : null;
   // which "night" are we in? before today's Fajr → last night's; otherwise tonight's.
   const preFajr = (E.fajr != null && now < E.fajr);
   const phase = preFajr ? 'n' : (pm ? 'e' : 'd');
-  // day-scoped fields — rewritten only when the Islamic day / weekday / night-phase changes
-  const sig = [hLive.d, hLive.m, hLive.y, wdShow, phase].join('|');
+  // day-scoped fields — rewritten only when the Islamic day / day-of-year / night-phase changes
+  const sig = [hLive.d, hLive.m, hLive.y, doyShow, phase].join('|');
   if (sig !== _tdSig){
     _tdSig = sig;
     if (g('tdHijriDay'))   g('tdHijriDay').textContent   = hLive.d || '—';
     if (g('tdHijriMonth')) g('tdHijriMonth').textContent = HIJRI_MONTHS[hLive.m-1] || '—';
     if (g('tdHijriYear'))  g('tdHijriYear').textContent  = hLive.y ? (hLive.y + ' AH') : '—';
-    if (g('tdWeekday'))    g('tdWeekday').textContent    = wdShow || '—';
+    if (g('tdDoy'))        g('tdDoy').textContent         = doyShow;
     if (g('tdDayBegins'))  g('tdDayBegins').textContent  = fmtT(E.maghrib, tz);
     // Tahajjud window = the last third of the current/upcoming night → Fajr (the prime time for duʿaʾ)
     let mg = null, fj = null;
