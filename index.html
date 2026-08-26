@@ -1921,7 +1921,7 @@ const METHODS = {
   Egypt:     {label:'Egyptian General Authority',         fajr:19.5, isha:{angle:17.5}},
   Makkah:    {label:'Umm al-Qura — Makkah',               fajr:18.5, isha:{mins:90}, ramadanMins:120},
   Karachi:   {label:'Univ. of Islamic Sciences, Karachi', fajr:18,   isha:{angle:18}},
-  Tehran:    {label:'Iran — Inst. of Geophysics, Tehran', fajr:17.7, isha:{angle:14}},
+  Tehran:    {label:'Iran — Inst. of Geophysics, Tehran', fajr:17.7, isha:{angle:14}, maghribAngle:4.5},
   India:     {label:'India \u2014 Univ. of Islamic Sciences (18\u00b0/18\u00b0)', fajr:18,   isha:{angle:18}},
   Kuwait:    {label:'Kuwait',                             fajr:18,   isha:{angle:17.5}},
   Qatar:     {label:'Qatar',                              fajr:18,   isha:{mins:90}},
@@ -2045,13 +2045,18 @@ function computeDay(civil, loc, opts){
   const base = Date.UTC(civil.y, civil.m-1, civil.d);
   const toEpoch = h => isNaN(h) ? null : Math.round(base + (h - lng/15)*3600000);
   const maghribOff = (raw.maghribMins || 0)/60;
+  // Maghrib: some conventions (Iran / Shia) define it by a small depression angle (~4.5°) rather than
+  // plain sunset, so the eastern redness has faded; fall back to sunset + pad if the angle can't resolve.
+  let maghH;
+  if (raw.maghribAngle){ maghH = angleTime(raw.maghribAngle, t.sunset, false); if (isNaN(maghH)) maghH = isNaN(t.sunset) ? NaN : t.sunset + Math.max(1/60, maghribOff); }
+  else maghH = isNaN(t.sunset) ? NaN : t.sunset + Math.max(1/60, maghribOff);
   const E = {
     fajr:    toEpoch(t.fajr),
     sunrise: toEpoch(t.sunrise),
     dhuhr:   toEpoch(t.dhuhr + 1/60),
     asr:     toEpoch(t.asr),
     sunset:  toEpoch(t.sunset),
-    maghrib: toEpoch(isNaN(t.sunset) ? NaN : t.sunset + Math.max(1/60, maghribOff)),
+    maghrib: toEpoch(maghH),
     isha:    toEpoch(t.isha)
   };
   if (raw.isha && raw.isha.mins && E.maghrib){
@@ -2108,45 +2113,76 @@ function distanceToMakkahKm(lat, lng){
 const COMPASS16 = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
 function cardinal(b){ return COMPASS16[Math.round((((b%360)+360)%360)/22.5)%16]; }
 
-/* ── moon phase (synodic estimate) ── */
+/* ── moon — true phase & syzygy via Meeus "Astronomical Algorithms" (Ch.48 illumination, Ch.49 phases).
+   Replaces the old mean-synodic estimate: new/full-moon times are now accurate to ~1–2 min (were up to
+   ~16 h off — a whole calendar day), and illumination is the true value (was up to ~5 pp off near quarters). */
+function _moonPhaseJDE(k){   // time of New Moon (integer k) or Full Moon (k+0.5), as Unix ms (UTC)
+  const T = k/1236.85, T2=T*T, T3=T2*T, T4=T3*T;
+  let JDE = 2451550.09766 + 29.530588861*k + 0.00015437*T2 - 0.000000150*T3 + 0.00000000073*T4;
+  const E  = 1 - 0.002516*T - 0.0000074*T2;
+  const M  = rad(fixAngle(2.5534   +  29.10535670*k - 0.0000014*T2 - 0.00000011*T3));
+  const Mp = rad(fixAngle(201.5643 + 385.81693528*k + 0.0107582*T2 + 0.00001238*T3 - 0.000000058*T4));
+  const F  = rad(fixAngle(160.7108 + 390.67050284*k - 0.0016118*T2 - 0.00000227*T3 + 0.000000011*T4));
+  const Om = rad(fixAngle(124.7746 -   1.56375588*k + 0.0020672*T2 + 0.00000215*T3));
+  const s = Math.sin;
+  const c = -0.40720*s(Mp) + 0.17241*E*s(M) + 0.01608*s(2*Mp) + 0.01039*s(2*F)
+    + 0.00739*E*s(Mp-M) - 0.00514*E*s(Mp+M) + 0.00208*E*E*s(2*M) - 0.00111*s(Mp-2*F)
+    - 0.00057*s(Mp+2*F) + 0.00056*E*s(2*Mp+M) - 0.00042*s(3*Mp) + 0.00042*E*s(M+2*F)
+    + 0.00038*E*s(M-2*F) - 0.00024*E*s(2*Mp-M) - 0.00017*s(Om) - 0.00007*s(Mp+2*M)
+    + 0.00004*s(2*Mp-2*F) + 0.00004*s(3*M) + 0.00003*s(Mp+M-2*F) + 0.00003*s(2*Mp+2*F)
+    - 0.00003*s(Mp+M+2*F) + 0.00003*s(Mp-M+2*F) - 0.00002*s(Mp-M-2*F) - 0.00002*s(3*Mp+M) + 0.00002*s(4*Mp);
+  JDE += c;
+  return (JDE - 69/86400 - 2440587.5)*86400000;   // JDE(TDT) → Unix ms (UTC), ΔT ≈ 69 s for this era
+}
+function _kFor(nowMs){ return (nowMs - Date.UTC(2000,0,1))/(365.25*86400000)*12.3685; }
 function moonPhase(date){
+  const nowMs = date.getTime();
+  // illuminated fraction from the TRUE phase angle i (Meeus 48.4)
+  const T = (nowMs/86400000 + 2440587.5 - 2451545.0)/36525, T2=T*T, T3=T2*T, T4=T3*T;
+  const D  = fixAngle(297.8501921 + 445267.1114034*T - 0.0018819*T2 + T3/545868 - T4/113065000);
+  const M  = fixAngle(357.5291092 +  35999.0502909*T - 0.0001536*T2 + T3/24490000);
+  const Mp = fixAngle(134.9633964 + 477198.8675055*T + 0.0087414*T2 + T3/69699 - T4/14712000);
+  const i = 180 - D - 6.289*Math.sin(rad(Mp)) + 2.100*Math.sin(rad(M)) - 1.274*Math.sin(rad(2*D-Mp))
+          - 0.658*Math.sin(rad(2*D)) - 0.214*Math.sin(rad(2*Mp)) - 0.110*Math.sin(rad(D));
+  const illum = (1 + Math.cos(rad(i)))/2;
+  // age = elapsed time since the TRUE previous new moon
+  const k0 = Math.floor(_kFor(nowMs));
+  let prevNM = null;
+  for (let k=k0+2; k>=k0-2; k--){ const t=_moonPhaseJDE(k); if (t<=nowMs){ prevNM=t; break; } }
   const synodic = 29.530588853;
-  const ref = Date.UTC(2000, 0, 6, 18, 14);          // known new moon
-  let age = ((date.getTime() - ref)/86400000) % synodic;
-  if (age < 0) age += synodic;
-  const frac = age/synodic;
-  const illum = (1 - Math.cos(2*Math.PI*frac))/2;
+  let age = prevNM!=null ? (nowMs-prevNM)/86400000 : (((nowMs-Date.UTC(2000,0,6,18,14))/86400000)%synodic+synodic)%synodic;
+  const frac = ((age/synodic)%1+1)%1;
+  const waxing = frac <= 0.5;
   const names = ['New moon','Waxing crescent','First quarter','Waxing gibbous','Full moon','Waning gibbous','Last quarter','Waning crescent'];
   const idx = Math.floor((frac + 1/16) % 1 * 8) % 8;
-  return {age, illum, frac, name:names[idx]};
+  return {age, illum, frac, name:names[idx], waxing};
 }
 function moonPredict(nowMs){
-  const synodic = 29.530588853*86400000, ref = Date.UTC(2000,0,6,18,14);
-  let k = Math.ceil((nowMs - ref)/synodic), nm = ref + k*synodic;
-  if (nm - nowMs < 43200000) nm += synodic;
-  let fm = nm - synodic/2; if (fm - nowMs < 43200000) fm = nm + synodic/2;
+  const k0 = Math.floor(_kFor(nowMs));
+  let nm=null, fm=null;
+  for (let k=k0-1; k<=k0+2; k++){ const t=_moonPhaseJDE(k);     if (t>nowMs && (nm===null||t<nm)) nm=t; }
+  for (let k=k0-1; k<=k0+2; k++){ const t=_moonPhaseJDE(k+0.5); if (t>nowMs && (fm===null||t<fm)) fm=t; }
   return { newMoon: nm, fullMoon: fm };
 }
-function moonPathD(R, frac){
-  const illum = (1 - Math.cos(2*Math.PI*frac))/2;
+function moonPathD(R, illum, waxing){
   const rx = R * Math.cos(Math.PI * illum);
-  const waxing = frac <= 0.5, cx = 48, cy = 48;
+  const cx = 48, cy = 48;
   const limbSweep = waxing ? 1 : 0;
   const termSweep = (rx >= 0) ? (waxing ? 0 : 1) : (waxing ? 1 : 0);
   return 'M '+cx+' '+(cy-R)+' A '+R+' '+R+' 0 0 '+limbSweep+' '+cx+' '+(cy+R)
        + ' A '+Math.abs(rx).toFixed(2)+' '+R+' 0 0 '+termSweep+' '+cx+' '+(cy-R)+' Z';
 }
 let _moonAnimDone = false;
-function drawMoon(frac){
+function drawMoon(illum, waxing){
   const p = document.getElementById('moonLit'); if (!p) return;
   const R = 44;
   const reduce = fastOn();
-  if (_moonAnimDone || reduce || typeof requestAnimationFrame !== 'function'){ p.setAttribute('d', moonPathD(R, frac)); _moonAnimDone = true; return; }
+  if (_moonAnimDone || reduce || typeof requestAnimationFrame !== 'function'){ p.setAttribute('d', moonPathD(R, illum, waxing)); _moonAnimDone = true; return; }
   _moonAnimDone = true;
   const start = (performance && performance.now) ? performance.now() : 0, dur = 1300;
   (function step(t){
     let k = Math.min(1, ((t||0) - start)/dur); const e = 1 - Math.pow(1-k, 3);
-    p.setAttribute('d', moonPathD(R, frac*e));
+    p.setAttribute('d', moonPathD(R, illum*e, waxing));
     if (k < 1) requestAnimationFrame(step);
   })(start);
 }
@@ -2383,7 +2419,7 @@ function renderSunNight(set, now, tz){
   document.getElementById('moonName').textContent = mp.name;
   document.getElementById('moonIllum').textContent = Math.round(mp.illum*100) + '%';
   document.getElementById('moonAge').textContent = mp.age.toFixed(1);
-  drawMoon(mp.frac);
+  drawMoon(mp.illum, mp.waxing);
   try{
     const mpr = moonPredict(now);
     const mfmt = (t) => new Intl.DateTimeFormat('en-GB', {timeZone:tz, weekday:'short', day:'numeric', month:'short'}).format(new Date(t));
@@ -7591,7 +7627,7 @@ function enableCompass(auto){
   const handler = e => {
     let h = null, absolute = false;
     if (e.webkitCompassHeading != null && !isNaN(e.webkitCompassHeading)){ h = e.webkitCompassHeading; absolute = true; }   // iOS: degrees clockwise from TRUE north
-    else if (e.alpha != null && (e.type === 'deviceorientationabsolute' || e.absolute === true)){ h = 360 - e.alpha; absolute = true; }  // TRUE-north: the ABSOLUTE event, or e.absolute===true (magnetometer-referenced)
+    else if (e.alpha != null && (e.type === 'deviceorientationabsolute' || e.absolute === true)){ h = 360 - e.alpha; absolute = true; }  // Android absolute orientation — magnetometer-referenced. NOTE: Chromium reports this relative to MAGNETIC north (no WMM applied), so the live needle can differ from true north by the local magnetic declination (near-zero across the Gulf / South Asia / UK core audience; up to ~13–15° in the Americas). The exact qibla BEARING + the North-up dial are GPS-derived TRUE bearings and remain authoritative; the iOS webkitCompassHeading branch above is already true-north.
     else if (e.alpha != null){ h = 360 - e.alpha; absolute = false; }             // plain 'deviceorientation' on a gyro Android is RELATIVE — alpha=0 is an arbitrary start, NOT north. Do NOT drive the needle; keep the correct static dial. (A live-but-WRONG qibla is worse than a correct static one.)
     if (h == null || !S.loc) return;
     window._compassGotEvent = true; clearTimeout(window._compassTimer);                                                     // a real reading arrived → cancel the "no sensor" fallback
@@ -7714,6 +7750,20 @@ function runTests(){
 
   const mp = moonPhase(new Date(Date.UTC(2000,0,6,18,14)));
   T('Moon age ≈ 0 at reference new moon', mp.age < 0.2 || mp.age > 29.4, mp.age.toFixed(2));
+  { const _nm = moonPredict(Date.UTC(2025,8,15)); T('Moon: next new moon after 2025-09-15 ≈ 2025-09-21 19:54Z (±10 min)', near(_nm.newMoon, Date.UTC(2025,8,21,19,54), 10*60000), new Date(_nm.newMoon).toISOString().slice(0,16)+'Z'); }
+  { const _fm = moonPredict(Date.UTC(2025,0,5)); T('Moon: next full moon after 2025-01-05 ≈ 2025-01-13 22:27Z (±10 min)', near(_fm.fullMoon, Date.UTC(2025,0,13,22,27), 10*60000), new Date(_fm.fullMoon).toISOString().slice(0,16)+'Z'); }
+
+  // ── Hijri (Umm al-Qura) correctness & the DST-safe adj shift ──
+  T('Hijri Umm al-Qura map: 2026-08-26 = 13 Rabiʿ al-Awwal 1448', (h=>h.d===13&&h.m===3&&h.y===1448)(hijriPartsAt(Date.UTC(2026,7,26)+12*3600000,'UTC',0)));
+  T('calHijri agrees with hijriPartsAt (adj 0)', (a=>{const b=hijriPartsAt(Date.UTC(2026,7,26)+12*3600000,'UTC',0); return a.d===b.d&&a.m===b.m&&a.y===b.y;})(calHijri(2026,8,26)));
+  { const _t=Date.UTC(2026,7,15)+12*3600000, _a=hijriPartsAt(_t,'UTC',0), _b=hijriPartsAt(_t,'UTC',1); T('Hijri adj +1 shifts exactly one civil day', (_b.d-_a.d===1)||(_b.d===1&&_a.d>=29)); }
+
+  // ── Iran/Tehran Maghrib depression angle (4.5°), and it must NOT affect other methods ──
+  { const _te=computeDay({y:2026,m:7,d:2},{lat:35.6892,lng:51.389,tz:'Asia/Tehran',elev:0},Object.assign({method:'Tehran',asr:'Standard'},base));
+    T('Iran/Tehran Maghrib ≈ sunset + 21 min (4.5° angle)', near((_te.E.maghrib-_te.E.sunset)/60000, 21, 4), ((_te.E.maghrib-_te.E.sunset)/60000).toFixed(1)+' min');
+    const _mw=computeDay({y:2026,m:7,d:2},{lat:35.6892,lng:51.389,tz:'Asia/Tehran',elev:0},Object.assign({method:'MWL',asr:'Standard'},base));
+    T('Non-Iran Maghrib stays ≈ sunset (≤ 2 min pad)', (_mw.E.maghrib-_mw.E.sunset)/60000 <= 2); }
+
   T('Events list resolves ≥ 3 upcoming', computeEvents({y:2026,m:7,d:2}, 'Asia/Kolkata', Date.UTC(2026,6,2)).length >= 3);
 
   const el = document.getElementById('testout');
@@ -7839,7 +7889,7 @@ function boot(){
   try{ setTimeout(function(){ checkForUpdate(); }, 4200); }catch(e){}   // quietly show the "update available" banner if a newer build is live
   try{ setTimeout(function(){ enforceFreshness(); }, 5200); }catch(e){}   // "circular update": force a fresh re-pull at least every 3 months, even if nothing new shipped
   try{ setTimeout(function(){ enforceRulesAcceptance(); }, 2200); }catch(e){}   // no-lock returning users: enforce Rules re-acceptance if the Rules changed (guarded off the lock screen)
-  try{ setTimeout(function(){ if (S.push && S.push.on) syncPush(); }, 2500); document.addEventListener('visibilitychange', function(){ if (document.visibilityState!=='visible') return; try{ renderTick(); rollDaily('hadith'); rollDaily('ayah'); qadaReconcile(); renderAppFeatures(); renderReflection(); renderTopAyah(); maybeDailyHadith(); if (S.loc){ var _s = currentSet(); var _td = _s.today; lastDayKey = _td.y + '-' + _td.m + '-' + _td.d; lastPrayerKey = currentPrayerKey(prayerWindows(_s), Date.now()); } }catch(e){} try{ refreshLocation(); }catch(e){} if (S.push && S.push.on) syncPush(); }); }catch(e){}
+  try{ setTimeout(function(){ if (S.push && S.push.on) syncPush(); }, 2500); document.addEventListener('visibilitychange', function(){ if (document.visibilityState!=='visible') return; try{ renderTick(); if (S.loc){ var _s = currentSet(); var _td = _s.today; var _dk = _td.y + '-' + _td.m + '-' + _td.d; if (lastDayKey && _dk !== lastDayKey){ rollDaily('hadith'); rollDaily('ayah'); qadaReconcile(); maybeDailyHadith(); }   /* advance the daily picks ONLY on a real new civil day — not on every foreground */ lastDayKey = _dk; lastPrayerKey = currentPrayerKey(prayerWindows(_s), Date.now()); } renderAppFeatures(); renderReflection(); renderTopAyah(); }catch(e){} try{ refreshLocation(); }catch(e){} if (S.push && S.push.on) syncPush(); }); }catch(e){}
   // Native Android splash: hide it now that the app has actually painted (config sets launchAutoHide:false),
   // with a 3s idempotent failsafe so a stalled boot can never strand the user on the splash.
   try { var _SS = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SplashScreen; if (_SS) { _SS.hide({ fadeOutDuration: 200 }); setTimeout(function(){ try{ _SS.hide(); }catch(e){} }, 3000); } } catch(e){}
@@ -7867,6 +7917,7 @@ setInterval(() => {
           try{ renderAppFeatures(); }catch(e){}             // streak · catch-up · qada · garden · commem · ramadan
           try{ renderReflection(); renderTopAyah(); renderGreetline(); }catch(e){}
           try{ maybeDailyHadith(); }catch(e){}              // re-arm today's hadith popup for the new day
+          try{ var _w = document.querySelector('.wrap'); if (typeof renderCalendar === 'function' && _w && _w.getAttribute('data-tab') === 'calendar'){ _calAnimate = false; renderCalendar(); } }catch(e){}   // a Calendar left open across midnight advances its "today" cell without a manual tap
         }
       } else if (pk !== lastPrayerKey){
         // ── PRAYER TRANSITION (same day) ── a prayer's window just opened or closed. Record any now-missed
