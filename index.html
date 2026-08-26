@@ -1088,19 +1088,14 @@
   .commem-hl{min-width:0}
   .commem-name{font-family:var(--serif,var(--font));font-weight:800;font-size:1.06rem;color:var(--ink);letter-spacing:.01em}
   .commem-aka{font-size:.76rem;color:var(--dim);margin-top:2px;line-height:1.4}
-  .commem-cat{flex:none;font-size:.6rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:4px 10px;border-radius:999px;white-space:nowrap}
-  /* ═══ Commemoration category marks (v3.165) — every category a DIFFERENT mark; the Prophet ﷺ + the
-     Ahl al-Bayt (the Maʿsūmīn) SHARE one unique, highly-visible radiant-gold mark. Rashidun / Family /
-     Awliya use FIXED saturated pills with light text (their own contrast), so every mark is clearly
-     visible in ALL 10 themes — several dark themes don't even define --teal, so we never rely on it. */
-  .commem-cat.prophet,.commem-cat.ahlbayt{background:linear-gradient(135deg,color-mix(in srgb,var(--gold) 36%,transparent),color-mix(in srgb,var(--gold) 12%,transparent));color:var(--gold-ink);border:1px solid var(--stroke-gold);box-shadow:0 0 18px -5px color-mix(in srgb,var(--gold) 72%,transparent),inset 0 1px 0 rgba(255,255,255,.18)}
-  .commem-cat.rashidun{background:linear-gradient(135deg,#1f8a63,#146b4c);color:#eafff6;border:1px solid rgba(255,255,255,.22);box-shadow:0 2px 10px -4px rgba(20,110,80,.7)}
-  .commem-cat.family{background:linear-gradient(135deg,#b1547d,#8f3f64);color:#fff0f6;border:1px solid rgba(255,255,255,.22);box-shadow:0 2px 10px -4px rgba(150,60,100,.7)}
-  .commem-cat.wali{background:linear-gradient(135deg,#6f59b8,#54409a);color:#f2eeff;border:1px solid rgba(255,255,255,.20);box-shadow:0 2px 10px -4px rgba(90,70,160,.7)}
+  /* Category marks — the app's own simple, flat reference-badge look (translucent gold fill, thin gold
+     outline, quiet gold text), used consistently everywhere. Theme-aware through the gold tokens, which are
+     AA-verified in every theme. The category COLOUR lives in the small calendar dots, not in the labels. */
+  .commem-cat{flex:none;font-size:.62rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:999px;white-space:nowrap;background:var(--gold-soft);color:var(--gold-ink);border:1px solid var(--stroke-gold)}
+  .cd-ihead2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   /* a soft category-tinted left accent so each blessed card feels loved, not listed */
-  .commem-item.cat-prophet,.commem-item.cat-ahlbayt{border-left:3px solid color-mix(in srgb,var(--gold) 62%,transparent)}
+  .commem-item.cat-prophet,.commem-item.cat-ahlbayt,.commem-item.cat-family{border-left:3px solid color-mix(in srgb,var(--gold) 62%,transparent)}
   .commem-item.cat-rashidun{border-left:3px solid #1f8a63}
-  .commem-item.cat-family{border-left:3px solid #b1547d}
   .commem-item.cat-wali{border-left:3px solid #6f59b8}
   .commem-events{display:flex;flex-wrap:wrap;gap:6px;margin:11px 0 4px}
   .commem-ev{font-size:.68rem;font-weight:700;color:var(--dim);background:color-mix(in srgb,var(--ink) 7%,transparent);border:1px solid var(--stroke);border-radius:999px;padding:4px 10px}
@@ -1159,15 +1154,16 @@
   @keyframes calCellIn{from{opacity:0;transform:translateY(9px) scale(.92)}to{opacity:1;transform:none}}
   /* Day-marks — each category a DIFFERENT colour, the Maʿsūmīn (Prophet ﷺ + Ahl al-Bayt) the unique brightest
      one. Fixed colours + a thin dark ring so every mark is clearly visible on light AND dark themes alike. */
-  .cdot{width:5px;height:5px;border-radius:50%;background:#8ba3c9;position:absolute;bottom:5px;left:50%;transform:translateX(-50%);box-shadow:0 0 5px rgba(139,163,201,.7),0 0 0 1px rgba(0,0,0,.28)}   /* holy day — slate */
-  .cdot.cm-sacred{width:7.5px;height:7.5px;background:#e6b94e;box-shadow:0 0 11px rgba(230,185,78,.98),0 0 0 1.4px rgba(0,0,0,.32),0 0 2px #fff}   /* Prophet ﷺ + Ahl al-Bayt — the unique, brightest mark */
-  .cdot.cm-rashidun{background:#22a37b;box-shadow:0 0 8px rgba(34,163,123,.9),0 0 0 1px rgba(0,0,0,.3)}
-  .cdot.cm-family{background:#d1608a;box-shadow:0 0 8px rgba(209,96,138,.9),0 0 0 1px rgba(0,0,0,.3)}
-  .cdot.cm-wali{background:#8f74e0;box-shadow:0 0 8px rgba(143,116,224,.9),0 0 0 1px rgba(0,0,0,.3)}
+  .cdot{width:5.5px;height:5.5px;border-radius:50%;background:#5aa0ea;position:absolute;bottom:5px;left:50%;transform:translateX(-50%);box-shadow:0 0 6px rgba(90,160,234,.8),0 0 0 1px rgba(0,0,0,.28)}
+  .cdot.cm-sacred{width:7.5px;height:7.5px;background:radial-gradient(circle at 34% 30%,#fbe9b0,#e6b94e 62%,#c99a33);box-shadow:0 0 11px rgba(230,185,78,.98),0 0 0 1.4px rgba(0,0,0,.32),0 0 2px #fff}   /* Prophet ﷺ · Ahl al-Bayt · Family — the unique, brightest mark */
+  .cdot.cm-rashidun{width:6px;height:6px;background:radial-gradient(circle at 34% 30%,#7fe6c4,#22a37b 60%,#158060);box-shadow:0 0 8px rgba(34,163,123,.9),0 0 0 1px rgba(0,0,0,.3)}   /* Rightly-Guided Caliph — emerald */
+  .cdot.cm-wali{width:6px;height:6px;background:radial-gradient(circle at 34% 30%,#c9bbf5,#8f74e0 60%,#6f56c8);box-shadow:0 0 8px rgba(143,116,224,.9),0 0 0 1px rgba(0,0,0,.3)}   /* Wali — violet */
+  .cdot.cm-holy{width:6.5px;height:6.5px;background:radial-gradient(circle at 33% 27%,#eaf4ff,#66aeee 55%,#3f8ad6);box-shadow:0 0 10px rgba(120,190,245,.95),0 0 0 1px rgba(0,0,0,.26),0 0 3px rgba(255,255,255,.7)}   /* Islamic day — azure, a touch lighter & glossier than the rest */
+  /* glossy bead — a soft specular highlight on every calendar dot (scoped so it never touches the prayer tracker) */
+  .cal-cell .cdot::after{content:'';position:absolute;top:9%;left:20%;width:46%;height:46%;border-radius:50%;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.96),rgba(255,255,255,.28) 52%,rgba(255,255,255,0) 80%);pointer-events:none}
   /* a soft, reverent glow behind the blessed days, tinted by category */
   .cal-cell.has-sacred:not(.today){background:color-mix(in srgb,#e6b94e 16%,transparent);box-shadow:inset 0 0 0 1px rgba(230,185,78,.55),0 0 15px -6px rgba(230,185,78,.9)}
   .cal-cell.has-rashidun:not(.today){background:color-mix(in srgb,#22a37b 12%,transparent);box-shadow:inset 0 0 0 1px rgba(34,163,123,.5)}
-  .cal-cell.has-family:not(.today){background:color-mix(in srgb,#d1608a 12%,transparent);box-shadow:inset 0 0 0 1px rgba(209,96,138,.5)}
   .cal-cell.has-wali:not(.today){background:color-mix(in srgb,#8f74e0 12%,transparent);box-shadow:inset 0 0 0 1px rgba(143,116,224,.5)}
   .cal-cell.today .cdot{background:#171204;box-shadow:none}
   .cal-cell.today{animation:calTodayGlow 2.8s ease-in-out infinite}
@@ -2458,13 +2454,13 @@ const EVENT_DEFS = [
     long:'The first day of Muharram opens the Hijri year, counted from the Prophet’s ﷺ Hijrah (migration) from Makkah to Madinah — the turning point that established the first Muslim community. Muharram is one of the four sacred months, in which good deeds carry special weight.'},
   {m:1,  d:10, ic:'🕊️', t:'Day of Ashura',       s:'10 Muharram — fasting (with the 9th) is sunnah',
     long:'The 10th of Muharram. On this day Allah saved Musa (Moses) and his people, so the Prophet ﷺ fasted it and encouraged it — fasting Ashura expiates the sins of the past year. It is recommended to also fast the 9th (Tasuʿa) alongside it.'},
-  {m:7,  d:27, ic:'✨', t:'Isra & Miʿraj',        s:'27 Rajab — the night journey to al-Aqsa and the gift of the five daily prayers', neutral:true,
+  {m:7,  d:27, ic:'✨', t:'Isra & Miʿraj',        s:'27 Rajab — the Prophet’s ﷺ night journey to al-Aqsa and the gift of the five daily prayers', cat:'sacred',
     long:'The miraculous Night Journey (al-Isra) from the Sacred Mosque in Makkah to al-Aqsa in Jerusalem, and the Ascension (al-Miʿraj) through the heavens — commonly placed on 27 Rajab. On this night the five daily prayers were made obligatory. The exact date and whether to mark it are matters scholars differ on; shown here for information.'},
   {m:8,  d:15, ic:'🌘', t:'Mid-Shaʿban',          s:'15 Shaʿban — a night of mercy, forgiveness and turning back to Allah', neutral:true,
     long:'The night of the 15th of Shaʿban, known in some traditions as Laylat al-Baraʾah and described as a night of mercy and forgiveness. Scholars differ on singling it out with specific worship; the general good of voluntary prayer, duʿaʾ and seeking forgiveness is always welcome. Shaʿban is a month the Prophet ﷺ fasted much of. Shown for information.'},
-  {m:3,  d:12, ic:'🕌', t:'Mawlid an-Nabi',       s:'12 Rabiʿ al-Awwal — the birth of the Prophet ﷺ; a time to send abundant salawat', neutral:true,
-    long:'The 12th of Rabiʿ al-Awwal, associated with the birth of the Prophet Muhammad ﷺ. Scholars differ on marking it: some hold gatherings of salawat, remembrance and charity; others do not observe it as a fixed occasion. Shown here neutrally. In every view, loving him, sending salawat, and following his sunnah is beloved on every day of the year.'},
-  {m:9,  d:1,  ic:'🌙', t:'Ramadan begins',       s:'1 Ramadan — the month of the Qurʾan',
+  {m:3,  d:12, ic:'🕌', t:'Mawlid an-Nabi ﷺ',     s:'12 Rabiʿ al-Awwal — the Wilādah (blessed birth) of the Prophet ﷺ; send abundant salawat', cat:'sacred',
+    long:'The 12th of Rabiʿ al-Awwal, the Wilādah (blessed birth) of the Prophet Muhammad ﷺ. Scholars differ on how to mark it: some hold gatherings of salawat, remembrance and charity; others do not observe it as a fixed occasion. In every view, loving him, sending salawat, and following his Sunnah is beloved on every day of the year.'},
+  {m:9,  d:1,  ic:'☪️', t:'Ramadan begins',       s:'1 Ramadan — the month of the Qurʾan',
     long:'The 1st of Ramadan — the month of the Qurʾan, of fasting, patience and mercy. From dawn (Fajr) to sunset (Maghrib) the believer abstains from food, drink and desire, seeking nearness to Allah. The gates of Paradise are opened, every good deed is multiplied, and the nights are revived with Taraweeh — building toward Laylat al-Qadr in the last ten.'},
   {m:9,  d:27, ic:'⭐', t:'Laylat al-Qadr (27th)', s:'A likely night; seek it in all odd nights of the last ten',
     long:'The Night of Decree — “better than a thousand months” (Surah al-Qadr). On it the Qurʾan began to descend and the angels come down with every decree. Its exact night is hidden so that we seek it — most likely in the odd nights of the last ten of Ramadan, with the 27th the most widely hoped for. Fill it with prayer, Qurʾan and duʿaʾ: “Allahumma innaka ʿafuwwun tuhibbul-ʿafwa faʿfu ʿanni” — O Allah, You are Most Forgiving and love to forgive, so forgive me.'},
@@ -2479,18 +2475,30 @@ const EVENT_DEFS = [
     long:'The 9th of Muharram, the day before Ashura. The Prophet ﷺ intended to fast it alongside the 10th to differ from the practice of others — so fasting the 9th and 10th together is the recommended way. In the Shia tradition it is also the eve of Ashura, honouring al-ʿAbbas ibn Ali.'},
   {m:2,  d:20, ic:'🕯️', t:'Arbaʿin',              s:'20 Safar — the fortieth day after Ashura', neutral:true,
     long:'The fortieth day after the martyrdom of Imam Husayn ﷺ at Karbala. Observed in the Shia tradition as a great day of remembrance and pilgrimage to Karbala. Shown here for information; loving the Prophet’s ﷺ household is dear to the whole Ummah.'},
-  {m:9,  d:17, ic:'🌟', t:'Battle of Badr',        s:'17 Ramadan, 2 AH — the first great victory',
+  {m:9,  d:17, ic:'⚔️', t:'Battle of Badr',        s:'17 Ramadan, 2 AH — the first great victory',
     long:'On the 17th of Ramadan in the second year of the Hijra, a small, ill-equipped band of believers met a far larger force at Badr and, by Allah’s help, prevailed — “the Day of Criterion” (Yawm al-Furqan) that distinguished truth from falsehood. A reminder that victory comes from Allah, not from numbers.'},
   {m:9,  d:20, ic:'🕋', t:'Conquest of Makkah',    s:'20 Ramadan, 8 AH — Fath Makkah',
     long:'The peaceful entry of the Prophet ﷺ into Makkah in the eighth year of the Hijra. The city that had driven him out was opened without bloodshed, its idols removed, and the Prophet ﷺ met his former enemies with the words: “Go, for you are free.” The supreme example of mercy in victory.'},
-  {m:12, d:8,  ic:'⛰️', t:'Yawm al-Tarwiyah',      s:'8 Dhu al-Hijja — the Hajj begins',
+  {m:12, d:8,  ic:'🏕️', t:'Yawm al-Tarwiyah',      s:'8 Dhu al-Hijja — the Hajj begins',
     long:'The 8th of Dhul-Hijjah, when the pilgrims set out from Makkah toward Mina to begin the rites of Hajj, carrying water for the days ahead — hence its name. The first of the blessed days of Hajj, in the best ten days of the year.'},
   {m:11, d:25, ic:'🌍', t:'Dahw al-Ard',           s:'25 Dhu al-Qiʿda — a recommended fast', neutral:true,
     long:'Observed in the Shia tradition as the day the earth was spread out from beneath the Kaʿbah, and marked with a recommended fast. Dhul-Qiʿda is one of the four sacred months. Shown for information.'},
   {m:12, d:18, ic:'🤝', t:'Ghadir Khumm',          s:'18 Dhu al-Hijja — the Prophet’s ﷺ words honouring Ali', neutral:true,
     long:'On the return from the Farewell Pilgrimage, at Ghadir Khumm, the Prophet ﷺ raised the hand of Ali ﷺ and spoke of his standing — “Whoever’s master I am, Ali is his master.” Observed as Eid al-Ghadir in the Shia tradition; the love of Ali ﷺ is beloved across the Ummah. Shown here neutrally.'},
   {m:12, d:24, ic:'🤲', t:'Mubahala',              s:'24 Dhu al-Hijja — the event of Qurʾan 3:61', neutral:true,
-    long:'The day of Mubahala (Qurʾan 3:61), when the Prophet ﷺ came forward with his household — Ali, Fatima, Hasan and Husayn ﷺ — the Ahl al-Bayt gathered under his cloak. Observed in the Shia tradition; shown here for information.'}
+    long:'The day of Mubahala (Qurʾan 3:61), when the Prophet ﷺ came forward with his household — Ali, Fatima, Hasan and Husayn ﷺ — the Ahl al-Bayt gathered under his cloak. Observed in the Shia tradition; shown here for information.'},
+  // ── the Prophet Muhammad ﷺ own life milestones — carried under the one gold (Prophet & Ahl al-Bayt) mark ──
+  {m:9,  d:17, ic:'📖', t:'First Revelation (Wahy)', s:'17 Ramadan — the first Qurʾan revealed to the Prophet ﷺ in the Cave of Hiraʾ', cat:'sacred',
+    long:'In the Cave of Hiraʾ above Makkah the angel Jibrīl ﷺ brought the first revelation to the Prophet Muhammad ﷺ — “Iqraʾ bismi Rabbika alladhī khalaq” (Read, in the name of your Lord who created). This began the Prophethood and twenty-three years of the Qurʾan. Commonly placed in the last third of Ramadan (the 17th, 21st or 24th), thirteen years before the Hijrah. Shown for reflection.'},
+  {m:3,  d:12, ic:'🤍', t:'Wafat of the Prophet ﷺ', s:'12 Rabiʿ al-Awwal, 11 AH — the passing of the Prophet ﷺ to the Highest Companion', cat:'sacred',
+    long:'On this day the Prophet Muhammad ﷺ returned to his Lord in Madinah, in the chamber of ʿAʾisha ﷺ, his final concern being the prayer and those in his people’s care — “al-ṣalāta, al-ṣalāta, wa mā malakat aymānukum.” He left behind the Qurʾan and his Sunnah, a light that never dims. Ṣallā Allāhu ʿalayhi wa sallam.'},
+  {m:3,  d:12, ic:'🐫', t:'Hijrah to Madinah',      s:'12 Rabiʿ al-Awwal, 1 AH — the Prophet ﷺ reaches Madinah; the Hijra that begins the Islamic era', cat:'sacred',
+    long:'After leaving Makkah, the Prophet ﷺ and Abu Bakr ﷺ arrived at Qubaʾ and entered Madinah — met with “Ṭalaʿa al-badru ʿalaynā.” The Hijra marks the birth of the first Muslim community and the start of the Hijri calendar, counted from that year. Shown for reflection.'},
+  // ── community milestones of the Seerah — framed as historic ──
+  {m:8,  d:15, ic:'🧭', t:'Change of Qibla',        s:'15 Shaʿban, 2 AH — the Qibla turned to the Kaʿbah in Makkah', neutral:true,
+    long:'In Madinah, revelation turned the direction of prayer from Jerusalem (Bayt al-Maqdis) to the Sacred Mosque in Makkah — “so turn your face toward al-Masjid al-Ḥarām” (Qurʾan 2:144). The Companions turned to face the Kaʿbah, and it has been the Qibla of the Ummah ever since. Shown for information.'},
+  {m:12, d:9,  ic:'📜', t:'The Farewell Sermon',    s:'9 Dhu al-Hijja, 10 AH — the Prophet’s ﷺ Farewell Sermon on the plain of Arafah', neutral:true,
+    long:'During his only Hajj, on Arafah, the Prophet ﷺ gave the Khuṭbat al-Wadāʿ — affirming the sanctity of life, wealth and honour, the rights of women, the end of blood-feuds and usury, the equality of all people, and holding fast to the Qurʾan. “Have I conveyed? O Allah, bear witness.” Shown for reflection.'}
 ];
 /* premium gold line-icons for the Islamic calendar (tinted by the medallion's currentColor) */
 const EV_ICON = {
@@ -2505,22 +2513,50 @@ const EV_ICON = {
   droplet:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.6s6.2 6.6 6.2 10.8A6.2 6.2 0 1 1 5.8 13.4C5.8 9.2 12 2.6 12 2.6z"/></svg>',
   gift:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.4 12.4h6.7V21H6a1.6 1.6 0 0 1-1.6-1.6z"/><path d="M12.9 12.4h6.7v7a1.6 1.6 0 0 1-1.6 1.6h-5.1z"/><path d="M4 8.7a1.6 1.6 0 0 1 1.6-1.6h5.5v4.1H4z"/><path d="M12.9 7.1h5.5a1.6 1.6 0 0 1 1.6 1.6v2.5h-7.1z"/><path d="M11.9 6.9C11.9 5.4 10.5 3.4 8.6 3.4 7.2 3.4 7.2 5.5 11.9 6.9zM12.1 6.9C12.1 5.4 13.5 3.4 15.4 3.4 16.8 3.4 16.8 5.5 12.1 6.9z"/></svg>',
   mountain:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 19.6h18L13.7 5.6l-2.9 5-2-2.6z"/></svg>',
-  kaaba:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l7.6 3.9v9.1L12 21.5l-7.6-6V6.4z"/></svg>'
+  kaaba:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l7.6 3.9v9.1L12 21.5l-7.6-6V6.4z"/></svg>',
+  // ── meaning-bearing icons so every occasion is visually distinct ──
+  ram:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 6.6C4.3 6.6 3 8.3 3 10.1c0 1.3.9 2.2 1.9 2.2s1.6-.8 1.6-1.7c0-.6-.3-.9-.3-1.4 0-.6.5-1 1.2-1"/><path d="M17.4 6.6c2.3 0 3.6 1.7 3.6 3.5 0 1.3-.9 2.2-1.9 2.2s-1.6-.8-1.6-1.7c0-.6.3-.9.3-1.4 0-.6-.5-1-1.2-1"/><path d="M12 7.3c-2.9 0-5 2.1-5 5.1 0 3.3 2.2 5.8 5 5.8s5-2.5 5-5.8c0-3-2.1-5.1-5-5.1z"/><path d="M10.2 12.4h.02M13.8 12.4h.02"/></svg>',
+  swords:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3.5h5.5V9"/><path d="M20.5 3.5 12 12"/><path d="M4 15l3 3-2 2 1.5 1.5 2-2 3 3"/><path d="M9 3.5H3.5V9"/><path d="M3.5 3.5 12 12"/><path d="M20 15l-3 3 2 2-1.5 1.5-2-2-3 3"/></svg>',
+  banner:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5.1" y="3" width="1.9" height="18" rx=".95"/><path d="M7 3.7h11.3l-2.6 3.9 2.6 3.9H7z"/></svg>',
+  handraise:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.6 12.2V4.9a1.25 1.25 0 0 1 2.5 0v5.1h.5V3.6a1.25 1.25 0 0 1 2.5 0v6.4h.5V5.2a1.25 1.25 0 0 1 2.5 0v7.7c0 3.7-2.1 6.8-5.5 6.8-2 0-3.4-1-4.6-2.9l-2.2-3.4c-.5-.8.6-1.9 1.5-1.2z"/></svg>',
+  dua:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 20.6c-3.1 0-5.7-2.1-6.5-5.1L4.4 11c-.25-.95 1.1-1.5 1.6-.6l1.7 2.7.45-.2-1-6.2c-.16-1 1.3-1.25 1.55-.3l1.3 5.3h.45V4.7a1.05 1.05 0 0 1 2.1 0v6.9h.45l1.3-5.3c.25-.95 1.71-.7 1.55.3l-1 6.2.45.2 1.7-2.7c.5-.9 1.85-.35 1.6.6l-1.1 4.5c-.8 3-3.4 5.1-6.5 5.1z"/></svg>',
+  tent:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.6 2.6 20.4h6.5L12 11.2l2.9 9.2h6.5z"/></svg>',
+  globe:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55"><circle cx="12" cy="12" r="8.3"/><ellipse cx="12" cy="12" rx="3.35" ry="8.3"/><path d="M3.8 9.4h16.4M3.8 14.6h16.4"/></svg>',
+  ewer:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.8 3.4h6.4v1.5l-1 .8v1.1c1.9.7 3.2 2.5 3.2 4.7V20a1 1 0 0 1-1 1H7.6a1 1 0 0 1-1-1v-1.7H5.3A1.7 1.7 0 0 1 3.6 16.6v-2A1.7 1.7 0 0 1 5.3 12.9h1.3c.2-1.7 1.4-3.2 3.2-3.9V7.7l-1-.8z"/></svg>',
+  book:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.3 5.4C9.6 4.2 7.4 3.7 4.9 3.7c-.75 0-1.35.6-1.35 1.35v11.3c0 .7.6 1.2 1.35 1.2 2.5 0 4.4.5 6.4 1.7z"/><path d="M12.7 5.4C14.4 4.2 16.6 3.7 19.1 3.7c.75 0 1.35.6 1.35 1.35v11.3c0 .7-.6 1.2-1.35 1.2-2.5 0-4.4.5-6.4 1.7z"/></svg>',
+  journey:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="4.7" cy="19.3" r="1.35"/><circle cx="8.5" cy="15.6" r="1.05"/><circle cx="11.8" cy="12.2" r=".85"/><path fill-rule="evenodd" d="M17.5 3.4c-2.2 0-4 1.8-4 4 0 2.9 4 6.9 4 6.9s4-4 4-6.9c0-2.2-1.8-4-4-4zm0 5.6a1.55 1.55 0 1 1 0-3.1 1.55 1.55 0 0 1 0 3.1z"/></svg>',
+  compass:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8.4"/><path d="M15.6 8.4 11 11 8.4 15.6 13 13z" fill="currentColor" stroke="none"/></svg>',
+  scroll:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4.6h9.8a1.7 1.7 0 0 1 1.7 1.7V17a2.5 2.5 0 0 1-2.5 2.5H8A2.5 2.5 0 0 1 5.5 17V6.4"/><path d="M5.5 6.4A1.65 1.65 0 0 1 8.8 6.4V8"/><path d="M9 9.6h6M9 12.4h6M9 15.2h4"/></svg>',
+  dome:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5c1.15 1 1.15 2.35 0 3.35z"/><path d="M5 20.2v-6.6a7 7 0 0 1 14 0v6.6z"/><rect x="3.6" y="20" width="16.8" height="1.9" rx=".95"/></svg>'
 };
 function eventIconFor(t){
   t = (t || '').toLowerCase();
+  // specific occasions first, generic month-based fallbacks last
   if (t.indexOf('jumu') > -1) return EV_ICON.mosque;
   if (t.indexOf('white day') > -1 || t.indexOf('ayyam') > -1) return EV_ICON.fullmoon;
+  if (t.indexOf('revelation') > -1 || t.indexOf('wahi') > -1 || t.indexOf('wahy') > -1) return EV_ICON.book;
+  if (t.indexOf('hijrah') > -1 || t.indexOf('hijra') > -1) return EV_ICON.journey;
+  if (t.indexOf('qibla') > -1) return EV_ICON.compass;
+  if (t.indexOf('farewell') > -1) return EV_ICON.scroll;
+  if (t.indexOf('wafat') > -1 || t.indexOf('passing') > -1) return EV_ICON.dome;
   if (t.indexOf('mawlid') > -1) return EV_ICON.candle;
-  if (t.indexOf('isra') > -1) return EV_ICON.sparkle;
-  if (t.indexOf('sha') > -1 && t.indexOf('ban') > -1) return EV_ICON.moonphase;
-  if (t.indexOf('ramadan') > -1) return EV_ICON.crescentstar;
-  if (t.indexOf('qadr') > -1) return EV_ICON.star;
-  if (t.indexOf('new year') > -1 || t.indexOf('muharram') > -1) return EV_ICON.crescent;
-  if (t.indexOf('ashura') > -1) return EV_ICON.droplet;
-  if (t.indexOf('fitr') > -1) return EV_ICON.gift;
+  if (t.indexOf('isra') > -1 || t.indexOf('miʿraj') > -1 || t.indexOf('miraj') > -1) return EV_ICON.sparkle;
+  if (t.indexOf('tarwiyah') > -1) return EV_ICON.tent;
   if (t.indexOf('arafah') > -1 || t.indexOf('arafat') > -1) return EV_ICON.mountain;
-  if (t.indexOf('adha') > -1) return EV_ICON.kaaba;
+  if (t.indexOf('adha') > -1) return EV_ICON.ram;
+  if (t.indexOf('fitr') > -1) return EV_ICON.gift;
+  if (t.indexOf('tasu') > -1) return EV_ICON.ewer;
+  if (t.indexOf('arba') > -1) return EV_ICON.banner;
+  if (t.indexOf('ashura') > -1) return EV_ICON.droplet;
+  if (t.indexOf('badr') > -1) return EV_ICON.swords;
+  if (t.indexOf('makkah') > -1 || t.indexOf('conquest') > -1 || t.indexOf('fath') > -1) return EV_ICON.kaaba;
+  if (t.indexOf('ghadir') > -1) return EV_ICON.handraise;
+  if (t.indexOf('mubahala') > -1) return EV_ICON.dua;
+  if (t.indexOf('dahw') > -1) return EV_ICON.globe;
+  if (t.indexOf('qadr') > -1) return EV_ICON.star;
+  if (t.indexOf('ramadan') > -1) return EV_ICON.crescentstar;
+  if (t.indexOf('sha') > -1 && t.indexOf('ban') > -1) return EV_ICON.moonphase;
+  if (t.indexOf('new year') > -1 || t.indexOf('muharram') > -1) return EV_ICON.crescent;
   return EV_ICON.crescent;
 }
 let _evStructKey = '';
@@ -3314,7 +3350,7 @@ function dayImportance(y, m, d){
   const h = calHijri(y, m, d);
   const wd = new Date(Date.UTC(y, m-1, d)).getUTCDay();
   const items = [];
-  for (const e of EVENT_DEFS){ if (e.m === h.m && e.d === h.d) items.push({kind:'event', ic:e.ic, t:e.t, s:e.s, neutral:!!e.neutral}); }
+  for (const e of EVENT_DEFS){ if (e.m === h.m && e.d === h.d) items.push({kind:'event', ic:e.ic, t:e.t, s:e.s, neutral:!!e.neutral, cat:e.cat||''}); }
   if (typeof COMMEM !== 'undefined'){ for (const p of COMMEM){ for (const ev of p.events){ if (ev.d === h.d && ev.m === h.m) items.push({kind:'commem', person:p, ev}); } } }
   if ([13,14,15].includes(h.d)) items.push({kind:'fast', ic:'🤍', t:'White Day (Ayyam al-Beed)', s:'Sunnah fast — the 13th, 14th and 15th of every Hijri month'});
   if (wd === 5) items.push({kind:'jumuah', ic:'🕌', t:'Jumuʿah', s:'Surah al-Kahf · abundant salawat · the hour of answered duʿaʾ'});
@@ -3340,17 +3376,23 @@ function renderCalendar(){
     const isSel = (d === calSel);
     const star = info.items.some(i => ['event','commem','fast'].includes(i.kind));
     const commem = info.items.some(i => i.kind === 'commem');
-    // day-mark colour, by the most honoured figure: the Maʿsūmīn (Prophet ﷺ + Ahl al-Bayt) share one
-    // 'sacred' mark; then the Rashidun caliphs, the Blessed Family, the awliya — each its own colour.
+    // day-mark colour, by the most honoured figure: the Prophet ﷺ, the Ahl al-Bayt AND the Blessed Family
+    // all share the one radiant 'sacred' mark; then the Rashidun caliphs, then the awliya — each its own colour.
     let topCat = '';
     if (commem){ const cats = info.items.filter(i => i.kind === 'commem').map(i => i.person.cat);
-      topCat = (cats.includes('prophet') || cats.includes('ahlbayt')) ? 'sacred' : cats.includes('rashidun') ? 'rashidun' : cats.includes('family') ? 'family' : 'wali'; }
+      topCat = (cats.includes('prophet') || cats.includes('ahlbayt') || cats.includes('family')) ? 'sacred' : cats.includes('rashidun') ? 'rashidun' : 'wali'; }
+    // a day with no figure but an occasion: the Prophet’s ﷺ own milestones take the gold sacred mark;
+    // every other Islamic day takes the one azure mark.
+    let holyCat = 'cm-holy';
+    if (!commem){ const evs = info.items.filter(i => i.kind === 'event');
+      if (evs.some(e => e.cat === 'sacred')) holyCat = 'cm-sacred'; }
     let cls = 'cal-cell';
     if (isToday) cls += ' today';
     if (isSel) cls += ' sel';
     if (info.wd === 5) cls += ' fri';
     if (commem) cls += ' has-' + topCat;
-    const dotCls = commem ? ('cdot cm-' + topCat) : 'cdot';
+    else if (holyCat === 'cm-sacred') cls += ' has-sacred';
+    const dotCls = commem ? ('cdot cm-' + topCat) : ('cdot ' + holyCat);
     if (anim) cls += ' cin';
     const delay = anim ? (' style="animation-delay:' + Math.min(340, (first + d) * 9) + 'ms"') : '';
     cells += '<div class="' + cls + '"' + delay + ' onclick="calPick(' + d + ')"><span class="cg">' + d + '</span><span class="chj">' + info.h.d + '</span>' + (star ? '<span class="' + dotCls + '"></span>' : '') + '</div>';
@@ -3362,7 +3404,7 @@ function renderCalendar(){
     + '<div class="cal-title"><div class="cal-hmon">' + esc(hspan) + ' AH</div><div class="cal-gmon">' + GMON[calM-1] + ' ' + calY + '</div></div>'
     + '<button class="cal-nav" onclick="calShift(1)" aria-label="Next month">›</button></div>'
     + '<div class="cal-grid">' + wdh + cells + '</div>'
-    + '<div class="cal-legend"><span><i class="cdot cm-sacred"></i>Prophet ﷺ &amp; Ahl al-Bayt</span><span><i class="cdot cm-rashidun"></i>Caliph</span><span><i class="cdot cm-family"></i>Family</span><span><i class="cdot cm-wali"></i>Wali</span><span><i class="cdot"></i>holy day</span><span><i class="lg-fri">Fri</i>Jumuʿah</span></div>'
+    + '<div class="cal-legend"><span><i class="cdot cm-sacred"></i>Prophet ﷺ · Ahl al-Bayt · Family</span><span><i class="cdot cm-rashidun"></i>Caliph</span><span><i class="cdot cm-wali"></i>Wali</span><span><i class="cdot cm-holy"></i>Holy day</span><span><i class="lg-fri">Fri</i>Jumuʿah</span></div>'
     + '<div id="calDetail"></div>';
   renderCalDetail();
 }
@@ -3397,7 +3439,9 @@ function renderCalDetail(){
     html += info.items.map(it => {
       if (it.kind === 'commem'){
         const p = it.person;
-        return '<div class="cd-item cd-commem"><div class="cd-ihead"><span class="cd-t">' + esc(it.ev.t) + ' · ' + esc(p.english) + '</span><span class="commem-cat ' + p.cat + '">' + (p.cat === 'ahlbayt' ? 'Ahl al-Bayt' : 'Beloved Wali') + '</span></div>'
+        const cName = p.cat === 'ahlbayt' ? 'Ahl al-Bayt' : p.cat === 'prophet' ? 'Prophet ﷺ' : p.cat === 'rashidun' ? 'Rightly-Guided Caliph' : p.cat === 'family' ? 'Blessed Family' : 'Beloved Wali';
+        const dual = (p.caliph && p.cat !== 'rashidun') ? '<span class="commem-cat rashidun" style="margin-inline-start:6px">Rightly-Guided Caliph</span>' : '';
+        return '<div class="cd-item cd-commem"><div class="cd-ihead"><span class="cd-t">' + esc(it.ev.t) + ' · ' + esc(p.english) + '</span><span class="commem-cat ' + p.cat + '">' + cName + '</span>' + dual + '</div>'
           + '<p class="small dim" style="margin:6px 0 0">' + esc(p.aka) + '</p>'
           + '<div class="commem-quote"><div class="commem-qlabel">' + (p.reftype === 'hadith' ? 'Hadith' : 'Qur&rsquo;an') + '</div><div class="ar" lang="ar" dir="rtl">' + p.ar + '</div>'
           + '<div class="small muted" style="margin-top:6px">' + esc(p.tr) + '</div>'
@@ -3405,7 +3449,14 @@ function renderCalDetail(){
       }
       const lk = (it.kind === 'fast2') ? ehKey('Monday & Thursday') : ehKey(it.t);
       const hadHtml = renderEventHadith(lk);
-      return '<div class="cd-item' + (hadHtml ? ' cd-event' : '') + '"><div class="cd-eventhead"><span class="cd-ic">' + it.ic + '</span><div class="cd-body"><div class="cd-t">' + esc(it.t) + '</div><div class="small dim">' + esc(it.s) + '</div></div></div>' + hadHtml + '</div>';
+      // a small glossy mark for every occasion: the Prophet’s ﷺ own milestone (gold), worship day (azure),
+      // historic milestone (bronze), or a sunnah day.
+      const pill = it.kind === 'event'
+          ? (it.cat === 'sacred' ? '<span class="commem-cat prophet">Prophet ﷺ</span>'
+            : '<span class="commem-cat holy">Holy day</span>')
+        : it.kind === 'jumuah' ? '<span class="commem-cat sunnah">Jumuʿah</span>'
+        : '<span class="commem-cat sunnah">Sunnah</span>';
+      return '<div class="cd-item' + (hadHtml ? ' cd-event' : '') + '"><div class="cd-eventhead"><span class="cd-ic">' + it.ic + '</span><div class="cd-body"><div class="cd-ihead2"><div class="cd-t">' + esc(it.t) + '</div>' + pill + '</div><div class="small dim">' + esc(it.s) + '</div></div></div>' + hadHtml + '</div>';
     }).join('');
   }
   html += '</div>';
