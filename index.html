@@ -2582,8 +2582,8 @@ const EVENT_DEFS = [
     long:'The miraculous Night Journey (al-Isra) from the Sacred Mosque in Makkah to al-Aqsa in Jerusalem, and the Ascension (al-Miʿraj) through the heavens — commonly placed on 27 Rajab. On this night the five daily prayers were made obligatory. The exact date and whether to mark it are matters scholars differ on; shown here for information.'},
   {m:8,  d:15, ic:'🌘', t:'Mid-Shaʿban',          s:'15 Shaʿban — a night of mercy, forgiveness and turning back to Allah', neutral:true,
     long:'The night of the 15th of Shaʿban, known in some traditions as Laylat al-Baraʾah and described as a night of mercy and forgiveness. Scholars differ on singling it out with specific worship; the general good of voluntary prayer, duʿaʾ and seeking forgiveness is always welcome. Shaʿban is a month the Prophet ﷺ fasted much of. Shown for information.'},
-  {m:3,  d:12, ic:'🕌', t:'Mawlid an-Nabi ﷺ',     s:'12 Rabiʿ al-Awwal — the Wilādah (blessed birth) of the Prophet ﷺ; send abundant salawat', cat:'sacred',
-    long:'The 12th of Rabiʿ al-Awwal, the Wilādah (blessed birth) of the Prophet Muhammad ﷺ. Scholars differ on how to mark it: some hold gatherings of salawat, remembrance and charity; others do not observe it as a fixed occasion. In every view, loving him, sending salawat, and following his Sunnah is beloved on every day of the year.'},
+  {m:3,  d:12, ic:'🕌', t:'Mawlid an-Nabi ﷺ',     s:'12 Rabiʿ al-Awwal — the Wilādah of the Prophet ﷺ, born in the Year of the Elephant (c. 570 CE, ~53 BH); send abundant salawat', cat:'sacred',
+    long:'The 12th of Rabiʿ al-Awwal — the Wilādah (blessed birth) of the Prophet Muhammad ﷺ, born in the Year of the Elephant, c. 570/571 CE — roughly 53 years before the Hijra (BH), well before the Hijri (AH) calendar was instituted. Scholars differ on how to mark the day: some hold gatherings of salawat, remembrance and charity; others do not observe it as a fixed occasion. In every view, loving him, sending salawat, and following his Sunnah is beloved on every day of the year.'},
   {m:9,  d:1,  ic:'☪️', t:'Ramadan begins',       s:'1 Ramadan — the month of the Qurʾan',
     long:'The 1st of Ramadan — the month of the Qurʾan, of fasting, patience and mercy. From dawn (Fajr) to sunset (Maghrib) the believer abstains from food, drink and desire, seeking nearness to Allah. The gates of Paradise are opened, every good deed is multiplied, and the nights are revived with Taraweeh — building toward Laylat al-Qadr in the last ten.'},
   {m:9,  d:27, ic:'⭐', t:'Laylat al-Qadr (27th)', s:'A likely night; seek it in all odd nights of the last ten',
@@ -2614,8 +2614,8 @@ const EVENT_DEFS = [
   // ── the Prophet Muhammad ﷺ own life milestones — carried under the one gold (Prophet & Ahl al-Bayt) mark ──
   {m:9,  d:17, ic:'📖', t:'First Revelation (Wahy)', s:'17 Ramadan — the first Qurʾan revealed to the Prophet ﷺ in the Cave of Hiraʾ', cat:'sacred',
     long:'In the Cave of Hiraʾ above Makkah the angel Jibrīl ﷺ brought the first revelation to the Prophet Muhammad ﷺ — “Iqraʾ bismi Rabbika alladhī khalaq” (Read, in the name of your Lord who created). This began the Prophethood and twenty-three years of the Qurʾan. Commonly placed in the last third of Ramadan (the 17th, 21st or 24th), thirteen years before the Hijrah. Shown for reflection.'},
-  {m:3,  d:12, ic:'🤍', t:'Wafat of the Prophet ﷺ', s:'12 Rabiʿ al-Awwal, 11 AH — the passing of the Prophet ﷺ to the Highest Companion', cat:'sacred',
-    long:'On this day the Prophet Muhammad ﷺ returned to his Lord in Madinah, in the chamber of ʿAʾisha ﷺ, his final concern being the prayer and those in his people’s care — “al-ṣalāta, al-ṣalāta, wa mā malakat aymānukum.” He left behind the Qurʾan and his Sunnah, a light that never dims. Ṣallā Allāhu ʿalayhi wa sallam.'},
+  {m:3,  d:12, ic:'🤍', t:'Wafat of the Prophet ﷺ', s:'12 Rabiʿ al-Awwal, 11 AH (June 632 CE) — the passing of the Prophet ﷺ to the Highest Companion', cat:'sacred',
+    long:'In 11 AH — eleven years after the Hijra, corresponding to June 632 CE — the Prophet Muhammad ﷺ returned to his Lord in Madinah, in the chamber of ʿAʾisha ﷺ, his final concern being the prayer and those in his people’s care — “al-ṣalāta, al-ṣalāta, wa mā malakat aymānukum.” He left behind the Qurʾan and his Sunnah, a light that never dims. Ṣallā Allāhu ʿalayhi wa sallam.'},
   {m:3,  d:12, ic:'🐫', t:'Hijrah to Madinah',      s:'12 Rabiʿ al-Awwal, 1 AH — the Prophet ﷺ reaches Madinah; the Hijra that begins the Islamic era', cat:'sacred',
     long:'After leaving Makkah, the Prophet ﷺ and Abu Bakr ﷺ arrived at Qubaʾ and entered Madinah — met with “Ṭalaʿa al-badru ʿalaynā.” The Hijra marks the birth of the first Muslim community and the start of the Hijri calendar, counted from that year. Shown for reflection.'},
   // ── community milestones of the Seerah — framed as historic ──
@@ -3739,22 +3739,28 @@ function reciteAudio(surah, ayah, g){
   a.warm = function(){
     if (promoted || started || seq !== _qaSeq) return;
     try{
-      a.muted = true;
+      a.muted = true; _qWarming = a;
+      // Play muted in the BACKGROUND and let it run — a paused element STOPS buffering on mobile/desktop
+      // WebViews, which left the next ayah completely unloaded at hand-off (the real inter-verse gap). Playing
+      // it through (silently) downloads the whole mp3 ahead of time; on promotion we just rewind + unmute.
       const p = a.play();
-      if (p && p.then) p.then(() => { if (!promoted){ try{ a.pause(); a.currentTime = 0; }catch(e){} } }, () => {});
+      if (p && p.then) p.catch(() => {});
     }catch(e){}
   };
   a.playFallback = function(fail){
-    onFail = fail || onFail; started = true; promoted = true; a.muted = false;   // now the LIVE element: unmute + claim it so a pending warm-pause is ignored
-    if (seq !== _qaSeq) return a;
-    try{ if (a.currentTime > 0.05) a.currentTime = 0; }catch(e){}                 // if warming nudged it forward, restart from the very first word
+    onFail = fail || onFail; started = true; promoted = true;   // now the LIVE element
+    if (_qWarming === a) _qWarming = null;
+    if (seq !== _qaSeq){ try{ a.pause(); }catch(e){} return a; }
+    try{ a.pause(); }catch(e){}                 // stop the muted warm play-through
+    try{ a.currentTime = 0; }catch(e){}          // restart from the very first word — the buffer is already loaded, so this is instant
+    a.muted = false;
     const p = a.play();
     if (p && p.then) p.then(() => {}, () => { if (seq === _qaSeq) advance(); });
     return a;
   };
   return a;
 }
-let _qa = null, _qaSeq = 0, _qFading = null;
+let _qa = null, _qaSeq = 0, _qFading = null, _qWarming = null;
 /* Prefetch an ayah mp3 via an <audio> element (media-src — allowed by CSP; a fetch() would hit
    connect-src, which does NOT list the reciter CDNs). Primes the browser + service-worker cache so the
    real tap plays with no cold DNS+TLS+GET round-trip. De-duped so repeated hovers/taps are free. */
@@ -3908,6 +3914,7 @@ function stopReciteAudio(){
   _qaSeq++;
   if (_qa){ try{ _qa.pause(); }catch(e){} _qa.onended = _qa.onerror = _qa.ontimeupdate = null; _qa = null; }   // _qaSeq bump already disarms every element's advance/lead-in; clearing listeners is belt-and-suspenders
   if (_qFading){ try{ _qFading.pause(); }catch(e){} _qFading = null; }   // also silence any ayah still cross-fading out, so a stop leaves zero lingering audio
+  if (_qWarming){ try{ _qWarming.pause(); }catch(e){} _qWarming = null; }   // stop the muted next-ayah pre-buffer so it doesn't keep decoding after a stop
   try{ _stopVoices(); }catch(e){}                 // a starting/stopping recitation also silences any short greeting clip, so the two never overlap
   if ('speechSynthesis' in window){ try{ speechSynthesis.cancel(); }catch(e){} }
   document.querySelectorAll('.recitebtn.playing').forEach(b => b.classList.remove('playing'));
@@ -3951,10 +3958,10 @@ function _qCrossfade(outEl, ms){
     }, dt);
   }catch(e){}
 }
-// Gapless hand-off lead (seconds): start the next ayah this far before the current mp3 ends, so its leading
-// silence + soft onset play UNDER the current ayah's trailing reverb. Scaled to length, capped so short ayahs
-// don't clip. Larger than before because per-ayah mp3s carry ~0.3–0.5 s of edge silence.
-function _qLead(d){ return Math.min(0.5, Math.max(0.3, d * 0.18)); }
+// Gapless hand-off lead (seconds): with the next ayah now fully pre-buffered, the only thing left to bridge is
+// the mp3's own leading silence, so keep the overlap MODEST — enough to smooth the seam, small enough never to
+// clip the end of the current verse (which was making it feel rushed/"fast").
+function _qLead(d){ return Math.min(0.22, Math.max(0.12, d * 0.08)); }
 function reciteSurahAudio(surah, count, firstG, btn){
   const wasThis = btn && btn.classList.contains('playing');
   stopReciteAudio();
