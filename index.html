@@ -1613,7 +1613,7 @@
     </div>
   </div>
 
-  <div class="glass">
+  <div class="glass" data-sec="today">
     <h2 class="sec">Islamic day</h2>
     <div class="igrid">
       <div class="ig" title="The day of the current Islamic (Hijri) month">
@@ -1625,17 +1625,15 @@
     </div>
     <div class="igrid" style="margin-top:12px">
       <div class="ig" title="Today’s day of the week (Friday is Jumuʿah)">
-        <b id="tdWeekday">—</b><span>Weekday</span></div>
+        <b id="tdWeekday">—</b><span>Day of week</span></div>
       <div class="ig" title="Time remaining until the next prayer or night-worship window (Tahajjud is in the last third of the night)">
         <b id="tdNextMs">—</b><span id="tdNextMsLbl">Next milestone</span></div>
       <div class="ig" title="The Islamic day begins at Maghrib (sunset), not midnight — so after sunset the date has already moved to the next day">
         <b id="tdDayBegins">—</b><span>Islamic day begins</span></div>
     </div>
-    <div class="igrid" style="margin-top:12px">
-      <div class="ig" title="Your current UTC offset — used to keep prayer times right as you travel"><b id="tdOffset">—</b><span>UTC offset</span></div>
-      <div class="ig" title="Whether daylight-saving time is currently in effect here"><b id="tdDst">—</b><span>Daylight saving</span></div>
-    </div>
-    <div class="small dim" id="tdIslamicNote" style="margin-top:10px">The Islamic day begins at Maghrib (sunset), not midnight — so after sunset today’s date has already moved to the next day.</div>
+    <div class="small" id="tdTahajjudLine" style="margin-top:14px;color:var(--gold-ink);font-weight:600" title="The last third of the night — the most beloved time to stand for Tahajjud and duʿaʾ, when Allah descends to the lowest heaven">◈ Tahajjud <b id="tdTahajjud" style="font-weight:800">—</b> <span class="dim" style="font-weight:400">· the prime time for accepted duʿaʾ</span></div>
+    <div class="small" id="tdSunnahLine" style="margin-top:7px;color:var(--gold-ink);font-weight:600" title="Sunnah fasting: Mondays &amp; Thursdays, and the White Days (13th–15th of every Hijri month)">◈ <span id="tdSunnahFast">—</span></div>
+    <div class="small dim" id="tdIslamicNote" style="margin-top:11px">The Islamic day begins at Maghrib (sunset), not midnight — so after sunset today’s date has already moved to the next day.</div>
   </div>
 
   <div class="glass" id="qiblaCard">
@@ -2475,31 +2473,49 @@ function renderVoluntary(set, now, tz){
 let _tdSig = '';
 function renderTimeDetails(set, now, tz){
   // Purpose-built for a worshipper — the live Islamic day (Maghrib-aware), not developer calendar math.
-  const offMin = tzOffsetMin(tz, new Date(now));
   const hLive = hijriTodayLive(now);
   const pm = pastMaghribNow(now);
   let wd = ''; try{ wd = new Intl.DateTimeFormat('en', {timeZone:tz, weekday:'long'}).format(new Date(now)); }catch(e){}
   const wdShow = (wd === 'Friday') ? 'Jumuʿah' : wd;
   const g = id => document.getElementById(id);
-  // day-scoped fields — rewritten only when the (Maghrib-aware) Islamic day / weekday / offset / DST changes
-  const sig = [hLive.d, hLive.m, hLive.y, wdShow, offMin, pm].join('|');
+  const E = set.t0.E, E1 = set.t1 ? set.t1.E : null, Ey = set.y0 ? set.y0.E : null;
+  // which "night" are we in? before today's Fajr → last night's; otherwise tonight's.
+  const preFajr = (E.fajr != null && now < E.fajr);
+  const phase = preFajr ? 'n' : (pm ? 'e' : 'd');
+  // day-scoped fields — rewritten only when the Islamic day / weekday / night-phase changes
+  const sig = [hLive.d, hLive.m, hLive.y, wdShow, phase].join('|');
   if (sig !== _tdSig){
     _tdSig = sig;
-    const sign = offMin >= 0 ? '+' : '−';
     if (g('tdHijriDay'))   g('tdHijriDay').textContent   = hLive.d || '—';
     if (g('tdHijriMonth')) g('tdHijriMonth').textContent = HIJRI_MONTHS[hLive.m-1] || '—';
     if (g('tdHijriYear'))  g('tdHijriYear').textContent  = hLive.y ? (hLive.y + ' AH') : '—';
     if (g('tdWeekday'))    g('tdWeekday').textContent    = wdShow || '—';
-    if (g('tdOffset'))     g('tdOffset').textContent     = `${sign}${pad(Math.floor(Math.abs(offMin)/60))}:${pad(Math.abs(offMin)%60)}`;
-    if (g('tdDst'))        g('tdDst').textContent        = isDST(tz, now) ? 'Active' : 'No';
-    if (g('tdDayBegins'))  g('tdDayBegins').textContent  = fmtT(set.t0.E.maghrib, tz);
+    if (g('tdDayBegins'))  g('tdDayBegins').textContent  = fmtT(E.maghrib, tz);
+    // Tahajjud window = the last third of the current/upcoming night → Fajr (the prime time for duʿaʾ)
+    let mg = null, fj = null;
+    if (preFajr && Ey){ mg = Ey.maghrib; fj = E.fajr; }     // still in last night
+    else { mg = E.maghrib; fj = E1 ? E1.fajr : null; }      // tonight
+    if (g('tdTahajjud')) g('tdTahajjud').textContent = (mg != null && fj != null && fj > mg) ? (fmtT(mg + (fj - mg) * 2/3, tz) + ' – ' + fmtT(fj, tz)) : '—';
+    // Sunnah fast — nearest of today (if the fast can still be kept) / tomorrow / within the week
+    const reasonsFor = (w, hd) => { const r = []; if (w === 1) r.push('Monday'); if (w === 4) r.push('Thursday'); if (hd >= 13 && hd <= 15) r.push('White Day (Ayyām al-Bīḍ)'); return r; };
+    let sun = 'No sunnah fast in the next few days';
+    for (let i = 0; i <= 7; i++){
+      if (i === 0 && E.maghrib != null && now >= E.maghrib) continue;   // today's fast window has already closed
+      const cv = addCivilDays(set.today, i);
+      const w2 = new Date(Date.UTC(cv.y, cv.m-1, cv.d)).getUTCDay();
+      const hd2 = hijriPartsAt(Date.UTC(cv.y, cv.m-1, cv.d) + 12*3600000, 'UTC', S.hijriAdj).d;
+      const rs = reasonsFor(w2, hd2);
+      if (!rs.length) continue;
+      const when = (i === 0) ? 'today' : (i === 1) ? 'tomorrow' : new Intl.DateTimeFormat('en', {weekday:'long'}).format(new Date(Date.UTC(cv.y, cv.m-1, cv.d)));
+      sun = 'Sunnah fast recommended ' + when + ' — ' + rs.join(' & '); break;
+    }
+    if (g('tdSunnahFast')) g('tdSunnahFast').textContent = sun;
     const note = g('tdIslamicNote');
     if (note) note.textContent = pm
       ? 'It is now after Maghrib — the Islamic day has already moved to ' + hLive.d + ' ' + (HIJRI_MONTHS[hLive.m-1] || '') + ' ' + hLive.y + ' AH. (The Islamic day begins at sunset, not midnight.)'
       : 'The Islamic day begins at Maghrib (sunset), not midnight — so after sunset today’s date has already moved to the next day.';
   }
   // live: countdown to the next spiritual milestone — prayer, Islamic midnight, or the last third (Tahajjud)
-  const E = set.t0.E, E1 = set.t1 ? set.t1.E : null;
   const night = (E1 && E1.fajr != null && E.maghrib != null) ? (E1.fajr - E.maghrib) : null;
   const ms = [
     {t:E.fajr,n:'Fajr'},{t:E.sunrise,n:'Sunrise'},{t:E.dhuhr,n:'Dhuhr'},{t:E.asr,n:'Asr'},{t:E.maghrib,n:'Maghrib'},{t:E.isha,n:'Isha'},
@@ -3714,7 +3730,7 @@ function reciteAudio(surah, ayah, g){
   };
   return a;
 }
-let _qa = null, _qaSeq = 0;
+let _qa = null, _qaSeq = 0, _qFading = null;
 /* Prefetch an ayah mp3 via an <audio> element (media-src — allowed by CSP; a fetch() would hit
    connect-src, which does NOT list the reciter CDNs). Primes the browser + service-worker cache so the
    real tap plays with no cold DNS+TLS+GET round-trip. De-duped so repeated hovers/taps are free. */
@@ -3867,6 +3883,7 @@ function clearRecitingAyah(){
 function stopReciteAudio(){
   _qaSeq++;
   if (_qa){ try{ _qa.pause(); }catch(e){} _qa.onended = _qa.onerror = _qa.ontimeupdate = null; _qa = null; }   // _qaSeq bump already disarms every element's advance/lead-in; clearing listeners is belt-and-suspenders
+  if (_qFading){ try{ _qFading.pause(); }catch(e){} _qFading = null; }   // also silence any ayah still cross-fading out, so a stop leaves zero lingering audio
   try{ _stopVoices(); }catch(e){}                 // a starting/stopping recitation also silences any short greeting clip, so the two never overlap
   if ('speechSynthesis' in window){ try{ speechSynthesis.cancel(); }catch(e){} }
   document.querySelectorAll('.recitebtn.playing').forEach(b => b.classList.remove('playing'));
@@ -3897,8 +3914,17 @@ function reciteAyah(surah, ayah, g, btn){
 // two ayahs cross-fade over ~160ms instead of one cutting to silence before the next starts.
 function _qCrossfade(outEl, ms){
   try{
-    var steps = 8, k = steps, dt = Math.max(12, ms / steps);
-    var t = setInterval(function(){ k--; try{ outEl.volume = Math.max(0, k / steps); }catch(e){} if (k <= 0){ clearInterval(t); try{ outEl.pause(); }catch(e){} } }, dt);
+    _qFading = outEl;
+    var seq = _qaSeq, steps = 16, k = steps, dt = Math.max(12, ms / steps), v0 = 1;
+    try{ if (typeof outEl.volume === 'number') v0 = outEl.volume; }catch(e){}
+    // ease-out fade of the LEAVING ayah so its trailing reverb dissolves smoothly under the next Qari voice;
+    // a stop (which bumps _qaSeq) cuts it at once so nothing lingers.
+    var t = setInterval(function(){
+      k--;
+      if (seq !== _qaSeq){ clearInterval(t); try{ outEl.pause(); }catch(e){} if (_qFading === outEl) _qFading = null; return; }
+      var f = k / steps; try{ outEl.volume = Math.max(0, v0 * f * f); }catch(e){}
+      if (k <= 0){ clearInterval(t); try{ outEl.pause(); }catch(e){} if (_qFading === outEl) _qFading = null; }
+    }, dt);
   }catch(e){}
 }
 function reciteSurahAudio(surah, count, firstG, btn){
@@ -3927,18 +3953,24 @@ function reciteSurahAudio(surah, count, firstG, btn){
     _qa = cur;
     const _an = hasBism ? i : i + 1; if (_an >= 1) setRecitingAyah(surah, _an, cur); else clearRecitingAyah();
     const outgoing = cur, hasNext = !!nxt; let advanced = false;
-    const advance = (fade) => {
+    const advance = (fadeMs) => {
       if (advanced || seq !== _qaSeq) return; advanced = true;
       const leaving = outgoing;
       i++; cur = nxt; nxt = (i + 1 < items.length) ? mk(i + 1) : null; if (nxt) nxt.warm();
-      play();                                       // promote + start the next ayah
-      if (fade) _qCrossfade(leaving, 170); else { try{ leaving.pause(); }catch(e){} }
+      play();                                       // promote + start the next ayah (already buffered via warm)
+      if (fadeMs) _qCrossfade(leaving, fadeMs); else { try{ leaving.pause(); }catch(e){} }
     };
-    outgoing.onended = () => advance(false);
-    // GAPLESS: hand off ~160ms before this ayah ends, cross-fading under its trailing reverb, so the
-    // Qari's voice flows on with no silent break. Skipped for very short ayahs and the final ayah.
-    outgoing.ontimeupdate = () => { if (!hasNext) return; const d = outgoing.duration; if (d && isFinite(d) && d > 0.7 && outgoing.currentTime >= d - 0.16) advance(true); };
-    outgoing.playFallback(() => advance(false));    // every source failed for this ayah → skip to next
+    outgoing.onended = () => advance(0);
+    // GAPLESS FLOW: hand off WELL before this ayah's mp3 ends, so the next ayah's leading silence plays UNDER
+    // this ayah's trailing reverb and the Qari's voice carries straight through with no pause. The lead (and
+    // the equal-length ease-out cross-fade) scale with the ayah's length, capped so short ayahs never clip.
+    outgoing.ontimeupdate = () => {
+      if (!hasNext) return; const d = outgoing.duration;
+      if (!(d && isFinite(d) && d > 0.8)) return;
+      const LEAD = Math.min(0.42, Math.max(0.24, d * 0.16));
+      if (outgoing.currentTime >= d - LEAD) advance(Math.round(LEAD * 1000));
+    };
+    outgoing.playFallback(() => advance(0));    // every source failed for this ayah → skip to next
   })();
 }
 function recitePassage(surah, fromAyah, count, firstG, btn){
@@ -3959,16 +3991,23 @@ function recitePassage(surah, fromAyah, count, firstG, btn){
     _qa = cur;
     setRecitingAyah(surah, fromAyah + i, cur);
     const outgoing = cur, hasNext = !!nxt; let advanced = false;
-    const advance = (fade) => {
+    const advance = (fadeMs) => {
       if (advanced || seq !== _qaSeq) return; advanced = true;
       const leaving = outgoing;
       i++; cur = nxt; nxt = (i + 1 < count) ? mk(i + 1) : null; if (nxt) nxt.warm();
-      play();                                       // promote + start the next ayah
-      if (fade) _qCrossfade(leaving, 170); else { try{ leaving.pause(); }catch(e){} }
+      play();                                       // promote + start the next ayah (already buffered via warm)
+      if (fadeMs) _qCrossfade(leaving, fadeMs); else { try{ leaving.pause(); }catch(e){} }
     };
-    outgoing.onended = () => advance(false);
-    outgoing.ontimeupdate = () => { if (!hasNext) return; const d = outgoing.duration; if (d && isFinite(d) && d > 0.7 && outgoing.currentTime >= d - 0.16) advance(true); };   // gapless cross-fade hand-off
-    outgoing.playFallback(() => advance(false));    // every source failed for this ayah → skip to next
+    outgoing.onended = () => advance(0);
+    // GAPLESS FLOW: hand off well before the mp3 ends so the next ayah's leading silence plays under this
+    // ayah's trailing reverb — the Qari flows on with no pause. Lead + matched cross-fade scale with length.
+    outgoing.ontimeupdate = () => {
+      if (!hasNext) return; const d = outgoing.duration;
+      if (!(d && isFinite(d) && d > 0.8)) return;
+      const LEAD = Math.min(0.42, Math.max(0.24, d * 0.16));
+      if (outgoing.currentTime >= d - LEAD) advance(Math.round(LEAD * 1000));
+    };
+    outgoing.playFallback(() => advance(0));    // every source failed for this ayah → skip to next
   })();
 }
 const SAJDA = {'7:206':'obligatory','13:15':'recommended','16:50':'recommended','17:109':'recommended','19:58':'recommended','22:18':'recommended','25:60':'recommended','27:26':'recommended','32:15':'obligatory','38:24':'recommended','41:38':'obligatory','53:62':'obligatory','84:21':'recommended','96:19':'obligatory'};
