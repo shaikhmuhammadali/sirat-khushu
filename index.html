@@ -1624,8 +1624,8 @@
         <b id="tdHijriYear">—</b><span>Hijri year</span></div>
     </div>
     <div class="igrid" style="margin-top:12px">
-      <div class="ig" title="Which day of the Gregorian year this is (1–365, or 366 in a leap year)">
-        <b id="tdDoy">—</b><span>Day of year</span></div>
+      <div class="ig" title="Which day of the Islamic (Hijri) year this is — the Hijri year runs 354 or 355 days">
+        <b id="tdDoy">—</b><span>Hijri day of year</span></div>
       <div class="ig" title="Time remaining until the next prayer or night-worship window (Tahajjud is in the last third of the night)">
         <b id="tdNextMs">—</b><span id="tdNextMsLbl">Next milestone</span></div>
       <div class="ig" title="The Islamic day begins at Maghrib (sunset), not midnight — so after sunset the date has already moved to the next day">
@@ -2120,6 +2120,30 @@ function hijriTodayLive(now){
 function hijriStringLive(now){ const h = hijriTodayLive(now); if (!h.y) return ''; return `${h.d} ${HIJRI_MONTHS[h.m-1] || ''} ${h.y} AH`; }
 // Has the Islamic day already rolled past Maghrib right now? (for the "day begins at Maghrib" indicator)
 function pastMaghribNow(now){ now = now || Date.now(); if (!S.loc) return false; try{ const civ = civilDateInTz(S.loc.tz, new Date(now)); const mg = engineFor(civ).E.maghrib; return !!(mg && now >= mg); }catch(e){ return false; } }
+/* Which day of the current Islamic (Hijri) year it is, e.g. {doy:73, total:354}. Maghrib-aware (uses the
+   same effective date as hijriTodayLive). Robust across the varying Umm-al-Qura month lengths: binary-search
+   the civil day on which 1 Muharram of this Hijri year fell, and the next year's, then difference the day
+   numbers — no month-length table needed. Cheap (~18 Intl reads) and only recomputed on a day/phase change. */
+function hijriDayOfYear(now){
+  now = now || Date.now();
+  const h = hijriTodayLive(now);
+  if (!h.y) return null;
+  const tz = S.loc ? S.loc.tz : 'UTC';
+  let civ = civilDateInTz(tz, new Date(now));
+  if (S.loc){ try{ const mg = engineFor(civ).E.maghrib; if (mg && now >= mg) civ = addCivilDays(civ, 1); }catch(e){} }
+  const dnum = c => Math.floor(Date.UTC(c.y, c.m-1, c.d) / 86400000);
+  const civOf = n => { const d = new Date(n * 86400000); return {y:d.getUTCFullYear(), m:d.getUTCMonth()+1, d:d.getUTCDate()}; };
+  const hyOf = c => hijriPartsAt(Date.UTC(c.y, c.m-1, c.d) + 12*3600000, 'UTC', S.hijriAdj).y;
+  const civN = dnum(civ);
+  // first civil day whose Hijri year === h.y  → 1 Muharram of h.y
+  let lo = civN - 360, hi = civN;
+  while (lo < hi){ const mid = (lo + hi) >> 1; if (hyOf(civOf(mid)) >= h.y) hi = mid; else lo = mid + 1; }
+  const yearStart = lo;
+  // 1 Muharram of the NEXT Hijri year → this year's length (354 or 355)
+  let lo2 = yearStart + 300, hi2 = yearStart + 361;
+  while (lo2 < hi2){ const mid = (lo2 + hi2) >> 1; if (hyOf(civOf(mid)) >= h.y + 1) hi2 = mid; else lo2 = mid + 1; }
+  return { doy: civN - yearStart + 1, total: lo2 - yearStart };
+}
 
 /* ── qibla & distance ── */
 const KAABA = {lat:21.4225, lng:39.8262};
@@ -2475,7 +2499,8 @@ function renderTimeDetails(set, now, tz){
   // Purpose-built for a worshipper — the live Islamic day (Maghrib-aware), not developer calendar math.
   const hLive = hijriTodayLive(now);
   const pm = pastMaghribNow(now);
-  const doyShow = dayOfYear(set.today) + ' / ' + (isLeap(set.today.y) ? 366 : 365);
+  const hdoy = hijriDayOfYear(now);
+  const doyShow = hdoy ? (hdoy.doy + ' / ' + hdoy.total) : '—';   // day of the HIJRI year (keeps the row all-Hijri)
   const g = id => document.getElementById(id);
   const E = set.t0.E, E1 = set.t1 ? set.t1.E : null, Ey = set.y0 ? set.y0.E : null;
   // which "night" are we in? before today's Fajr → last night's; otherwise tonight's.
@@ -3926,6 +3951,10 @@ function _qCrossfade(outEl, ms){
     }, dt);
   }catch(e){}
 }
+// Gapless hand-off lead (seconds): start the next ayah this far before the current mp3 ends, so its leading
+// silence + soft onset play UNDER the current ayah's trailing reverb. Scaled to length, capped so short ayahs
+// don't clip. Larger than before because per-ayah mp3s carry ~0.3–0.5 s of edge silence.
+function _qLead(d){ return Math.min(0.5, Math.max(0.3, d * 0.18)); }
 function reciteSurahAudio(surah, count, firstG, btn){
   const wasThis = btn && btn.classList.contains('playing');
   stopReciteAudio();
@@ -3951,24 +3980,27 @@ function reciteSurahAudio(surah, count, firstG, btn){
     if (i >= items.length || !cur){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); stopReciteScroll(); return; }
     _qa = cur;
     const _an = hasBism ? i : i + 1; if (_an >= 1) setRecitingAyah(surah, _an, cur); else clearRecitingAyah();
-    const outgoing = cur, hasNext = !!nxt; let advanced = false;
+    const outgoing = cur, hasNext = !!nxt; let advanced = false, hoPoll = 0;
     const advance = (fadeMs) => {
       if (advanced || seq !== _qaSeq) return; advanced = true;
+      try{ clearInterval(hoPoll); }catch(e){}
       const leaving = outgoing;
       i++; cur = nxt; nxt = (i + 1 < items.length) ? mk(i + 1) : null; if (nxt) nxt.warm();
       play();                                       // promote + start the next ayah (already buffered via warm)
       if (fadeMs) _qCrossfade(leaving, fadeMs); else { try{ leaving.pause(); }catch(e){} }
     };
     outgoing.onended = () => advance(0);
-    // GAPLESS FLOW: hand off WELL before this ayah's mp3 ends, so the next ayah's leading silence plays UNDER
-    // this ayah's trailing reverb and the Qari's voice carries straight through with no pause. The lead (and
-    // the equal-length ease-out cross-fade) scale with the ayah's length, capped so short ayahs never clip.
-    outgoing.ontimeupdate = () => {
-      if (!hasNext) return; const d = outgoing.duration;
-      if (!(d && isFinite(d) && d > 0.8)) return;
-      const LEAD = Math.min(0.42, Math.max(0.24, d * 0.16));
-      if (outgoing.currentTime >= d - LEAD) advance(Math.round(LEAD * 1000));
-    };
+    // GAPLESS FLOW: poll the REAL playback position every 50 ms and hand off once the Qari reaches
+    // (duration − lead). Position-based (not a wall-clock timer), so a mid-ayah buffer stall can never fire a
+    // premature cut; fine-grained (not the coarse ~250 ms ontimeupdate that fired late). The next ayah's
+    // leading silence then plays UNDER this ayah's trailing reverb and the recitation flows straight through.
+    if (hasNext){
+      hoPoll = setInterval(() => {
+        if (advanced || seq !== _qaSeq){ try{ clearInterval(hoPoll); }catch(e){} return; }
+        const d = outgoing.duration;
+        if (d && isFinite(d) && d > 0.8 && outgoing.currentTime >= d - _qLead(d)) advance(Math.round(_qLead(d) * 1000));
+      }, 50);
+    }
     outgoing.playFallback(() => advance(0));    // every source failed for this ayah → skip to next
   })();
 }
@@ -3989,23 +4021,24 @@ function recitePassage(surah, fromAyah, count, firstG, btn){
     if (i >= count || !cur){ if (btn) btn.classList.remove('playing'); clearRecitingAyah(); stopReciteScroll(); return; }
     _qa = cur;
     setRecitingAyah(surah, fromAyah + i, cur);
-    const outgoing = cur, hasNext = !!nxt; let advanced = false;
+    const outgoing = cur, hasNext = !!nxt; let advanced = false, hoPoll = 0;
     const advance = (fadeMs) => {
       if (advanced || seq !== _qaSeq) return; advanced = true;
+      try{ clearInterval(hoPoll); }catch(e){}
       const leaving = outgoing;
       i++; cur = nxt; nxt = (i + 1 < count) ? mk(i + 1) : null; if (nxt) nxt.warm();
       play();                                       // promote + start the next ayah (already buffered via warm)
       if (fadeMs) _qCrossfade(leaving, fadeMs); else { try{ leaving.pause(); }catch(e){} }
     };
     outgoing.onended = () => advance(0);
-    // GAPLESS FLOW: hand off well before the mp3 ends so the next ayah's leading silence plays under this
-    // ayah's trailing reverb — the Qari flows on with no pause. Lead + matched cross-fade scale with length.
-    outgoing.ontimeupdate = () => {
-      if (!hasNext) return; const d = outgoing.duration;
-      if (!(d && isFinite(d) && d > 0.8)) return;
-      const LEAD = Math.min(0.42, Math.max(0.24, d * 0.16));
-      if (outgoing.currentTime >= d - LEAD) advance(Math.round(LEAD * 1000));
-    };
+    // GAPLESS FLOW: poll the REAL playback position every 50 ms (see reciteSurahAudio) — stall-proof + precise.
+    if (hasNext){
+      hoPoll = setInterval(() => {
+        if (advanced || seq !== _qaSeq){ try{ clearInterval(hoPoll); }catch(e){} return; }
+        const d = outgoing.duration;
+        if (d && isFinite(d) && d > 0.8 && outgoing.currentTime >= d - _qLead(d)) advance(Math.round(_qLead(d) * 1000));
+      }, 50);
+    }
     outgoing.playFallback(() => advance(0));    // every source failed for this ayah → skip to next
   })();
 }
