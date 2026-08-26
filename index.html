@@ -1088,10 +1088,15 @@
   .commem-hl{min-width:0}
   .commem-name{font-family:var(--serif,var(--font));font-weight:800;font-size:1.06rem;color:var(--ink);letter-spacing:.01em}
   .commem-aka{font-size:.76rem;color:var(--dim);margin-top:2px;line-height:1.4}
-  /* Category marks — the app's own simple, flat reference-badge look (translucent gold fill, thin gold
-     outline, quiet gold text), used consistently everywhere. Theme-aware through the gold tokens, which are
-     AA-verified in every theme. The category COLOUR lives in the small calendar dots, not in the labels. */
+  /* Category marks — the app's own simple, flat reference-badge look (translucent fill, thin outline, quiet
+     text), but each category a DISTINCT tint so they vary. Theme-safe: the text mixes the category hue with
+     var(--text), so it stays legible in every theme (dark themes → a lighter hue, light themes → a darker
+     hue). Prophet ﷺ · Ahl al-Bayt · Family keep the exact gold reference-badge look. */
   .commem-cat{flex:none;font-size:.62rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:999px;white-space:nowrap;background:var(--gold-soft);color:var(--gold-ink);border:1px solid var(--stroke-gold)}
+  .commem-cat.rashidun{background:color-mix(in srgb,#1f9d68 15%,transparent);border:1px solid color-mix(in srgb,#1f9d68 44%,transparent);color:color-mix(in srgb,#1f9d68 62%,var(--text))}
+  .commem-cat.wali{background:color-mix(in srgb,#8f74e0 16%,transparent);border:1px solid color-mix(in srgb,#8f74e0 46%,transparent);color:color-mix(in srgb,#8f74e0 64%,var(--text))}
+  .commem-cat.holy{background:color-mix(in srgb,#4f9be8 16%,transparent);border:1px solid color-mix(in srgb,#4f9be8 46%,transparent);color:color-mix(in srgb,#4f9be8 62%,var(--text))}
+  .commem-cat.sunnah{background:color-mix(in srgb,#cf6a92 16%,transparent);border:1px solid color-mix(in srgb,#cf6a92 46%,transparent);color:color-mix(in srgb,#cf6a92 60%,var(--text))}
   .cd-ihead2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   /* a soft category-tinted left accent so each blessed card feels loved, not listed */
   .commem-item.cat-prophet,.commem-item.cat-ahlbayt,.commem-item.cat-family{border-left:3px solid color-mix(in srgb,var(--gold) 62%,transparent)}
@@ -2637,7 +2642,7 @@ function computeEvents(today, tz, now){
     }
   }
   out.sort((a, b) => (a.today === b.today ? a.startEpoch - b.startEpoch : (a.today ? -1 : 1)));
-  return out.slice(0, 7);
+  return out.slice(0, 40);   // show the full year of occasions (each mapped once), not just the next few
 }
 
 /* ── notifications ── */
