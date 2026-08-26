@@ -1608,26 +1608,34 @@
         <div style="font-weight:800"><span id="moonName">—</span></div>
         <div class="small muted"><b id="moonIllum">—</b> illuminated · moon age <b id="moonAge">—</b> days</div>
         <div class="moonpred small"><span>Next new moon <b id="moonNext">—</b></span><span>Next full moon <b id="moonFull">—</b></span></div>
-        <div class="small dim" style="margin-top:4px">Astronomical calculation (mean synodic model, ±~1 day); the local crescent sighting decides the Hijri month.</div>
+        <div class="small dim" style="margin-top:4px">Calculated astronomically to the minute (Meeus); the Hijri month still officially begins with the local crescent sighting.</div>
       </div>
     </div>
   </div>
 
   <div class="glass">
-    <h2 class="sec">Time details</h2>
+    <h2 class="sec">Islamic day</h2>
     <div class="igrid">
-      <div class="ig"><b id="tdOffset">—</b><span>UTC offset</span></div>
-      <div class="ig"><b id="tdDst">—</b><span>Daylight saving</span></div>
-      <div class="ig"><b id="tdWeek">—</b><span>ISO week</span></div>
-      <div class="ig"><b id="tdQuarter">—</b><span>Quarter</span></div>
-      <div class="ig"><b id="tdDoy">—</b><span>Day of year</span></div>
-      <div class="ig"><b id="tdLeap">—</b><span>Leap year</span></div>
+      <div class="ig" title="The day of the current Islamic (Hijri) month">
+        <b id="tdHijriDay">—</b><span>Hijri day</span></div>
+      <div class="ig" title="The current Islamic (Hijri) month">
+        <b id="tdHijriMonth">—</b><span>Hijri month</span></div>
+      <div class="ig" title="The Islamic (Hijri) year — counted from the Prophet’s ﷺ Hijrah">
+        <b id="tdHijriYear">—</b><span>Hijri year</span></div>
     </div>
     <div class="igrid" style="margin-top:12px">
-      <div class="ig"><b class="tab" id="tdUnix" style="font-size:.9rem">—</b><span>Unix time</span></div>
-      <div class="ig"><b class="tab" id="tdJulian" style="font-size:.9rem">—</b><span>Julian day</span></div>
-      <div class="ig"><b class="tab" id="tdIso" style="font-size:.72rem">—</b><span>ISO 8601 (local)</span></div>
+      <div class="ig" title="Today’s day of the week (Friday is Jumuʿah)">
+        <b id="tdWeekday">—</b><span>Weekday</span></div>
+      <div class="ig" title="Time remaining until the next prayer or night-worship window (Tahajjud is in the last third of the night)">
+        <b id="tdNextMs">—</b><span id="tdNextMsLbl">Next milestone</span></div>
+      <div class="ig" title="The Islamic day begins at Maghrib (sunset), not midnight — so after sunset the date has already moved to the next day">
+        <b id="tdDayBegins">—</b><span>Islamic day begins</span></div>
     </div>
+    <div class="igrid" style="margin-top:12px">
+      <div class="ig" title="Your current UTC offset — used to keep prayer times right as you travel"><b id="tdOffset">—</b><span>UTC offset</span></div>
+      <div class="ig" title="Whether daylight-saving time is currently in effect here"><b id="tdDst">—</b><span>Daylight saving</span></div>
+    </div>
+    <div class="small dim" id="tdIslamicNote" style="margin-top:10px">The Islamic day begins at Maghrib (sunset), not midnight — so after sunset today’s date has already moved to the next day.</div>
   </div>
 
   <div class="glass" id="qiblaCard">
@@ -2096,6 +2104,24 @@ function hijriString(epoch, tz){
   if (!h.y) return '';
   return `${h.d} ${HIJRI_MONTHS[h.m-1] || ''} ${h.y} AH`;
 }
+/* ── The Islamic day begins at MAGHRIB (sunset), not civil midnight ──
+   Once today's Maghrib has passed, the live "today" Hijri date has already rolled to the next day. This is
+   the fiqh-accurate boundary and is used for ALL live "today" displays — the Hijri line, Ramadan mode, the
+   commemorations "today", the Islamic-day card. The calendar GRID keeps its civil→Hijri table (a browsable
+   date map) untouched. The moon-sighting offset (hijriAdj) still applies exactly once inside hijriPartsAt,
+   so the Maghrib roll and the offset simply add — never a double shift. */
+function hijriTodayLive(now){
+  now = now || Date.now();
+  if (!S.loc) return hijriPartsAt(now, 'UTC', S.hijriAdj);
+  const tz = S.loc.tz;
+  const civ = civilDateInTz(tz, new Date(now));
+  let eff = civ;
+  try{ const mg = engineFor(civ).E.maghrib; if (mg && now >= mg) eff = addCivilDays(civ, 1); }catch(e){}
+  return hijriPartsAt(Date.UTC(eff.y, eff.m-1, eff.d) + 12*3600000, 'UTC', S.hijriAdj);
+}
+function hijriStringLive(now){ const h = hijriTodayLive(now); if (!h.y) return ''; return `${h.d} ${HIJRI_MONTHS[h.m-1] || ''} ${h.y} AH`; }
+// Has the Islamic day already rolled past Maghrib right now? (for the "day begins at Maghrib" indicator)
+function pastMaghribNow(now){ now = now || Date.now(); if (!S.loc) return false; try{ const civ = civilDateInTz(S.loc.tz, new Date(now)); const mg = engineFor(civ).E.maghrib; return !!(mg && now >= mg); }catch(e){ return false; } }
 
 /* ── qibla & distance ── */
 const KAABA = {lat:21.4225, lng:39.8262};
@@ -2350,7 +2376,7 @@ function renderTick(){
     if (m[2]) html += `<span class="ampm">${m[2]}</span>`;
     document.getElementById('clock').innerHTML = html;
     document.getElementById('dateline').textContent = fmt('date', tz).format(new Date(now));
-    document.getElementById('hijriline').textContent = hijriString(now, tz);
+    document.getElementById('hijriline').textContent = hijriStringLive(now);
     renderClockChips(tz, now);
   }
 
@@ -2448,28 +2474,45 @@ function renderVoluntary(set, now, tz){
 
 let _tdSig = '';
 function renderTimeDetails(set, now, tz){
-  const c = set.today;
-  // These six only change once per day — rewrite them only when the signature changes, not on
-  // every 500ms tick. Unix / Julian / ISO below are live, so they still update each tick.
-  // NOTE: offMin is part of the signature and is computed every tick on purpose. A DST change
-  // happens MID-day, so a date-only signature would leave the UTC-offset and DST rows showing
-  // stale values until the next day. (The original code recomputed offMin every tick too, so
-  // this costs nothing extra — we still skip the 6 DOM writes + isDST + isoWeek on most ticks.)
+  // Purpose-built for a worshipper — the live Islamic day (Maghrib-aware), not developer calendar math.
   const offMin = tzOffsetMin(tz, new Date(now));
-  const sig = [c.y, c.m, c.d, tz, offMin].join('|');
+  const hLive = hijriTodayLive(now);
+  const pm = pastMaghribNow(now);
+  let wd = ''; try{ wd = new Intl.DateTimeFormat('en', {timeZone:tz, weekday:'long'}).format(new Date(now)); }catch(e){}
+  const wdShow = (wd === 'Friday') ? 'Jumuʿah' : wd;
+  const g = id => document.getElementById(id);
+  // day-scoped fields — rewritten only when the (Maghrib-aware) Islamic day / weekday / offset / DST changes
+  const sig = [hLive.d, hLive.m, hLive.y, wdShow, offMin, pm].join('|');
   if (sig !== _tdSig){
     _tdSig = sig;
     const sign = offMin >= 0 ? '+' : '−';
-    document.getElementById('tdOffset').textContent = `${sign}${pad(Math.floor(Math.abs(offMin)/60))}:${pad(Math.abs(offMin)%60)}`;
-    document.getElementById('tdDst').textContent = isDST(tz, now) ? 'Active' : 'No';
-    document.getElementById('tdWeek').textContent = 'W' + isoWeek(c.y, c.m, c.d);
-    document.getElementById('tdQuarter').textContent = 'Q' + (Math.floor((c.m-1)/3)+1);
-    document.getElementById('tdDoy').textContent = dayOfYear(c) + ' / ' + (isLeap(c.y) ? 366 : 365);
-    document.getElementById('tdLeap').textContent = isLeap(c.y) ? 'Yes' : 'No';
+    if (g('tdHijriDay'))   g('tdHijriDay').textContent   = hLive.d || '—';
+    if (g('tdHijriMonth')) g('tdHijriMonth').textContent = HIJRI_MONTHS[hLive.m-1] || '—';
+    if (g('tdHijriYear'))  g('tdHijriYear').textContent  = hLive.y ? (hLive.y + ' AH') : '—';
+    if (g('tdWeekday'))    g('tdWeekday').textContent    = wdShow || '—';
+    if (g('tdOffset'))     g('tdOffset').textContent     = `${sign}${pad(Math.floor(Math.abs(offMin)/60))}:${pad(Math.abs(offMin)%60)}`;
+    if (g('tdDst'))        g('tdDst').textContent        = isDST(tz, now) ? 'Active' : 'No';
+    if (g('tdDayBegins'))  g('tdDayBegins').textContent  = fmtT(set.t0.E.maghrib, tz);
+    const note = g('tdIslamicNote');
+    if (note) note.textContent = pm
+      ? 'It is now after Maghrib — the Islamic day has already moved to ' + hLive.d + ' ' + (HIJRI_MONTHS[hLive.m-1] || '') + ' ' + hLive.y + ' AH. (The Islamic day begins at sunset, not midnight.)'
+      : 'The Islamic day begins at Maghrib (sunset), not midnight — so after sunset today’s date has already moved to the next day.';
   }
-  document.getElementById('tdUnix').textContent = Math.floor(now/1000).toLocaleString();
-  document.getElementById('tdJulian').textContent = (now/86400000 + 2440587.5).toFixed(3);
-  document.getElementById('tdIso').textContent = isoLocal(tz, now);
+  // live: countdown to the next spiritual milestone — prayer, Islamic midnight, or the last third (Tahajjud)
+  const E = set.t0.E, E1 = set.t1 ? set.t1.E : null;
+  const night = (E1 && E1.fajr != null && E.maghrib != null) ? (E1.fajr - E.maghrib) : null;
+  const ms = [
+    {t:E.fajr,n:'Fajr'},{t:E.sunrise,n:'Sunrise'},{t:E.dhuhr,n:'Dhuhr'},{t:E.asr,n:'Asr'},{t:E.maghrib,n:'Maghrib'},{t:E.isha,n:'Isha'},
+    (night!=null)?{t:E.maghrib+night/2,n:'Islamic midnight'}:null,
+    (night!=null)?{t:E.maghrib+night*2/3,n:'Last third · Tahajjud'}:null,
+    E1?{t:E1.fajr,n:'Fajr'}:null
+  ].filter(m => m && m.t != null && m.t > now).sort((a,b)=>a.t-b.t);
+  const nx = ms[0], bEl = g('tdNextMs'), lEl = g('tdNextMsLbl');
+  if (bEl){
+    if (nx){ const left = nx.t - now, hh = Math.floor(left/3600000), mm = Math.floor((left%3600000)/60000);
+      bEl.textContent = (hh>0 ? hh+'h ' : '') + mm + 'm'; if (lEl) lEl.textContent = 'until ' + nx.n; }
+    else { bEl.textContent = '—'; if (lEl) lEl.textContent = 'Next milestone'; }
+  }
 }
 const isLeap = y => (y%4===0 && y%100!==0) || y%400===0;
 function dayOfYear(c){ return Math.floor((Date.UTC(c.y,c.m-1,c.d) - Date.UTC(c.y,0,0))/86400000); }
@@ -4119,7 +4162,7 @@ const COMMEM = [
 
 function commemMatchToday(){
   if (!S.loc) return [];
-  const h = hijriPartsAt(Date.now(), S.loc.tz, S.hijriAdj);
+  const h = hijriTodayLive();   // Maghrib-aware: after sunset, "today's" commemorations follow the Islamic day
   const out = [];
   COMMEM.forEach(p => p.events.forEach(e => { if (e.d === h.d && e.m === h.m) out.push({p, e}); }));
   return out;
@@ -4146,7 +4189,7 @@ function renderCommemToday(){
 function renderCommem(){
   const el = document.getElementById('commemCard'); if (!el) return;
   el.className = 'glass';
-  const h = S.loc ? hijriPartsAt(Date.now(), S.loc.tz, S.hijriAdj) : {d:0, m:0};
+  const h = S.loc ? hijriTodayLive() : {d:0, m:0};
   const isNow = e => e.d === h.d && e.m === h.m;
   const cards = COMMEM.map(p => {
     const todayEv = p.events.some(isNow);
@@ -5891,11 +5934,11 @@ function renderCatchup(){
 }
 
 /* ── Ramadan super-mode + escalation ── */
-function ramadanActive(){ if (!S.loc) return false; return hijriPartsAt(Date.now(), S.loc.tz, S.hijriAdj).m === 9; }   // PURELY automatic: Ramadan super-mode is on iff the real Hijri month (with the user's hijriAdj moonsight offset) is 9 — no manual preview override, ever.
+function ramadanActive(){ if (!S.loc) return false; return hijriTodayLive().m === 9; }   // PURELY automatic + Maghrib-aware: Ramadan super-mode is on iff the LIVE Islamic month (Maghrib-rolled, with the user's hijriAdj moonsight offset) is 9 — so it turns on the night Ramadan enters, at Maghrib. No manual preview override, ever.
 function renderRamadan(){
   const el = document.getElementById('ramadanCard'); if (!el) return;
   if (!ramadanActive()){ el.innerHTML = ''; return; }
-  const h = S.loc ? hijriPartsAt(Date.now(), S.loc.tz, S.hijriAdj) : {d:0,y:''}, day = h.d;
+  const h = S.loc ? hijriTodayLive() : {d:0,y:''}, day = h.d;
   const last10 = day >= 21, odd = [21,23,25,27,29].includes(day), dk = todayKey(), tarDone = !!(dk && S.taraweeh[dk]);
   el.className = 'glass';
   el.innerHTML = '<h2 class="sec">Ramadan ' + (h.y||'') + ' ✨</h2><div class="ramrow">' +
