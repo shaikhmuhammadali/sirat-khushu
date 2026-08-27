@@ -390,7 +390,7 @@
       padding-left:max(18px, env(safe-area-inset-left));
       padding-right:max(18px, env(safe-area-inset-right));
       padding-top:max(22px, env(safe-area-inset-top));
-      padding-bottom:calc(60px + env(safe-area-inset-bottom));
+      padding-bottom:calc(88px + env(safe-area-inset-bottom));   /* keep the base 88px clearance for the fixed .bnav; the @supports block only ADDS the safe-area inset — it must not shrink the pixel base, or the last content hides behind the nav (worse with large-text a11y settings) */
     }
   }
   /* PWA: non-intrusive "update available" toast */
@@ -424,6 +424,10 @@
   .logbtn{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--stroke);background:transparent;cursor:pointer;display:grid;place-items:center;flex:none;position:relative;transition:all .2s}
   .logbtn::after{content:"";position:absolute;inset:-6px}   /* 34px visual circle, ~46px touch target */
   .logbtn:not(.locked):active{transform:scale(.92)}          /* press feedback, matching the app's small controls */
+  /* a11y: give the small secondary controls the SAME invisible hit-slop as .logbtn so their effective touch
+     target reaches ~44px, without changing their visual size. Each needs position:relative to anchor ::after. */
+  .qpair-x, .updbanner .updx, .qx, .cdots .cdot, .qbtn{position:relative}
+  .qpair-x::after, .updbanner .updx::after, .qx::after, .cdots .cdot::after, .qbtn::after{content:"";position:absolute;inset:-8px}
   .logbtn svg{width:16px;height:16px;stroke:var(--dim);fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
   .logbtn.done{background:var(--gold-soft);border-color:var(--gold)}
   .logbtn.done svg{stroke:var(--gold-ink)}
@@ -1900,6 +1904,20 @@ let S = (() => {
   // reject a corrupt/unknown persisted timezone so a stale bad value can never brick boot
   if (merged.loc && !isValidTz(merged.loc.tz)) merged.loc = null;
   if (merged.loc && merged.loc.cc) merged.loc.cc = String(merged.loc.cc).toUpperCase();   // self-heal legacy lowercase codes (pre-v3.99) so CC_METHOD/auto-method matches again
+  // SECURITY (defense-in-depth): coerce every numeric counter that is later concatenated into innerHTML
+  // (streak / dhikr cards) to a real Number on load, so a string smuggled in via a hostile cloud-sync blob
+  // or a hand-crafted backup import can NEVER reach an HTML sink. Mirrors the existing dhikrTotal guard in
+  // applyCloudRestore and closes the same gap for streakBest/streakCelebrated. All restore paths reload(),
+  // so this one self-heal on boot backstops every entry point regardless of where the value came from.
+  ['dhikrTotal','streakBest','streakCelebrated'].forEach(k => { merged[k] = Number(merged[k]) || 0; });
+  // SCHEMA REPAIR: if a persisted core collection has the wrong shape (corrupt storage, a bad sync/import,
+  // or a build mismatch), reset it to its default type so boot code (streakInfo's Object.keys(S.logs),
+  // renderJournal's .slice, …) can never throw. Objects must be plain non-array objects; lists must be arrays.
+  const _isObj = v => v && typeof v === 'object' && !Array.isArray(v);
+  if (!_isObj(merged.logs)) merged.logs = {};
+  if (!_isObj(merged.taraweeh)) merged.taraweeh = {};
+  if (!_isObj(merged.tasbih)) merged.tasbih = {count:0,target:33,phrase:0};
+  ['journal','bookmarks','duas','hadithSeen'].forEach(k => { if (!Array.isArray(merged[k])) merged[k] = []; });
   merged.dhikrVoice = true; merged.salawatAudio = true;   // recite-aloud & salawat audio are always-on now (no toggle) — override any previously-saved false
   // SECURITY: email password-reset is now 100% server-side. Actively WIPE any legacy client-side EmailJS
   // config (which could hold a user's EmailJS private key) + its local reset code left in localStorage by an
@@ -1918,7 +1936,57 @@ let S = (() => {
    phone-wide Prayer Lock silently never fires. S is mutated in place (never reassigned),
    so this reference stays correct for the life of the page. */
 window.S = S;
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ /* private mode / quota — non-fatal */ } try{ if (typeof scheduleCloudSync === 'function') scheduleCloudSync(); }catch(e){} }
+let _saveWarned = false;
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(S)); window._saveOK = true; }
+  catch(e){
+    // The write did NOT persist — quota exhausted, or private-mode block. Previously this was swallowed
+    // silently, so a user whose storage filled kept "logging" prayers/journal that vanished on reload.
+    // Warn ONCE, plainly, and still fall through to a cloud sync so the change can survive server-side.
+    window._saveOK = false;
+    if (!_saveWarned){
+      _saveWarned = true;
+      try{ if (typeof toast === 'function') toast('Storage is full', 'Changes may not be saved on this device. Free up space, or export a backup in Settings → Export.', '⚠️'); }catch(_){}
+    }
+  }
+  try{ if (typeof scheduleCloudSync === 'function') scheduleCloudSync(); }catch(e){}
+}
+
+/* ── A11Y: keyboard + screen-reader access for inline link-style actions ──────────────────────────
+   Many actions are styled as click-only inline <span class="lk"> / ".wlink" (e.g. the auth-gate "Log in",
+   "Rules", and in-card links). A mouse can click them, but a keyboard or screen-reader user cannot reach or
+   activate them — a hard block behind AUTH_REQUIRED. Rather than edit dozens of call sites, a MutationObserver
+   stamps role="button" + tabindex="0" onto every such span as it enters the DOM (real <button>/<a> are left
+   alone), and a delegated keydown activates them on Enter/Space — so all current AND dynamically-rendered
+   links become operable. Cheap: the callback only scans added subtrees for the two classes. */
+(function(){
+  const SEL = '.lk, .wlink';
+  function enhance(root){
+    try{
+      const list = [];
+      if (root.matches && root.matches(SEL)) list.push(root);
+      if (root.querySelectorAll) root.querySelectorAll(SEL).forEach(el => list.push(el));
+      list.forEach(function(el){
+        if (el.tagName === 'BUTTON' || el.tagName === 'A') return;
+        if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
+        if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+      });
+    }catch(e){}
+  }
+  try{
+    new MutationObserver(function(muts){
+      muts.forEach(function(m){ m.addedNodes && m.addedNodes.forEach(function(n){ if (n.nodeType === 1) enhance(n); }); });
+    }).observe(document.documentElement, { childList:true, subtree:true });
+  }catch(e){}
+  document.addEventListener('keydown', function(e){
+    if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+    const t = e.target;
+    if (t && t.getAttribute && t.getAttribute('role') === 'button' && t.tagName !== 'BUTTON' && t.tagName !== 'A'){
+      e.preventDefault(); try{ t.click(); }catch(_){}
+    }
+  });
+  try{ if (document.body) enhance(document); }catch(e){}
+})();
 
 /* ── calculation methods (angles verified against AlAdhan /v1/methods, 2026) ── */
 const METHODS = {
@@ -2449,17 +2517,24 @@ function isDST(tz, now){
 
 let _sunSig = '';
 function renderSunNight(set, now, tz){
-  const E = set.t0.E, E1 = set.t1.E;
-  const sig = [set.today.y, set.today.m, set.today.d, E.sunrise, E.sunset, E.maghrib, E1.fajr, tz].join('|');
+  const E = set.t0.E, E1 = set.t1.E, Ey = set.y0 ? set.y0.E : null;
+  // Which night are we in? Before today's Fajr we are still inside LAST night (yesterday's Maghrib → today's
+  // Fajr); otherwise tonight (today's Maghrib → tomorrow's Fajr). Islamic midnight & the last third must be
+  // anchored to the night the worshipper is actually in, matching renderTimeDetails' tdTahajjud row — else
+  // at ~3am they would point ~24h away (to the coming night) during the exact tahajjud window they serve.
+  const preFajr = (E.fajr != null && now < E.fajr);
+  const nMg = (preFajr && Ey) ? Ey.maghrib : E.maghrib;
+  const nFj = preFajr ? E.fajr : E1.fajr;
+  const sig = [set.today.y, set.today.m, set.today.d, E.sunrise, E.sunset, nMg, nFj, tz].join('|');   // nMg/nFj shift the sig when we cross Fajr, so the cache invalidates and redraws
   if (sig === _sunSig) return;                 // sun/moon values are fixed for the day — skip the redraw (incl. drawMoon) every tick
   _sunSig = sig;
   document.getElementById('igSunrise').textContent = fmtT(E.sunrise, tz);
   document.getElementById('igSunset').textContent = fmtT(E.sunset, tz);
   document.getElementById('igGolden').textContent = E.sunset ? fmtT(E.sunset - 40*60000, tz) : '—';
-  if (E.maghrib && E1.fajr){
-    const night = E1.fajr - E.maghrib;
-    document.getElementById('igMidnight').textContent = fmtT(E.maghrib + night/2, tz);
-    document.getElementById('igLastThird').textContent = fmtT(E.maghrib + night*2/3, tz);
+  if (nMg && nFj && nFj > nMg){
+    const night = nFj - nMg;
+    document.getElementById('igMidnight').textContent = fmtT(nMg + night/2, tz);
+    document.getElementById('igLastThird').textContent = fmtT(nMg + night*2/3, tz);
     document.getElementById('igNight').textContent = Math.floor(night/3600000) + 'h ' + pad(Math.floor(night/60000)%60) + 'm';
   } else { document.getElementById('igMidnight').textContent = '—'; document.getElementById('igLastThird').textContent = '—'; document.getElementById('igNight').textContent = '—'; }
 
@@ -2478,17 +2553,23 @@ function renderSunNight(set, now, tz){
 
 let _volSig = '';
 function renderVoluntary(set, now, tz){
-  const E = set.t0.E, E1 = set.t1.E;
-  const sig = [set.today.y, set.today.m, set.today.d, E.sunrise, E.dhuhr, E.maghrib, E1.fajr, tz].join('|');
+  const E = set.t0.E, E1 = set.t1.E, Ey = set.y0 ? set.y0.E : null;
+  // Night-anchored rows (Islamic midnight, last third) must follow the night we are actually in: before
+  // today's Fajr that is LAST night (yesterday's Maghrib → today's Fajr), else tonight. Daytime rows
+  // (Ishraq, Duha, Awwabin) always stay on today's sun times.
+  const preFajr = (E.fajr != null && now < E.fajr);
+  const nMg = (preFajr && Ey) ? Ey.maghrib : E.maghrib;
+  const nFj = preFajr ? E.fajr : E1.fajr;
+  const sig = [set.today.y, set.today.m, set.today.d, E.sunrise, E.dhuhr, nMg, nFj, tz].join('|');
   if (sig === _volSig) return;                 // fixed times for the day — don't rebuild innerHTML every 500ms tick
   _volSig = sig;
-  const night = (E.maghrib && E1.fajr) ? E1.fajr - E.maghrib : null;
+  const night = (nMg && nFj && nFj > nMg) ? nFj - nMg : null;
   const rows = [
     {n:'Ishraq', ar:'الإشراق', e:E.sunrise ? E.sunrise + 18*60000 : null, d:'~15–20 min after sunrise'},
     {n:'Duha',   ar:'الضحى',   e:E.sunrise && E.dhuhr ? E.sunrise + (E.dhuhr - E.sunrise)*0.35 : null, d:'forenoon, until before Dhuhr'},
     {n:'Awwabin',ar:'الأوابين', e:E.maghrib || null, d:'between Maghrib and Isha'},
-    {n:'Islamic midnight', ar:'منتصف الليل', e:night ? E.maghrib + night/2 : null, d:'midpoint of the night'},
-    {n:'Last third (Tahajjud)', ar:'التهجد', e:night ? E.maghrib + night*2/3 : null, d:'most beloved time for duʿaʾ'}
+    {n:'Islamic midnight', ar:'منتصف الليل', e:night ? nMg + night/2 : null, d:'midpoint of the night'},
+    {n:'Last third (Tahajjud)', ar:'التهجد', e:night ? nMg + night*2/3 : null, d:'most beloved time for duʿaʾ'}
   ];
   document.getElementById('voluntary').innerHTML = rows.map(r =>
     `<div class="v"><span class="n">${r.n}<span class="ar" lang="ar" dir="rtl">${r.ar}</span><div class="d">${r.d}</div></span><span class="t">${r.e ? fmtT(r.e, tz) : '—'}</span></div>`).join('');
@@ -5404,8 +5485,8 @@ function renderFeaturesSetup(){
     b.addEventListener('click', function(){ var f=model.find(function(x){ return x.k===b.dataset.fk; }); if(f){ f.act(); setTimeout(renderFeaturesSetup, 800); } });
   });
 }
-function openFeaturesSetup(){ try{ renderFeaturesSetup(); }catch(e){} var m=document.getElementById('featuresModal'); if(m) m.classList.add('open'); }
-function closeFeaturesSetup(){ var m=document.getElementById('featuresModal'); if(m) m.classList.remove('open'); }
+function openFeaturesSetup(){ try{ renderFeaturesSetup(); }catch(e){} var m=document.getElementById('featuresModal'); if(m){ m.classList.add('open'); try{ _dlgLastFocus = document.activeElement; var f = m.querySelector('button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'); if (f) f.focus({ preventScroll:true }); }catch(e){} } }
+function closeFeaturesSetup(){ var m=document.getElementById('featuresModal'); if(m) m.classList.remove('open'); try{ _restoreDlgFocus(); }catch(e){} }
 // Automatically ask for every app permission on a new login — the OS dialogs fire in SEQUENCE
 // (one at a time; two at once would be suppressed by the browser), reusing the app's own request
 // flow. Runs at most once per device; an already-granted permission simply never re-prompts.
@@ -6049,13 +6130,13 @@ function streakInfo(){
     const c = dayCount(keyForCivil(addCivilDays(t, -i)));
     if (c > 0) cur++; else if (i === 0) continue; else break;
   }
-  let best = S.streakBest || 0, run = 0, prev = null;
+  let best = Number(S.streakBest) || 0, run = 0, prev = null;   // Number(): a poisoned string must never survive as best and reach innerHTML
   for (const dk of Object.keys(S.logs).filter(k => dayCount(k) > 0).sort()){
     const tt = new Date(dk + 'T12:00:00').getTime();
     run = (prev != null && Math.round((tt - prev)/86400000) === 1) ? run + 1 : 1;
     prev = tt; if (run > best) best = run;
   }
-  if (best > (S.streakBest||0)){ S.streakBest = best; save(); }
+  if (best > (Number(S.streakBest)||0)){ S.streakBest = best; save(); }
   return {cur, best};
 }
 const STREAK_GOALS = [3,7,14,30,40,66,100,150,200,300,365,500,700,1000];
@@ -6095,7 +6176,7 @@ function renderStreak(){
   el.className = 'glass';
   el.innerHTML = '<h2 class="sec">Your streak</h2><div class="streakrow">' +
     '<div><b>' + s.cur + '</b><span>day' + (s.cur===1?'':'s') + ' in a row</span></div>' +
-    '<div><b>' + s.best + '</b><span>your best</span></div>' +
+    '<div><b>' + esc(s.best) + '</b><span>your best</span></div>' +   // esc(): belt-and-suspenders — s.best is now numeric, but never trust a persisted value at an HTML sink
     '<div><b>' + todayC + '/5</b><span>today</span></div></div>' +
     '<div class="streakgoal"><div class="sg-top"><span>Next milestone</span><span class="sg-num"><b>' + s.cur + '</b> / ' + goal + ' days</span></div><div class="sgbar"><i style="width:' + pct.toFixed(0) + '%"></i></div><div class="sg-note">' + (STREAK_GOALS.indexOf(s.cur) !== -1 ? 'Milestone reached — mashaAllah! \u2b50' : left + ' day' + (left===1?'':'s') + ' to your next milestone') + '</div></div>' +
     '<p class="small dim" style="margin-top:10px">Your streak updates <b>automatically</b> each time you log a prayer — a day counts the moment you pray even once. Missed a day? Log it below; <b>returning keeps your streak</b>. Mercy, never shame.</p>';
@@ -6134,7 +6215,13 @@ function renderRamadan(){
   const el = document.getElementById('ramadanCard'); if (!el) return;
   if (!ramadanActive()){ el.innerHTML = ''; return; }
   const h = S.loc ? hijriTodayLive() : {d:0,y:''}, day = h.d;
-  const last10 = day >= 21, odd = [21,23,25,27,29].includes(day), dk = todayKey(), tarDone = !!(dk && S.taraweeh[dk]);
+  // "Tonight" = the night now in progress or about to begin. In Islamic reckoning the night PRECEDES the day
+  // and the live Hijri date rolls at Maghrib, so: after Maghrib the current night already carries `day`;
+  // before Maghrib (daytime) the coming night carries `day + 1`. Keying the odd-night / last-ten wording on
+  // this nightDay fixes the daytime inversion where the 21st's "odd night" (already passed) was announced
+  // as tonight while tonight is actually the even 22nd.
+  const nightDay = (pastMaghribNow(Date.now()) ? day : day + 1);
+  const last10 = nightDay >= 21, odd = [21,23,25,27,29].includes(nightDay), dk = todayKey(), tarDone = !!(dk && S.taraweeh[dk]);
   el.className = 'glass';
   el.innerHTML = '<h2 class="sec">Ramadan ' + (h.y||'') + ' ✨</h2><div class="ramrow">' +
     '<div><span>Suhoor ends in</span><b id="ramSuhoor">—</b></div>' +
@@ -6155,7 +6242,14 @@ function updateRamadanCountdown(){
   const su = document.getElementById('ramSuhoor'), IF = document.getElementById('ramIftar');
   if (!su || !IF) return;
   const E = currentSet().t0.E, now = Date.now();
-  su.textContent = (E.fajr && E.fajr > now) ? cdShort(E.fajr - now) : 'closed';
+  // Suhoor deadline: before today's Fajr → today's Fajr (the current suhoor window). After iftar (Maghrib
+  // has passed) → the NEXT fast's pre-dawn Fajr, so the evening shows a live countdown to tomorrow's suhoor
+  // instead of a dead 'closed'. During the fasting day itself (Fajr passed, Maghrib not yet) suhoor is
+  // genuinely closed. Guard t1 so a null tomorrow-Fajr (polar) still degrades gracefully.
+  let suFajr = null;
+  if (E.fajr && E.fajr > now) suFajr = E.fajr;
+  else if (E.maghrib && now >= E.maghrib){ try{ suFajr = currentSet().t1.E.fajr; }catch(e){} }
+  su.textContent = (suFajr && suFajr > now) ? cdShort(suFajr - now) : 'closed';
   IF.textContent = (E.maghrib && E.maghrib > now) ? cdShort(E.maghrib - now) : 'Ramadan Mubarak';
 }
 function toggleTaraweeh(){ const dk = todayKey(); if (!dk) return; if (S.taraweeh[dk]) delete S.taraweeh[dk]; else S.taraweeh[dk] = true; save(); renderRamadan(); }
@@ -6518,6 +6612,27 @@ document.addEventListener('keydown', function(e){
   if (e.shiftKey && act === first){ e.preventDefault(); last.focus({ preventScroll: true }); }
   else if (!e.shiftKey && act === last){ e.preventDefault(); first.focus({ preventScroll: true }); }
 }, true);
+// a11y (WCAG 2.1.2): Escape closes the open dialog — the standard expectation. Two dialogs are exempt: the
+// auth gate (#welcome) must not be bypassable, and an ACTIVE (non-preview) prayer lock must not be dismissed
+// mid-prayer. All informational modals route to their existing close fn so focus is restored correctly.
+document.addEventListener('keydown', function(e){
+  if (e.key !== 'Escape' && e.keyCode !== 27) return;
+  const dlg = _activeTrapDialog(); if (!dlg) return;
+  const id = dlg.id;
+  if (id === 'welcome') return;                                  // the auth wall is not Escape-dismissible
+  if (id === 'prayerLock' && !(typeof _plPreview !== 'undefined' && _plPreview)) return;   // don't abort a real prayer
+  e.preventDefault();
+  try{
+    if (id === 'prayerLock' && typeof closePrayerLock === 'function') closePrayerLock();
+    else if (id === 'prayerPrompt' && typeof closePrayerPrompt === 'function') closePrayerPrompt();
+    else if (id === 'focus' && typeof closeFocus === 'function') closeFocus();
+    else if (id === 'hadithPop' && typeof closeHadithPop === 'function') closeHadithPop();
+    else if (id === 'namePop' && typeof skipNamePop === 'function') skipNamePop();
+    else if (id === 'featuresModal' && typeof closeFeaturesSetup === 'function') closeFeaturesSetup();
+    else if (dlg.classList.contains('modal') && typeof closeModal === 'function') closeModal(id);
+    else dlg.classList.remove('open');
+  }catch(_){}
+}, true);
 function openPrayerLock(k, e, tz, preview){
   _plKey = k || null;
   _plPreview = !!preview;                          // a PREVIEW must never log a real prayer (matches the prompt's ppPreview guard)
@@ -6677,6 +6792,12 @@ function qadaReconcile(){
   // Never advance past the earliest day that still has an OPEN (not-yet-closed) window — otherwise that
   // day is never rescanned and its later-closing prayer (e.g. a missed Isha spanning midnight) is lost.
   if (firstOpen && firstOpen < q.lastCheckedKey) q.lastCheckedKey = firstOpen;
+  // Bound q.resolved (was unbounded: ~5 keys/day forever). Entries whose day is strictly BEFORE the
+  // watermark are permanently settled — reconcile never rescans them (it starts AT lastCheckedKey), and
+  // the backfill toggle path guards double-counting via missedLog, not via resolved — so dropping them is
+  // safe and matches the cap already on the sibling clearLog. Slice(0,10) is the "YYYY-MM-DD" date part.
+  const _wm = q.lastCheckedKey;
+  if (_wm){ let _pruned = false; for (const k in q.resolved){ if (k.slice(0,10) < _wm){ delete q.resolved[k]; _pruned = true; } } if (_pruned && !events.length) save(); }
   if (events.length) save();
   return events;
 }
@@ -6781,8 +6902,14 @@ function qadaProjection(){
 }
 
 /* ── generic modal helpers (the app has no openModal/closeModal) ── */
-function openModal(id){ const m = document.getElementById(id); if (m) m.classList.add('open'); }
-function closeModal(id){ const m = document.getElementById(id); if (m) m.classList.remove('open'); }
+function openModal(id){
+  const m = document.getElementById(id); if (!m) return;
+  m.classList.add('open');
+  // a11y: remember the trigger and move focus INTO the dialog (matches the prayerLock/prayerPrompt pattern),
+  // so keyboard/SR users land inside the modal instead of being stranded on the trigger behind the overlay.
+  try{ _dlgLastFocus = document.activeElement; const f = m.querySelector('button:not([disabled]), a[href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])'); if (f) f.focus({ preventScroll:true }); else { m.tabIndex = -1; m.focus({ preventScroll:true }); } }catch(e){}
+}
+function closeModal(id){ const m = document.getElementById(id); if (m) m.classList.remove('open'); _restoreDlgFocus(); }
 
 /* ── RENDER: the Qada card (Today tab) ── */
 function qadaMounts(){ return [document.getElementById('qadaCard'), document.getElementById('qadaCardCal')].filter(Boolean); }
@@ -7122,6 +7249,10 @@ function importData(file, errEl){
     // keys so a hand-crafted backup file can't pollute the prototype or smuggle unexpected shapes
     // into the store (the cloud path already does this; the import path previously did not).
     try{ obj = _sanitizeServerData(obj); }catch(e){}
+    // Coerce numeric counters that reach innerHTML sinks, exactly like the cloud path (applyCloudRestore),
+    // so a crafted backup file can't smuggle a string into the streak/dhikr cards. (Boot self-heal also
+    // backstops this after the reload below, but coerce here too so the persisted blob is already clean.)
+    try{ ['dhikrTotal','streakBest','streakCelebrated'].forEach(k => { obj[k] = Number(obj[k]) || 0; }); }catch(e){}
     try{ _storeInvalidated = true; clearTimeout(_cloudTimer); }catch(e){}   // stop any in-flight sync from reverting the restore
     try{ localStorage.setItem(KEY, JSON.stringify(obj)); }catch(e){ _storeInvalidated = false; fail('Could not save the backup on this device.'); return; }
     try{ sessionStorage.removeItem('sabr-unlocked'); }catch(e){}
@@ -7200,6 +7331,8 @@ function _sanitizeServerData(v, depth){
 async function applyCloudRestore(j, pw, urlThatWorked){
   const data = _sanitizeServerData((j.data && typeof j.data === 'object') ? j.data : {});
   data.dhikrTotal = Number(data.dhikrTotal) || 0;        // never persist a non-numeric value the garden renders into innerHTML
+  data.streakBest = Number(data.streakBest) || 0;        // same guard: streakBest reaches renderStreak()'s innerHTML
+  data.streakCelebrated = Number(data.streakCelebrated) || 0;
   const baseAcct = (data.account && typeof data.account === 'object') ? data.account
                    : (S.account ? {username:S.account.username, email:S.account.email} : {username:j.username});
   if (!baseAcct.username) baseAcct.username = j.username;
@@ -7848,6 +7981,21 @@ function enableCompass(auto){
   // leak for the page's life and each re-applies the low-pass to the same reading, compounding jitter.
   if (window._compassHandler){ try{ ['deviceorientation','deviceorientationabsolute'].forEach(function(ev){ window.removeEventListener(ev, window._compassHandler, true); }); }catch(e){} }
   _csx = _csy = null; window._compassGotEvent = false; window._compassGotAbs = false;
+  // BATTERY/CPU: when the page is hidden (backgrounded, screen off, another tab) the DeviceOrientation
+  // stream keeps firing and draining power for a compass nobody can see. Install ONCE a visibility hook that
+  // detaches the sensor listeners while hidden and silently re-arms when the app is shown again. This bounds
+  // live-sensor cost to the time the app is actually on-screen, without disabling the live compass in use.
+  if (!window._compassVisHook){
+    window._compassVisHook = true;
+    document.addEventListener('visibilitychange', function(){
+      if (document.visibilityState === 'hidden'){
+        if (window._compassHandler){ try{ ['deviceorientation','deviceorientationabsolute'].forEach(function(ev){ window.removeEventListener(ev, window._compassHandler, true); }); }catch(e){} }
+        clearTimeout(window._compassTimer); window._compassOn = false; window._compassSuspended = true;
+      } else if (window._compassSuspended){
+        window._compassSuspended = false; try{ enableCompass(true); }catch(e){}
+      }
+    });
+  }
   const btn0 = document.getElementById('qCompassBtn'), note0 = document.getElementById('qCompassNote');
   const noSensor = (msg, hard) => {
     window._compassOn = false; clearTimeout(window._compassTimer);
@@ -7882,6 +8030,11 @@ function enableCompass(auto){
     }
     h = ((h + screenAngle()) % 360 + 360) % 360;        // compensate if the screen itself is rotated (landscape)
     compassHeading = h; window._compassGotAbs = true;
+    // Android only: once the true-north 'deviceorientationabsolute' stream is live, the parallel plain
+    // 'deviceorientation' stream is pure redundant work (the handler already early-returns on it). Detach it
+    // to halve the event/CPU load. NEVER do this on iOS, where absolute readings ARRIVE via 'deviceorientation'
+    // (webkitCompassHeading) — removing it there would kill the compass.
+    if (e.type === 'deviceorientationabsolute'){ try{ window.removeEventListener('deviceorientation', handler, true); }catch(_){} }
     const raw = (qiblaBearing(S.loc.lat, S.loc.lng) - h + 360) % 360;
     // Low-pass filter on a UNIT VECTOR (handles the 360°→0° wrap cleanly) so the needle glides
     // instead of jittering with sensor noise — steadier reads as more accurate to the eye.

@@ -7,14 +7,14 @@
      allow-listed CDNs is cached on first play so a heard ayah recites offline;
      Navigation Preload for faster first paint; stale-while-revalidate for static.
    • Never phones home: this worker only ever fetches same-origin assets, one of
-     the four opt-in API hosts, or the two allow-listed reciter-audio CDNs —
+     the four opt-in API hosts, or the three allow-listed reciter-audio CDNs —
      nothing else, upholding the app's constitution and matching the page CSP.
    • A new version WAITS on install; the page prompts the user to Reload (opt-in) instead of force-reloading,
      so a running session is never swapped out underneath the user.
    ═══════════════════════════════════════════════════════════════════════════ */
 'use strict';
 
-const VERSION = 'sabr-engine-v3.177.0';         // ← bump to ship an update (clients auto-drop the old cache)
+const VERSION = 'sabr-engine-v3.178.0';         // ← bump to ship an update (clients auto-drop the old cache)
 const SHELL   = VERSION + '-shell';
 const RUNTIME = VERSION + '-runtime';
 // Reciter audio (offline recitation) is bounded + FIFO. Its name is DELIBERATELY version-independent so a
@@ -41,6 +41,7 @@ const AUDIO_HOSTS = new Set([
 const PRECACHE = [
   './',
   './index.html',
+  './offline.html',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -183,12 +184,13 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 1b) reciter audio (cross-origin, ALLOW-LISTED) → CACHE-FIRST: a previously-heard ayah is stored as a
-  //     full file (keyed by bare URL) and served instantly — instant replay, ZERO network, and fully
-  //     OFFLINE. Recitation audio is immutable, so cache-first has no staleness downside. On a cache
-  //     MISS we hit the network and background-cache the full file. We deliberately do NOT cache 206
-  //     (partial/range) responses — caches.put() rejects them — only full 200s and opaque (no-CORS)
-  //     media responses; a range request offline still matches the cached full file by URL.
+  // 1b) reciter audio (cross-origin, ALLOW-LISTED). Policy is split by connectivity (see the ONLINE/OFFLINE
+  //     branches below): ONLINE we hand the request entirely to the browser's native media stack and merely
+  //     warm the full-file cache in the background (a SW-mediated cross-origin/opaque/range media response
+  //     is a known Android-WebView playback hazard); OFFLINE we serve cache-first so a previously-heard ayah
+  //     recites with ZERO network. Recitation audio is immutable, so the cached copy never goes stale. We
+  //     deliberately do NOT cache 206 (partial/range) responses — caches.put() rejects them — only full 200s
+  //     and opaque (no-CORS) media responses; a range request offline still matches the cached full file by URL.
   if (AUDIO_HOSTS.has(url.hostname)){
     const online = !(self.navigator && self.navigator.onLine === false);
     // ── ONLINE → hand the request ENTIRELY to the browser's native media stack (do NOT respondWith). ──
@@ -229,13 +231,35 @@ self.addEventListener('fetch', event => {
         if (res && res.ok){ const copy = res.clone(); event.waitUntil((async () => { const c = await caches.open(SHELL); await c.put('./index.html', copy); })()); }
         return res;
       } catch (e) {
-        return (await caches.match('./index.html')) || (await caches.match('./')) || Response.error();
+        // Offline navigation: prefer the cached app shell (fully functional offline); only if the shell was
+        // never cached (e.g. a brand-new install that went offline mid-first-load) fall back to the minimal
+        // offline.html, which is now precached so this branch can actually reach it.
+        return (await caches.match('./index.html')) || (await caches.match('./')) || (await caches.match('./offline.html')) || Response.error();
       }
     })());
     return;
   }
 
-  // 4) other same-origin static (icons, manifest, fonts, local audio) → STALE-WHILE-REVALIDATE:
+  // 3b) LARGE, BYTE-IMMUTABLE, version-scoped assets (the 2.9MB Qur'an JSON, the Hafs font, the hadith
+  //     frame image, bundled voice/salawat audio) → CACHE-FIRST with NO background revalidation. These do
+  //     not change for the life of a VERSION, and the activate purge already drops the whole SHELL cache on
+  //     a version bump — so stale-while-revalidate re-downloads several megabytes every session for nothing.
+  //     This is the single largest client-bandwidth / CDN-egress lever in the app. Serve the cached copy
+  //     instantly; hit the network ONLY on a genuine cache miss (first ever load, or a fresh version).
+  if (/\/(data|fonts|img)\/|\/audio\/.+\.mp3$/.test(url.pathname)){
+    event.respondWith((async () => {
+      const cached = await caches.match(req);
+      if (cached) return cached;
+      try {
+        const res = await fetch(req);
+        if (res && res.ok){ const c = await caches.open(SHELL); c.put(req, res.clone()); }
+        return res;
+      } catch (e) { return Response.error(); }
+    })());
+    return;
+  }
+
+  // 4) other same-origin static (icons, manifest) → STALE-WHILE-REVALIDATE:
   //    serve the cached copy instantly if present, and refresh it in the background so a changed
   //    asset self-heals without waiting for a full VERSION bump. No cache yet → go to network.
   event.respondWith((async () => {
