@@ -66,7 +66,7 @@
        • everyayah.com / cdn.islamic.network — reciter audio
      SELF-HOSTING NOTE: if you point CLOUD_URL / push at a different server, add that exact origin to
      BOTH connect-src and media-src below, or sync/TTS will be blocked. Keep the list minimal. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://shaikhmuhammadali.github.io https://geocoding-api.open-meteo.com https://nominatim.openstreetmap.org https://api.aladhan.com https://api.bigdatacloud.net https://ipwho.is https://get.geojs.io https://sabr-push-server.onrender.com http://localhost:* http://127.0.0.1:*; media-src 'self' https://everyayah.com https://cdn.islamic.network https://audio.qurancdn.com https://sabr-push-server.onrender.com http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://shaikhmuhammadali.github.io https://geocoding-api.open-meteo.com https://nominatim.openstreetmap.org https://api.aladhan.com https://api.bigdatacloud.net https://ipwho.is https://get.geojs.io https://sabr-push-server.onrender.com https://everyayah.com https://cdn.islamic.network https://audio.qurancdn.com http://localhost:* http://127.0.0.1:*; media-src 'self' https://everyayah.com https://cdn.islamic.network https://audio.qurancdn.com https://sabr-push-server.onrender.com http://localhost:* http://127.0.0.1:*; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <!-- Warm the reciter-audio CDNs so the FIRST Recite tap doesn't pay DNS+TLS. Resource hints aren't gated
      by CSP connect-src; the audio itself is allowed by media-src. -->
 <link rel="preconnect" href="https://audio.qurancdn.com" crossorigin>
@@ -3761,9 +3761,9 @@ function reciteAudio(surah, ayah, g){
   return a;
 }
 let _qa = null, _qaSeq = 0, _qFading = null, _qWarming = null;
-/* Prefetch an ayah mp3 via an <audio> element (media-src — allowed by CSP; a fetch() would hit
-   connect-src, which does NOT list the reciter CDNs). Primes the browser + service-worker cache so the
-   real tap plays with no cold DNS+TLS+GET round-trip. De-duped so repeated hovers/taps are free. */
+/* Prefetch an ayah mp3 via an <audio> element (media-src). Primes the browser + service-worker cache so the
+   real tap plays with no cold DNS+TLS+GET round-trip. De-duped so repeated hovers/taps are free.
+   (The reciter CDNs are now ALSO in connect-src so the Web-Audio gapless engine can fetch()+decode them.) */
 const _qaPrefetched = new Set();
 function prefetchAyahAudio(surah, ayah, g){
   try{
@@ -3912,6 +3912,7 @@ function clearRecitingAyah(){
 }
 function stopReciteAudio(){
   _qaSeq++;
+  try{ _waStop(); }catch(e){}   // stop the Web-Audio gapless engine (sources + scheduled timers) if it's running
   if (_qa){ try{ _qa.pause(); }catch(e){} _qa.onended = _qa.onerror = _qa.ontimeupdate = null; _qa = null; }   // _qaSeq bump already disarms every element's advance/lead-in; clearing listeners is belt-and-suspenders
   if (_qFading){ try{ _qFading.pause(); }catch(e){} _qFading = null; }   // also silence any ayah still cross-fading out, so a stop leaves zero lingering audio
   if (_qWarming){ try{ _qWarming.pause(); }catch(e){} _qWarming = null; }   // stop the muted next-ayah pre-buffer so it doesn't keep decoding after a stop
@@ -3962,7 +3963,114 @@ function _qCrossfade(outEl, ms){
 // the mp3's own leading silence, so keep the overlap MODEST — enough to smooth the seam, small enough never to
 // clip the end of the current verse (which was making it feel rushed/"fast").
 function _qLead(d){ return Math.min(0.22, Math.max(0.12, d * 0.08)); }
+
+/* ══ TRUE GAPLESS RECITATION via Web Audio ══════════════════════════════════════════════════════════════
+   Two per-ayah mp3s can't be handed off seamlessly with <audio>. So we DECODE each ayah to a PCM buffer,
+   TRIM its built-in edge silence (we can read the samples — everyayah & qurancdn send CORS), and schedule the
+   buffers back-to-back on ONE sample-accurate AudioContext timeline with a small controlled breath + tiny
+   click-guard fades. The Qari then flows verse-to-verse like butter. Gracefully falls back to the HTMLAudio
+   engine when Web Audio, or a CORS-decodable source, isn't available (e.g. an isn-only reciter, or offline
+   before an ayah was ever cached). */
+let _waCtx = null, _wa = null;
+function _waAudioCtx(){
+  const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+  if (!_waCtx){ try{ _waCtx = new AC(); }catch(e){ return null; } }
+  if (_waCtx.state === 'suspended'){ try{ _waCtx.resume(); }catch(e){} }
+  return _waCtx;
+}
+function _waCorsUrls(s, a, g){ return ayahAudioUrls(s, a, g).filter(u => u.indexOf('everyayah.com') > -1 || u.indexOf('audio.qurancdn.com') > -1); }
+async function _waDecode(ctx, it){
+  for (const u of _waCorsUrls(it.s, it.a, it.g)){
+    try{
+      const r = await fetch(u, { mode:'cors', credentials:'omit' }); if (!r.ok) continue;
+      const ab = await r.arrayBuffer(); if (!ab || ab.byteLength < 256) continue;
+      const buf = await ctx.decodeAudioData(ab);
+      const ch = buf.getChannelData(0), n = ch.length, sr = buf.sampleRate, thr = 0.006, pad = Math.round(sr * 0.015);
+      let s = 0, e = n - 1;
+      while (s < n && Math.abs(ch[s]) < thr) s++;
+      while (e > s && Math.abs(ch[e]) < thr) e--;
+      if (e <= s){ s = 0; e = n - 1; }                      // pure-quiet safety
+      s = Math.max(0, s - pad); e = Math.min(n - 1, e + pad);
+      return { buffer: buf, offset: s / sr, dur: Math.max(0.05, (e - s) / sr) };
+    }catch(err){ /* try next CORS source */ }
+  }
+  return null;
+}
+// a tiny virtual "audio" so the existing teleprompter scroll + word-glow keep working off the AudioContext clock
+function _waVirtual(ctx, startAt, dur){
+  const lis = {};
+  return {
+    duration: dur,
+    get currentTime(){ return Math.max(0, Math.min(dur, ctx.currentTime - startAt)); },
+    addEventListener(ev, fn, opts){ (lis[ev] = lis[ev] || []).push({ fn, once: opts && opts.once }); },
+    removeEventListener(){},
+    _fire(ev){ (lis[ev] || []).slice().forEach(l => { try{ l.fn(); }catch(e){} }); if (lis[ev]) lis[ev] = lis[ev].filter(l => !l.once); }
+  };
+}
+const _waSleep = ms => new Promise(r => setTimeout(r, ms));
+async function _waPlay(items, btn){
+  const ctx = _waAudioCtx(); if (!ctx || !items.length) return false;
+  const seq = _qaSeq;                                        // stopReciteAudio() already ran in the caller
+  const decoded = {};
+  decoded[0] = await _waDecode(ctx, items[0]);
+  if (seq !== _qaSeq) return true;                          // superseded while decoding → do NOT fall back
+  if (!decoded[0]) return false;                            // no CORS-decodable source → caller uses HTMLAudio
+  if (btn) btn.classList.add('playing');
+  startReciteScroll();
+  const state = { seq, srcs: [], timers: [], stopped: false, va: null, wordTimer: 0 };
+  _wa = state;
+  state.wordTimer = setInterval(() => { if (state.stopped || state.seq !== _qaSeq){ clearInterval(state.wordTimer); return; } if (state.va) state.va._fire('timeupdate'); }, 55);
+  const GAP = 0.05, FADE = 0.018;                            // 50 ms breath between verses + 18 ms click-guard fades
+  const decodeAhead = k => { for (let j = k; j <= k + 2 && j < items.length; j++){ if (decoded[j] === undefined){ decoded[j] = 'pending'; _waDecode(ctx, items[j]).then(d => { if (state.seq === _qaSeq) decoded[j] = d; }); } } };
+  let t = ctx.currentTime + 0.12, i = 0;
+  decodeAhead(1);
+  while (i < items.length && !state.stopped && state.seq === _qaSeq){
+    let d = decoded[i];
+    if (d === undefined) d = decoded[i] = await _waDecode(ctx, items[i]);
+    else if (d === 'pending'){ let tries = 0; while (decoded[i] === 'pending' && tries < 240 && !state.stopped && state.seq === _qaSeq){ await _waSleep(25); tries++; } d = decoded[i]; }
+    if (state.stopped || state.seq !== _qaSeq) break;
+    if (!d || d === 'pending'){ i++; continue; }             // couldn't decode this ayah → skip it (rare)
+    const startAt = Math.max(t, ctx.currentTime + 0.03);
+    const src = ctx.createBufferSource(); src.buffer = d.buffer;
+    const g = ctx.createGain(); src.connect(g); g.connect(ctx.destination);
+    g.gain.setValueAtTime(0.0001, startAt);
+    g.gain.exponentialRampToValueAtTime(1, startAt + FADE);
+    g.gain.setValueAtTime(1, Math.max(startAt + FADE, startAt + d.dur - FADE));
+    g.gain.exponentialRampToValueAtTime(0.0001, startAt + d.dur);
+    try{ src.start(startAt, d.offset, d.dur); }catch(e){}
+    state.srcs.push(src);
+    const it = items[i], va = _waVirtual(ctx, startAt, d.dur), delay = Math.max(0, (startAt - ctx.currentTime) * 1000);
+    state.timers.push(setTimeout(() => { if (state.seq === _qaSeq && !state.stopped){ state.va = va; if (it.ha > 0) setRecitingAyah(it.hs, it.ha, va); else clearRecitingAyah(); } }, delay));
+    t = startAt + d.dur + GAP;
+    if (decoded[i - 3]) decoded[i - 3] = null;               // free a played buffer (bounds memory on long surahs)
+    i++;
+    decodeAhead(i);
+    while (!state.stopped && state.seq === _qaSeq && (t - ctx.currentTime) > 4){ await _waSleep(150); }   // don't schedule too far ahead
+  }
+  const endMs = Math.max(0, (t - ctx.currentTime + 0.35) * 1000);
+  state.timers.push(setTimeout(() => { if (state.seq === _qaSeq && !state.stopped){ try{ clearInterval(state.wordTimer); }catch(e){} if (btn) btn.classList.remove('playing'); clearRecitingAyah(); stopReciteScroll(); if (_wa === state) _wa = null; } }, endMs));
+  return true;
+}
+function _waStop(){
+  const st = _wa; _wa = null; if (!st) return;
+  st.stopped = true;
+  try{ clearInterval(st.wordTimer); }catch(e){}
+  st.timers.forEach(t => { try{ clearTimeout(t); }catch(e){} });
+  st.srcs.forEach(s => { try{ s.stop(); }catch(e){} try{ s.disconnect(); }catch(e){} });
+}
+
 function reciteSurahAudio(surah, count, firstG, btn){
+  const wasThis = btn && btn.classList.contains('playing');
+  stopReciteAudio();
+  if (wasThis || !count) return;
+  const hasBism = (surah !== 1 && surah !== 9);
+  const items = [];
+  if (hasBism) items.push({ s:1, a:1, g:1, hs:surah, ha:0 });                         // Bismillah — decode Fatiha 1:1, no highlight
+  for (let ai = 1; ai <= count; ai++) items.push({ s:surah, a:ai, g:firstG + ai - 1, hs:surah, ha:ai });
+  const seq0 = _qaSeq;
+  _waPlay(items, btn).then(ok => { if (!ok && _qaSeq === seq0) _reciteSurahAudioHTML(surah, count, firstG, btn); });   // Web Audio couldn't source it → HTMLAudio fallback
+}
+function _reciteSurahAudioHTML(surah, count, firstG, btn){
   const wasThis = btn && btn.classList.contains('playing');
   stopReciteAudio();
   if (wasThis || !count) return;
@@ -4012,6 +4120,15 @@ function reciteSurahAudio(surah, count, firstG, btn){
   })();
 }
 function recitePassage(surah, fromAyah, count, firstG, btn){
+  const wasThis = btn && btn.classList.contains('playing');
+  stopReciteAudio();
+  if (wasThis || !count) return;
+  const items = [];
+  for (let k = 0; k < count; k++) items.push({ s:surah, a:fromAyah + k, g:firstG + k, hs:surah, ha:fromAyah + k });
+  const seq0 = _qaSeq;
+  _waPlay(items, btn).then(ok => { if (!ok && _qaSeq === seq0) _recitePassageHTML(surah, fromAyah, count, firstG, btn); });
+}
+function _recitePassageHTML(surah, fromAyah, count, firstG, btn){
   const wasThis = btn && btn.classList.contains('playing');
   stopReciteAudio();
   if (wasThis || !count) return;
