@@ -474,6 +474,23 @@
   .tasbihReset{display:inline-flex;align-items:center;gap:7px;padding:9px 22px;border-radius:999px;border:1px solid var(--stroke-gold);background:var(--gold-soft);color:var(--gold-ink);font-family:var(--font);font-size:.82rem;font-weight:800;letter-spacing:.02em;cursor:pointer;transition:transform .12s ease, box-shadow .3s ease}
   .tasbihReset:hover{box-shadow:0 0 20px -6px var(--gold)}
   .tasbihReset:active{transform:scale(.94)}
+  /* per-phrase dhikr counts — each keeps its own running total, with a separate Recite + Reset */
+  .dcounts{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+  .dcount{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;border:1px solid var(--stroke);background:var(--glass);cursor:pointer;transition:border-color .18s ease, background .18s ease, transform .1s ease}
+  .dcount:active{transform:scale(.99)}
+  @media(hover:hover){ .dcount:not(.on):hover{border-color:var(--stroke-gold)} }
+  .dcount.on{border-color:var(--gold);background:var(--gold-soft);box-shadow:0 0 0 1px var(--gold) inset}
+  .dcount-ph{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .dcount-ph .ar{font-family:var(--font-ar,inherit);font-size:1.15rem;font-weight:700;color:var(--text);line-height:1.4}
+  .dcount-ph .en{font-size:.72rem;color:var(--dim);letter-spacing:.02em}
+  .dcount-n{flex:none;min-width:42px;text-align:center;font-size:1.35rem;font-weight:800;color:var(--gold-ink);font-variant-numeric:tabular-nums}
+  .dcount.on .dcount-n{color:var(--gold-ink)}
+  .dcount-acts{flex:none;display:flex;gap:6px}
+  .dcount-btn{width:34px;height:34px;border-radius:10px;border:1px solid var(--stroke);background:transparent;color:var(--dim);display:grid;place-items:center;cursor:pointer;transition:border-color .15s ease, color .15s ease, background .15s ease}
+  .dcount-btn:active{transform:scale(.9)}
+  @media(hover:hover){ .dcount-btn:hover{border-color:var(--stroke-gold);color:var(--gold-ink)} }
+  .dcount-btn .ricon{width:16px;height:16px}
+  .dcount-btn.recitebtn.playing{border-color:var(--gold);color:var(--gold-ink);background:var(--gold-soft)}
   .tasbih{position:relative}
   .tasbih::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--gold);opacity:0;pointer-events:none}
   .tasbih.counted::after{animation:tcount .55s ease}
@@ -1553,11 +1570,12 @@
   <div id="bookmarksCard"></div>
 
   <div class="glass">
-    <h2 class="sec">Dhikr</h2>
-    <div class="chiprow" id="phraseChips"></div>
-    <div class="tasbihwrap"><button class="tasbih" id="tasbih" aria-label="Count dhikr"><span class="tn" id="tasbihN">0</span><span class="tof" id="tasbihOf">of 33</span><span class="tph" id="tasbihPhrase"></span></button></div>
+    <h2 class="sec">Dhikr counter</h2>
+    <div class="tasbihwrap"><button class="tasbih" id="tasbih" aria-label="Count the selected dhikr"><span class="tn" id="tasbihN">0</span><span class="tof" id="tasbihOf">of 33</span><span class="tph" id="tasbihPhrase"></span></button></div>
     <div class="chiprow"><button class="chip2" onclick="setTarget(33)">33</button><button class="chip2" onclick="setTarget(99)">99</button><button class="chip2" onclick="setTarget(100)">100</button></div>
-    <div style="text-align:center;margin-top:12px"><button class="tasbihReset" onclick="resetTasbih()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4v5h5"/></svg><span>Reset</span></button></div>
+    <p class="small dim" style="text-align:center;margin:8px 0 0">Pick a dhikr below, then tap the circle to count it. <b>Each keeps its own running total</b> — so you never lose track of how many you’ve done. ▶ recites it; ↺ resets just that one.</p>
+    <div class="dcounts" id="dhikrCounts"></div>
+    <div style="text-align:center;margin-top:12px"><button class="tasbihReset" onclick="resetAllTasbih()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4v5h5"/></svg><span>Reset all counts</span></button></div>
   </div>
 
   <div class="glass" id="journalCard">
@@ -6435,27 +6453,53 @@ async function shareHadithImage(idx){
 }
 
 /* ── dhikr ── */
+// Per-phrase counts: each dhikr keeps its OWN running total, so switching between them never loses a count.
+// One-time migration lifts any legacy single count onto the active phrase.
+function _tasbihCounts(){
+  S.tasbih = S.tasbih || {count:0, target:33, phrase:0};
+  if (!S.tasbih.counts || typeof S.tasbih.counts !== 'object' || Array.isArray(S.tasbih.counts)){
+    S.tasbih.counts = {};
+    if (Number(S.tasbih.count) > 0) S.tasbih.counts[S.tasbih.phrase || 0] = Number(S.tasbih.count) || 0;
+  }
+  return S.tasbih.counts;
+}
+const _DRECITE_SVG = '<svg class="ricon" viewBox="0 0 24 24" aria-hidden="true"><path class="spk" d="M4 9v6h4l5 4V5L8 9H4z"/><path class="wv1" d="M15.6 8.7a3.7 3.7 0 0 1 0 6.6"/><path class="wv2" d="M18.2 6.2a7.2 7.2 0 0 1 0 11.6"/></svg>';
+const _DRESET_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4v5h5"/></svg>';
 function renderDhikr(){
-  const chips = document.getElementById('phraseChips'); if (!chips) return;
-  chips.innerHTML = PHRASES.map((p, i) => '<button class="chip2 ' + (S.tasbih.phrase===i?'on':'') + '" onclick="setPhrase(' + i + ')">' + p.en + '</button>').join('');
-  document.getElementById('tasbihN').textContent = S.tasbih.count;
-  document.getElementById('tasbihOf').textContent = 'of ' + S.tasbih.target;
-  document.getElementById('tasbihPhrase').textContent = PHRASES[S.tasbih.phrase].ar;
+  const counts = _tasbihCounts();
+  const active = S.tasbih.phrase || 0;
+  const elN = document.getElementById('tasbihN'); if (elN) elN.textContent = Number(counts[active]) || 0;
+  const elOf = document.getElementById('tasbihOf'); if (elOf) elOf.textContent = 'of ' + S.tasbih.target;
+  const elPh = document.getElementById('tasbihPhrase'); if (elPh) elPh.textContent = (PHRASES[active] || PHRASES[0]).ar;
+  const list = document.getElementById('dhikrCounts'); if (!list) return;
+  list.innerHTML = PHRASES.map(function(p, i){
+    const n = Number(counts[i]) || 0, arAttr = esc(p.ar).replace(/"/g, '&#34;');
+    return '<div class="dcount' + (i === active ? ' on' : '') + '" role="button" tabindex="0" onclick="setPhrase(' + i + ')" aria-label="' + esc(p.en) + ', counted ' + n + ' times">'
+      + '<div class="dcount-ph"><span class="ar" lang="ar" dir="rtl">' + p.ar + '</span><span class="en">' + esc(p.en) + '</span></div>'
+      + '<div class="dcount-n" title="how many you’ve counted">' + n + '</div>'
+      + '<div class="dcount-acts" onclick="event.stopPropagation()">'
+        + '<button class="dcount-btn recitebtn" title="Recite ' + esc(p.en) + '" aria-label="Recite ' + esc(p.en) + '" onclick="reciteText(&quot;' + arAttr + '&quot;, this)">' + _DRECITE_SVG + '</button>'
+        + '<button class="dcount-btn" title="Reset ' + esc(p.en) + '" aria-label="Reset ' + esc(p.en) + '" onclick="resetPhrase(' + i + ')">' + _DRESET_SVG + '</button>'
+      + '</div></div>';
+  }).join('');
 }
 function setPhrase(i){ S.tasbih.phrase = i; save(); renderDhikr(); }
-function setTarget(n){ S.tasbih.target = n; S.tasbih.count = 0; save(); renderDhikr(); }
-function resetTasbih(){ S.tasbih.count = 0; save(); renderDhikr(); }
+function setTarget(n){ S.tasbih.target = n; save(); renderDhikr(); }        // target is a milestone only — it never wipes your counts
+function resetPhrase(i){ const c = _tasbihCounts(); c[i] = 0; save(); renderDhikr(); }
+function resetTasbih(){ resetPhrase(S.tasbih.phrase || 0); }                // back-compat alias: reset the active phrase
+function resetAllTasbih(){ S.tasbih.counts = {}; save(); renderDhikr(); }
 function bumpTasbih(){
   const dk = todayKey() || 'x';
   if (!S.dhikrDay || S.dhikrDay.date !== dk) S.dhikrDay = {date: dk, n: 0};
   S.dhikrDay.n++;
-  S.tasbih.count++; S.dhikrTotal = (S.dhikrTotal||0) + 1;
-  if (navigator.vibrate) navigator.vibrate(S.tasbih.count >= S.tasbih.target ? [40,60,80] : 12);
-  if (S.tasbih.count >= S.tasbih.target){ S.tasbih.count = 0; }
+  const counts = _tasbihCounts(), active = S.tasbih.phrase || 0;
+  const n = (Number(counts[active]) || 0) + 1;
+  counts[active] = n; S.dhikrTotal = (Number(S.dhikrTotal) || 0) + 1;       // counts PERSIST (no auto-reset) — the running history the user asked for
+  const hitTarget = S.tasbih.target && (n % S.tasbih.target === 0);
+  if (navigator.vibrate) navigator.vibrate(hitTarget ? [40,60,80] : 12);
   save(); renderDhikr();
-  // update ONLY the "dhikr counted" number — never rebuild the whole galaxy on a tap
   try{ const b = document.querySelectorAll('#skystats div b')[2]; if (b) b.textContent = (Number(S.dhikrTotal) || 0); }catch(e){}
-  try{ const n = document.getElementById('tasbihN'); if (n){ n.classList.remove('bump'); void n.offsetWidth; n.classList.add('bump'); } const t = document.getElementById('tasbih'); if (t){ t.classList.remove('counted'); void t.offsetWidth; t.classList.add('counted'); } }catch(e){}
+  try{ const el = document.getElementById('tasbihN'); if (el){ el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); } const t = document.getElementById('tasbih'); if (t){ t.classList.remove('counted'); void t.offsetWidth; t.classList.add('counted'); } }catch(e){}
 }
 
 /* ── journal ── */
