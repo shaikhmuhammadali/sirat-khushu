@@ -1779,7 +1779,7 @@
 
   <div class="glass">
     <h2 class="sec">Your data — an amanah</h2>
-    <p class="small muted">Your data is an <b>amanah</b> — a sacred trust. As humble servants of Allah ﷻ, we guard what He has given us the honour to keep: everything you write, log and search stays on <b>your own device</b>, and — only if you turn on cloud login — on <b>your own server</b>. We never sell it, never share it, and never look into what is yours. It remains yours alone, in shā’ Allah — kept the way an amanah deserves to be kept.</p>
+    <p class="small muted">Your data is an <b>amanah</b> — a sacred trust. <b>Everything you write — your journal, reflections, duʿāʾ and searches — stays on your own device and is never uploaded.</b> So the app can keep running well and you can recover your password, a <b>minimal</b> record is kept on our secure server: your username, email and anonymous <b>activity counts</b> (how many prayers you’ve logged, your streak) — <b>never your writings</b>. We never sell it, never share it, and never read what is yours. It remains yours alone, in shā’ Allah — kept the way an amanah deserves to be kept.</p>
   </div>
 
   <footer>
@@ -1950,6 +1950,7 @@ function save(){
     }
   }
   try{ if (typeof scheduleCloudSync === 'function') scheduleCloudSync(); }catch(e){}
+  try{ if (typeof scheduleMetaSync === 'function') scheduleMetaSync(); }catch(e){}   // privacy-preserving admin visibility (counts only)
 }
 
 /* ── A11Y: keyboard + screen-reader access for inline link-style actions ──────────────────────────
@@ -5349,10 +5350,11 @@ async function createAccount(){
   S.rulesVer = RULES_VERSION;   // they accepted the current Rules to create the account (the consent box required it)
   S.gender = _acGender; S.profile = {name:dn, since: todayKey() || ''}; S.lockEnabled = true; S.guestMode = false; S.staySignedIn = true;
   save(); sessionUnlock(); afterAuth(true); try{ renderLockControls(); }catch(e){}   // afterAuth(true): this is the ONE genuine new-account moment → the guided tour runs here (and only here). Notification prompt is deferred to endTour() so it lands AFTER the tour.
-  // PRIVACY — cloud sync is OPT-IN. We deliberately do NOT auto-upload on sign-up: a new account stays
-  // on THIS device only and nothing leaves it ("data between them and Allah" by default). The user can
-  // later enable cross-device sync + emailed password reset from Settings → "Turn on cloud login"
-  // (cloudConnect → cloudSignup), which is the moment their data is first sent to the server.
+  // PRIVACY — your WRITINGS stay on THIS device. On sign-up we register only a MINIMAL metadata record
+  // (username, email, and activity COUNTS) so the owner's /admin can see the real user base + engagement —
+  // NEVER the journal text, reflections, exact logs, searches or location (see buildMeta()). Best-effort +
+  // retry-safe (metaSyncNow re-tries on the next change / app open if the server was unreachable).
+  try{ metaSyncNow(); }catch(e){}
 }
 async function tryUnlock(){
   const err = document.getElementById('lkErr'), pw = val('lkPass');
@@ -7350,6 +7352,55 @@ function scheduleCloudSync(){
   if (_storeInvalidated || !(S.cloud && S.cloud.token) || !cloudUrl()) return;
   clearTimeout(_cloudTimer); _cloudTimer = setTimeout(cloudSyncNow, 20000);
 }
+
+/* ── Metadata sync — privacy-preserving admin visibility ──────────────────────────────────────────────
+   Auto-registers a MINIMAL record on the server — username, email, and activity COUNTS — so the owner's
+   /admin can see the real user base + engagement, LIVE. It NEVER uploads your journal text, reflections,
+   exact logs, searches or location: those stay on THIS device (the amanah). Authenticated by a high-entropy
+   per-device key (no password, so the record can't be logged into and carries no reversible secret).
+   Retry-safe: the key lives locally, so a failed sync (e.g. the free server was asleep) just retries on the
+   next change or app open. Independent of the (opt-in) full cloud-login system. */
+function _metaKey(){ if (!S.metaKey){ S.metaKey = randomHex(32); try{ persistCloudMeta(); }catch(e){} } return S.metaKey; }
+function buildMeta(){
+  const logs = (S.logs && typeof S.logs === 'object') ? S.logs : {};
+  const days = Object.keys(logs), P = ['fajr','dhuhr','asr','maghrib','isha'];
+  const byName = {fajr:0,dhuhr:0,asr:0,maghrib:0,isha:0}; let logged = 0;
+  days.forEach(function(dk){ const day = logs[dk]; if (day && typeof day === 'object') P.forEach(function(p){ if (day[p]){ byName[p]++; logged++; } }); });
+  const recent = days.sort().slice(-21).map(function(dk){ const day = logs[dk] || {}; return { day: dk, count: P.filter(function(p){ return day[p]; }).length }; });
+  const total = days.length * 5, completion = total ? Math.round(logged / total * 100) : 0;
+  let cur = 0; try{ if (typeof streakInfo === 'function') cur = streakInfo().cur || 0; }catch(e){}
+  return {
+    v: 1,
+    name: (S.profile && S.profile.name) || (S.account && S.account.name) || null,
+    gender: S.gender || null, since: (S.profile && S.profile.since) || null,
+    theme: S.theme || null, method: S.method || null,
+    prayerDays: days.length, prayerLogs: logged, prayerByName: byName, prayerCompletion: completion, prayerRecent: recent,
+    streakBest: Number(S.streakBest) || 0, streakCurrent: cur,
+    xp: Number(S.xp) || 0, dhikr: Number(S.dhikrTotal) || 0,
+    bookmarks: Array.isArray(S.bookmarks) ? S.bookmarks.length : 0,
+    duas: Array.isArray(S.duas) ? S.duas.length : 0,
+    adhkar: Number(S.adhkarCount) || 0,
+    achievements: Array.isArray(S.achievements) ? S.achievements.length : (S.achievements && typeof S.achievements === 'object' ? Object.keys(S.achievements).length : 0),
+    journalCount: Array.isArray(S.journal) ? S.journal.length : 0,   // COUNT only — the entries themselves NEVER leave this device
+    devices: 1,
+  };
+}
+let _metaTimer = null, _metaBusy = false, _metaLastSig = null;
+function _metaSig(m){ return [m.prayerDays,m.prayerLogs,m.streakBest,m.streakCurrent,m.xp,m.dhikr,m.bookmarks,m.duas,m.adhkar,m.achievements,m.journalCount,m.name,m.theme,m.method,(S.account&&S.account.email)].join('|'); }
+function scheduleMetaSync(){ if (!(S.account && S.account.username) || S.metaBlocked || !cloudUrl()) return; clearTimeout(_metaTimer); _metaTimer = setTimeout(metaSyncNow, 3000); }
+async function metaSyncNow(){
+  if (_metaBusy || !(S.account && S.account.username) || S.metaBlocked || !cloudUrl() || navigator.onLine === false) return;
+  const m = buildMeta(), sig = _metaSig(m);
+  if (sig === _metaLastSig && !S.metaPending) return;                 // nothing changed since the last successful sync
+  _metaBusy = true;
+  try{
+    const j = await cloudFetch('/meta/upsert', { username: S.account.username, email: S.account.email || null, name: m.name, metaKey: _metaKey(), meta: m }, null, 30000);
+    if (j && j.ok){ _metaLastSig = sig; S.metaPending = false; S.metaRev = j.rev; try{ persistCloudMeta(); }catch(e){} }
+    else if (j && j.error === 'username taken'){ _metaLastSig = sig; S.metaBlocked = true; try{ persistCloudMeta(); }catch(e){} }   // a real account owns this name — stop
+    else { S.metaPending = true; }
+  }catch(e){ S.metaPending = true; }
+  _metaBusy = false;
+}
 async function cloudSyncNow(){
   if (_cloudBusy || _storeInvalidated) return;
   if (!(S.cloud && S.cloud.token) || !cloudUrl()) return;
@@ -8277,6 +8328,7 @@ function boot(){
   try{ if (!(typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission)) setTimeout(function(){ try{ enableCompass(true); }catch(e){} }, 1200); }catch(e){}
   try{ renderGreetline(); renderTopAyah(); }catch(e){}
   try{ setTimeout(function(){ trackVisit(); }, 3000); }catch(e){}   // anonymous visit ping — no-op unless opted in
+  try{ setTimeout(function(){ if (typeof scheduleMetaSync === 'function') scheduleMetaSync(); }, 5500); }catch(e){}   // refresh the admin's counts + mark active; retries a signup registration the (asleep) server may have missed
   try{ setTimeout(function(){ checkForUpdate(); }, 4200); }catch(e){}   // quietly show the "update available" banner if a newer build is live
   try{ setTimeout(function(){ enforceFreshness(); }, 5200); }catch(e){}   // "circular update": force a fresh re-pull at least every 3 months, even if nothing new shipped
   try{ setTimeout(function(){ enforceRulesAcceptance(); }, 2200); }catch(e){}   // no-lock returning users: enforce Rules re-acceptance if the Rules changed (guarded off the lock screen)
