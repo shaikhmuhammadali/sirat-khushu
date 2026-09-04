@@ -301,6 +301,13 @@
   .pcard.next::after{content:""; position:absolute; inset:-1px; border-radius:20px; pointer-events:none;
     border:1px solid color-mix(in srgb,var(--gold) 60%,transparent); opacity:0; animation:pcardRing 2.8s ease-in-out infinite}
   @keyframes pcardRing{0%,100%{opacity:0; transform:scale(.996)} 50%{opacity:.85; transform:scale(1.006)}}
+  /* HANDOVER pulse: the instant a card becomes the next (or active) prayer — e.g. Dhuhr → Asr — a golden
+     ring ripples outward once. It fires only on the REAL change: refreshCards removes+re-adds the class in
+     the same frame for a card that stays next, so the ::before never re-matches from scratch on the 1s tick. */
+  .pcard.next::before, .pcard.active::before{content:""; position:absolute; inset:-1px; border-radius:20px; pointer-events:none; z-index:2;
+    opacity:0; border:2px solid color-mix(in srgb,var(--gold) 72%,transparent); animation:handoverRipple .85s cubic-bezier(.2,.7,.3,1)}
+  .pcard.active::before{border-color:color-mix(in srgb,var(--teal,#0e7a70) 72%,transparent)}
+  @keyframes handoverRipple{0%{opacity:.95; transform:scale(1)} 100%{opacity:0; transform:scale(1.085)}}
 
   /* staggered entrance cascade when the Today tab appears (fill-mode BACKWARDS so hover transforms still work after) */
   .wrap.tabfade .clockcard{animation-delay:.02s}
