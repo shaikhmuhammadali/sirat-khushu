@@ -253,6 +253,23 @@
   .nextstrip .cd{font-size:1.7rem; font-weight:800; font-variant-numeric:tabular-nums; color:var(--gold-ink); text-align:right}
   .nextstrip .at{font-size:.78rem; color:var(--muted); text-align:right}
 
+  /* Prayer-flow connector: the passed prayer → the upcoming one, with time visibly streaming toward it */
+  .pflow{margin:-6px 4px 16px; padding:0 2px}
+  .pflow-ends{display:flex; align-items:baseline; justify-content:space-between; gap:10px; font-size:.66rem; font-weight:800; letter-spacing:.05em; text-transform:uppercase; margin-bottom:7px}
+  .pflow-prev{color:var(--muted)}
+  .pflow-next{color:var(--gold-ink)}
+  .pflow-track{position:relative; height:7px; border-radius:999px; background:color-mix(in srgb,var(--ink) 12%,transparent); overflow:hidden}
+  .pflow-track::after{content:""; position:absolute; top:0; bottom:0; left:0; width:38%; pointer-events:none;
+    background:linear-gradient(90deg,transparent, color-mix(in srgb,var(--gold) 32%,transparent), transparent);
+    transform:translateX(-130%); animation:pflowSweep 3s linear infinite}
+  @keyframes pflowSweep{0%{transform:translateX(-130%)} 100%{transform:translateX(330%)}}
+  .pflow-fill{position:relative; height:100%; min-width:3px; border-radius:999px; transition:width 1s linear;
+    background:linear-gradient(90deg,var(--teal,#0e7a70), var(--gold))}
+  .pflow-comet{position:absolute; right:-4px; top:50%; width:13px; height:13px; margin-top:-6.5px; border-radius:50%;
+    background:radial-gradient(circle, var(--gold-ink) 0%, color-mix(in srgb,var(--gold) 60%,transparent) 45%, transparent 72%);
+    box-shadow:0 0 12px 2px color-mix(in srgb,var(--gold) 55%,transparent); animation:pflowPulse 1.9s ease-in-out infinite}
+  @keyframes pflowPulse{0%,100%{transform:scale(.82); opacity:.82} 50%{transform:scale(1.28); opacity:1}}
+
   .pgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin-bottom:16px}
   .pcard{position:relative; background:color-mix(in srgb, var(--bg2) 78%, transparent); border:1px solid var(--stroke); border-radius:20px; padding:15px 16px; transition:border-color .25s,background .25s,transform .28s cubic-bezier(.2,.85,.3,1),box-shadow .3s ease}
   .pcard.active{border-color:var(--teal); background:linear-gradient(160deg,var(--teal-soft),var(--glass))}
@@ -1639,6 +1656,11 @@
     <div><div class="cd" id="nsCd">--:--:--</div><div class="at" id="nsAt"></div></div>
   </div>
 
+  <div class="pflow" id="prayerFlow" style="display:none" aria-hidden="true">
+    <div class="pflow-ends"><span class="pflow-prev" id="pflowPrev"></span><span class="pflow-next" id="pflowNext"></span></div>
+    <div class="pflow-track"><div class="pflow-fill" id="pflowFill"><i class="pflow-comet"></i></div></div>
+  </div>
+
   <div class="pgrid" id="pgrid"></div>
 
   <div id="ramadanCard"></div>
@@ -2587,6 +2609,24 @@ function refreshCards(win, now, t1){
   return next;
 }
 
+/* The connector between the prayer that just passed and the upcoming one: a track whose fill grows with
+   the elapsed fraction of the gap, a pulsing "now" comet at the leading edge, and a light that keeps
+   streaming toward the next prayer — so at a glance you see where you are and what's coming. */
+function renderPrayerFlow(win, now, next, nextE, tz){
+  const fl = document.getElementById('prayerFlow'); if (!fl) return;
+  if (!next || nextE == null){ fl.style.display = 'none'; return; }
+  const obl = win.filter(w => !w.info && w.e != null);
+  let prev = null; for (const w of obl){ if (w.e <= now) prev = w; }   // the most recent prayer that has passed
+  const prevE = prev ? prev.e : (nextE - 5*3600000);                    // pre-Fajr fallback: a sensible 5h lead-in
+  const prevName = prev ? prev.k : 'Night';
+  const span = Math.max(1, nextE - prevE);
+  const frac = Math.max(0, Math.min(1, (now - prevE) / span));
+  fl.style.display = 'block';
+  const p = document.getElementById('pflowPrev'), n = document.getElementById('pflowNext'), f = document.getElementById('pflowFill');
+  if (p) p.textContent = prevName + ' · ' + fmtT(prevE, tz);
+  if (n) n.textContent = (next.tomorrow ? 'Tomorrow · ' : '') + next.k + ' · ' + fmtT(nextE, tz);
+  if (f) f.style.width = (frac * 100).toFixed(2) + '%';
+}
 /* ── the tick: everything time-dependent ── */
 let lastClock = '', notifiedKeys = {}, eventCache = null, eventCacheKey = '';
 function renderTick(){
@@ -2624,7 +2664,8 @@ function renderTick(){
     document.getElementById('nsAr').textContent = ar;
     document.getElementById('nsCd').textContent = cd(e-now);
     document.getElementById('nsAt').textContent = 'at ' + fmtT(e, tz);
-  } else ns.style.display = 'none';
+    renderPrayerFlow(win, now, next, e, tz);
+  } else { ns.style.display = 'none'; const _pf = document.getElementById('prayerFlow'); if (_pf) _pf.style.display = 'none'; }
 
   renderSunNight(set, now, tz);
   renderVoluntary(set, now, tz);
