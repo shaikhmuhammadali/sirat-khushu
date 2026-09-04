@@ -2067,7 +2067,7 @@ let S = (() => {
   // or a hand-crafted backup import can NEVER reach an HTML sink. Mirrors the existing dhikrTotal guard in
   // applyCloudRestore and closes the same gap for streakBest/streakCelebrated. All restore paths reload(),
   // so this one self-heal on boot backstops every entry point regardless of where the value came from.
-  ['dhikrTotal','streakBest','streakCelebrated'].forEach(k => { merged[k] = Number(merged[k]) || 0; });
+  ['dhikrTotal','streakBest','streakCelebrated','xp'].forEach(k => { merged[k] = Number(merged[k]) || 0; });
   // SCHEMA REPAIR: if a persisted core collection has the wrong shape (corrupt storage, a bad sync/import,
   // or a build mismatch), reset it to its default type so boot code (streakInfo's Object.keys(S.logs),
   // renderJournal's .slice, …) can never throw. Objects must be plain non-array objects; lists must be arrays.
@@ -6085,7 +6085,7 @@ const LEVELS = [
   {xp:750,name:'Illuminated'},{xp:1300,name:'Sincere Heart'},{xp:2200,name:'Beloved of the Path'}
 ];
 function levelInfo(){
-  const xp = S.xp || 0; let cur = LEVELS[0], next = null;
+  const xp = Number(S.xp) || 0; let cur = LEVELS[0], next = null;   // Number(): a poisoned string XP must never survive to renderXP()'s innerHTML (matches the streakBest/dhikrTotal guards)
   for (let i = 0; i < LEVELS.length; i++){ if (xp >= LEVELS[i].xp){ cur = LEVELS[i]; next = LEVELS[i+1] || null; } }
   return {cur, next, xp};
 }
