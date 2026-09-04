@@ -284,7 +284,11 @@
   .pflow-labels span.done{color:var(--muted)}
   .pflow-labels span.next{color:var(--gold-ink)}
 
-  .pgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin-bottom:16px}
+  .pgrid{position:relative; display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin-bottom:16px}
+  /* a glossy light that glides from the just-passed prayer card to the upcoming one (JS-positioned) */
+  .pray-ray{position:absolute; left:0; top:0; width:26px; height:26px; margin:-13px 0 0 -13px; border-radius:50%; pointer-events:none; z-index:6; will-change:transform,opacity;
+    background:radial-gradient(circle, #fff 0%, var(--gold-ink) 26%, color-mix(in srgb,var(--gold) 55%,transparent) 52%, transparent 72%);
+    box-shadow:0 0 22px 7px color-mix(in srgb,var(--gold) 55%,transparent), 0 0 6px 2px color-mix(in srgb,#fff 60%,transparent)}
   .pcard{position:relative; background:color-mix(in srgb, var(--bg2) 78%, transparent); border:1px solid var(--stroke); border-radius:20px; padding:15px 16px; transition:border-color .25s,background .25s,transform .28s cubic-bezier(.2,.85,.3,1),box-shadow .3s ease}
   .pcard.active{border-color:var(--teal); background:linear-gradient(160deg,var(--teal-soft),var(--glass))}
   .pcard.next{border-color:var(--stroke-gold); background:linear-gradient(160deg,var(--gold-soft),var(--glass))}
@@ -1696,7 +1700,6 @@
     <div class="skystats" id="skystats"></div>
     <p class="small dim" style="margin-top:10px">Every prayer you log becomes a star — your sky only ever grows. Missed a day? Log it below to keep your streak going.</p>
     <div class="hquote"><div class="ar" lang="ar" dir="rtl">أَنْ تَعْبُدَ اللَّهَ كَأَنَّكَ تَرَاهُ، فَإِنْ لَمْ تَكُنْ تَرَاهُ فَإِنَّهُ يَرَاكَ</div><div class="hquote-tr">“It is to worship Allah as though you see Him, for though you do not see Him, He sees you.”</div><div class="hquote-ref"><span class="badge ref">Sahih al-Bukhari 50 · Sahih Muslim 8</span> <span class="badge grade">Sahih</span></div><div class="hquote-note">Ihsan — the good only your Creator sees. Not every eye sees your quiet stars, but He does.</div></div>
-    <div style="margin-top:12px"><button class="btn" onclick="openFocus()">Enter Focus Mode</button></div>
   </div>
 
   <div id="streakCard"></div>
@@ -2066,7 +2069,7 @@ const DEFAULTS = {
   hadithNotif:true, hadithOverlay:true, hadithHour:8, hadithMin:0,   // daily Hadith background: always-on at full power (no toggle) — also forced each boot by ensureHadithAuto()
   prayerLock:true, prayerLockMins:15,   // Prayer Lock: always-on automatic focus-lock at every prayer (no toggle) — also forced each boot by ensurePrayerLockAuto()
   profile:null, nameAsked:0, xp:0, achievements:[], questClaim:null, dhikrDay:null, greetSeen:null,
-  remind:true, notifPre:0, notifPost:0, soundName:'bell', vol:1, vibrate:true,
+  remind:true, notifPre:15, notifPost:0, soundName:'bell', vol:1, vibrate:true,   // notifPre:15 → a gentle heads-up 15 min before every prayer, always-on (see ensurePreReminderAuto)
   quiet:false, quietFrom:22, quietTo:6, hadithPopup:true, progressToasts:true, loveEvery:45,
   gender:null, dhikrVoice:true, adhkarCount:null, voiceDepth:'deep', salawatAudio:true, reciter:'afasy', reciterReminded:false, rot:null, lockEnabled:false, lockFails:null, account:null, push:{url:'',key:'',appkey:'',on:false}, methodAuto:true,
   analytics:false,         // anonymous usage sharing — OFF by default; opt-in only
@@ -2664,6 +2667,40 @@ function renderPrayerFlow(win, now, next, nextE, tz){
   };
   if (rail) Array.prototype.forEach.call(rail.children, setState);
   if (lab) Array.prototype.forEach.call(lab.children, setState);
+}
+/* A glossy light that glides across the grid from the prayer that just passed to the upcoming one
+   (e.g. Fajr → Dhuhr) — a moving cue for "this is what's next". Positions are read live (responsive-safe)
+   and it animates on ONE element via the Web Animations API (transform+opacity → compositor). */
+function animatePrayerRay(){
+  try{
+    const pg = document.getElementById('pgrid'); if (!pg) return;
+    const target = pg.querySelector('.pcard.next'); if (!target) return;
+    const passed = Array.prototype.filter.call(pg.querySelectorAll('.pcard'), c => c.querySelector('.pill.passed'));
+    const source = passed.length ? passed[passed.length - 1] : null;
+    if (!source || source === target) return;
+    const pr = pg.getBoundingClientRect(), a = source.getBoundingClientRect(), b = target.getBoundingClientRect();
+    if (a.width < 2 || b.width < 2) return;
+    const ax = a.left + a.width/2 - pr.left, ay = a.top + a.height/2 - pr.top;
+    const bx = b.left + b.width/2 - pr.left, by = b.top + b.height/2 - pr.top;
+    const ray = document.createElement('div'); ray.className = 'pray-ray'; pg.appendChild(ray);
+    const anim = ray.animate([
+      { transform:`translate(${ax}px,${ay}px) scale(.4)`, opacity:0, offset:0 },
+      { transform:`translate(${ax}px,${ay}px) scale(1)`, opacity:1, offset:.12 },
+      { opacity:1, offset:.82 },
+      { transform:`translate(${bx}px,${by}px) scale(.7)`, opacity:0, offset:1 }
+    ], { duration:1400, easing:'cubic-bezier(.45,.05,.35,1)' });
+    const done = () => { try{ ray.remove(); }catch(e){} };
+    anim.onfinish = done; anim.oncancel = done;
+  }catch(e){}
+}
+let _rayTimer = null;
+function startPrayerRay(){
+  if (_rayTimer) return;
+  _rayTimer = setInterval(function(){
+    if (document.hidden) return;
+    const w = document.querySelector('.wrap'); if (!w || w.dataset.tab !== 'today') return;
+    animatePrayerRay();
+  }, 7000);
 }
 /* ── the tick: everything time-dependent ── */
 let lastClock = '', notifiedKeys = {}, eventCache = null, eventCacheKey = '';
@@ -7190,6 +7227,13 @@ function ensurePrayerLockAuto(){
   try{ save(); }catch(e){}
   try{ if (window.SKNative && window.SKNative.pushSchedule) window.SKNative.pushSchedule(); }catch(e){}
 }
+function ensurePreReminderAuto(){
+  // A gentle heads-up 15 min before each prayer is now ALWAYS ON (frictionless) — the app fires it in-app
+  // (renderTick) and, when closed, via the background push schedule (buildPushSchedule). Existing users who
+  // never set a lead time (notifPre 0/undefined) are lifted to 15; a custom non-zero value they chose is kept.
+  if (!(Number(S.notifPre) > 0)) S.notifPre = 15;
+  try{ save(); }catch(e){}
+}
 
 // [removed] toggleRamadanPreview — Ramadan super-mode is now purely Hijri-automatic (ramadanActive); no manual preview toggle exists.
 
@@ -7666,7 +7710,7 @@ function go(sec){
   const w = document.querySelector('.wrap'); if (w){ w.dataset.tab = sec; w.classList.remove('tabfade'); void w.offsetWidth; w.classList.add('tabfade'); }
   document.querySelectorAll('.bnav button').forEach(x => x.classList.toggle('active', x.dataset.tab === sec));
   window.scrollTo({top:0});
-  try{ if (sec==='learn'){ try{ rollDaily('ayah'); rollDaily('hadith'); }catch(e){} renderReflection(); renderBookmarks(); renderQuran(); } else if (sec==='dhikr'){ renderDhikr(); try{ rollDaily('name'); rollDaily('dua'); }catch(e){} renderDaily(); } else if (sec==='journal'){ newJournalAyah(); renderJournal(); } else if (sec==='settings'){ try{ renderJournalHistory(); }catch(e){} } else if (sec==='today'){ renderCommemToday(); } else if (sec==='calendar'){ renderCalendar(); try{ var _ev=document.getElementById('events'); if(_ev){ _ev.classList.remove('reveal'); void _ev.offsetWidth; _ev.classList.add('reveal'); } }catch(e){} } }catch(e){}
+  try{ if (sec==='learn'){ try{ rollDaily('ayah'); rollDaily('hadith'); }catch(e){} renderReflection(); renderBookmarks(); renderQuran(); } else if (sec==='dhikr'){ renderDhikr(); try{ rollDaily('name'); rollDaily('dua'); }catch(e){} renderDaily(); } else if (sec==='journal'){ newJournalAyah(); renderJournal(); } else if (sec==='settings'){ try{ renderJournalHistory(); }catch(e){} } else if (sec==='today'){ renderCommemToday(); try{ setTimeout(animatePrayerRay, 650); }catch(e){} } else if (sec==='calendar'){ renderCalendar(); try{ var _ev=document.getElementById('events'); if(_ev){ _ev.classList.remove('reveal'); void _ev.offsetWidth; _ev.classList.add('reveal'); } }catch(e){} } }catch(e){}
   highlightNamesSoon();
 }
 let _salawat=null, _alham=null, _assalam=null;
@@ -8814,6 +8858,8 @@ function boot(){
   if (S.soundMigrated !== true){ S.chime = true; S.soundMigrated = true; save(); }
   try{ ensureHadithAuto(); }catch(e){}   // daily Hadith background is always-on at full power (no toggle) — force the flags + let native schedule it
   try{ ensurePrayerLockAuto(); }catch(e){}   // Prayer Lock is always-on: the app auto-locks into focus at every prayer time; native covers the whole phone
+  try{ ensurePreReminderAuto(); }catch(e){}   // a gentle 15-min-before heads-up is always-on (in-app + background push)
+  try{ startPrayerRay(); }catch(e){}   // the glossy "next prayer" ray glides across the grid every ~7s while on Today
   try{ initSettings(); renderStatic(); }
   catch(e){
     console.warn('Sirat Khushu: recovering from bad state —', e);
