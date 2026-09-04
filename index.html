@@ -277,6 +277,7 @@
   .pray-ray{position:absolute; left:0; top:0; width:26px; height:26px; margin:-13px 0 0 -13px; border-radius:50%; pointer-events:none; z-index:6; will-change:transform,opacity;
     background:radial-gradient(circle, #fff 0%, var(--gold-ink) 26%, color-mix(in srgb,var(--gold) 55%,transparent) 52%, transparent 72%);
     box-shadow:0 0 22px 7px color-mix(in srgb,var(--gold) 55%,transparent), 0 0 6px 2px color-mix(in srgb,#fff 60%,transparent)}
+  .pray-trail{position:absolute; inset:0; pointer-events:none; z-index:5; overflow:visible; filter:drop-shadow(0 0 5px color-mix(in srgb,var(--gold) 60%,transparent))}
   .pcard{position:relative; background:color-mix(in srgb, var(--bg2) 78%, transparent); border:1px solid var(--stroke); border-radius:20px; padding:15px 16px; transition:border-color .25s,background .25s,transform .28s cubic-bezier(.2,.85,.3,1),box-shadow .3s ease}
   .pcard.active{border-color:var(--teal); background:linear-gradient(160deg,var(--teal-soft),var(--glass))}
   .pcard.next{border-color:var(--stroke-gold); background:linear-gradient(160deg,var(--gold-soft),var(--glass))}
@@ -2646,15 +2647,34 @@ function animatePrayerRay(){
     if (a.width < 2 || b.width < 2) return;
     const ax = a.left + a.width/2 - pr.left, ay = a.top + a.height/2 - pr.top;
     const bx = b.left + b.width/2 - pr.left, by = b.top + b.height/2 - pr.top;
+    const HEAD = 1050;   // the comet draws the trail over this long, then the whole thing fades
+    // ── the premium glowing TRAIL (SVG), drawn from the just-passed prayer to the upcoming one ──
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('class', 'pray-trail');
+    svg.setAttribute('width', pr.width); svg.setAttribute('height', pr.height);
+    const gid = 'ptg' + Math.random().toString(36).slice(2, 8);
+    svg.innerHTML = '<defs><linearGradient id="' + gid + '" gradientUnits="userSpaceOnUse" x1="' + ax + '" y1="' + ay + '" x2="' + bx + '" y2="' + by + '">'
+      + '<stop offset="0" stop-color="#0e9e8e" stop-opacity="0"/><stop offset="0.55" stop-color="#e6c169" stop-opacity="0.85"/><stop offset="1" stop-color="#ffffff"/></linearGradient></defs>';
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', 'M ' + ax + ' ' + ay + ' L ' + bx + ' ' + by);
+    path.setAttribute('stroke', 'url(#' + gid + ')'); path.setAttribute('stroke-width', '3'); path.setAttribute('fill', 'none'); path.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(path); pg.appendChild(svg);
+    const len = Math.hypot(bx - ax, by - ay) || 1;
+    path.style.strokeDasharray = len; path.style.strokeDashoffset = len;
+    try{ path.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], { duration: HEAD, easing: 'cubic-bezier(.4,.05,.3,1)', fill: 'forwards' }); }catch(e){}
+    // ── the comet head that leads the trail ──
     const ray = document.createElement('div'); ray.className = 'pray-ray'; pg.appendChild(ray);
     const anim = ray.animate([
-      { transform:`translate(${ax}px,${ay}px) scale(.4)`, opacity:0, offset:0 },
+      { transform:`translate(${ax}px,${ay}px) scale(.45)`, opacity:0, offset:0 },
       { transform:`translate(${ax}px,${ay}px) scale(1)`, opacity:1, offset:.12 },
-      { opacity:1, offset:.82 },
+      { opacity:1, offset:.85 },
       { transform:`translate(${bx}px,${by}px) scale(.7)`, opacity:0, offset:1 }
-    ], { duration:1400, easing:'cubic-bezier(.45,.05,.35,1)' });
-    const done = () => { try{ ray.remove(); }catch(e){} };
-    anim.onfinish = done; anim.oncancel = done;
+    ], { duration: HEAD, easing:'cubic-bezier(.4,.05,.3,1)' });
+    const rmRay = () => { try{ ray.remove(); }catch(e){} };
+    anim.onfinish = rmRay; anim.oncancel = rmRay;
+    // fade the trail out once the comet has arrived
+    setTimeout(() => { try{ const fo = svg.animate([{ opacity:1 }, { opacity:0 }], { duration: 560, easing:'ease-in', fill:'forwards' }); fo.onfinish = () => { try{ svg.remove(); }catch(e){} }; }catch(e){ try{ svg.remove(); }catch(e2){} } }, HEAD);
   }catch(e){}
 }
 let _rayTimer = null;
