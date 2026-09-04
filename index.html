@@ -304,14 +304,14 @@
   .events .e .b .evdesc[open]>summary{margin-bottom:2px}
   .events .e .b .evdesc p{margin:9px 0 3px; font-size:.84rem; line-height:1.72; color:var(--muted); max-width:62ch; animation:evDescIn .32s ease}
   @keyframes evDescIn{from{opacity:0; transform:translateY(-4px)}to{opacity:1; transform:none}}
-  @media (prefers-reduced-motion:reduce){ .events .e .b .evdesc p{animation:none} }
+  @media (prefers-reduced-motion:reduce) and (min-width:99999px){ .events .e .b .evdesc p{animation:none} }
   /* premium staggered entrance for the events list (plays on build / tab-open, not on every countdown tick) */
   .events.reveal .e{animation:evRow .5s cubic-bezier(.2,.85,.3,1) both; animation-delay:calc(var(--i,0) * .06s)}
   @keyframes evRow{from{opacity:0; transform:translateY(14px) scale(.98)} to{opacity:1; transform:none}}
   .events.reveal .e .ic{animation:evIc .6s cubic-bezier(.2,1.45,.4,1) both; animation-delay:calc(var(--i,0) * .06s + .04s)}
   @keyframes evIc{0%{opacity:0; transform:scale(.4) rotate(-14deg)} 60%{transform:scale(1.12) rotate(4deg)} 100%{opacity:1; transform:scale(1) rotate(0)}}
   @keyframes evFade{from{opacity:0} to{opacity:1}}
-  @media (prefers-reduced-motion:reduce){ .events.reveal .e, .events.reveal .e .ic{animation:evFade .3s ease both} }
+  @media (prefers-reduced-motion:reduce) and (min-width:99999px){ .events.reveal .e, .events.reveal .e .ic{animation:evFade .3s ease both} }
   .events .e .cd{font-weight:800; font-variant-numeric:tabular-nums; color:var(--gold-ink); white-space:nowrap; font-size:.9rem}
   .events .e.today{background:var(--gold-soft); border-radius:12px; padding:12px 12px; border-bottom:1px solid transparent}
   .events .e.today .cd{color:var(--teal-ink)}
@@ -340,7 +340,7 @@
   .moonpred b{color:var(--gold-ink); font-weight:800}
   @keyframes rshake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-3px)}40%,80%{transform:translateX(3px)}}
   .recitebtn.novoice{animation:rshake .42s ease; border-color:var(--gold)}
-  @media (prefers-reduced-motion:reduce){ .moonorb svg,.moonorb::after,.moonorb::before,.moonorb i{animation:none} .moonorb i{opacity:.5} .recitebtn.novoice{animation:none} }
+  @media (prefers-reduced-motion:reduce) and (min-width:99999px){ .moonorb svg,.moonorb::after,.moonorb::before,.moonorb i{animation:none} .moonorb i{opacity:.5} .recitebtn.novoice{animation:none} }
 
   .srow{display:flex; align-items:center; justify-content:space-between; gap:14px; padding:12px 0; border-bottom:1px solid var(--stroke)}
   .srow:last-child{border:none}
@@ -374,7 +374,7 @@
   .updbanner .updbtn:active{transform:scale(.95)}
   .updbanner .updx{flex:none;width:28px;height:28px;border:none;background:none;color:var(--dim);font-size:.95rem;cursor:pointer;border-radius:8px;transition:.15s}
   .updbanner .updx:hover{color:var(--text);background:rgba(255,255,255,.06)}
-  @media (prefers-reduced-motion:reduce){ .updbanner,.updbanner .updic{animation:none} }
+  @media (prefers-reduced-motion:reduce) and (min-width:99999px){ .updbanner,.updbanner .updic{animation:none} }
 
   footer{margin-top:26px; text-align:center; color:var(--dim); font-size:.74rem; line-height:1.9}
   footer .ar{font-family:var(--arabic); color:var(--gold-ink); font-size:1rem}
@@ -419,7 +419,7 @@
   .sgbar i::after{content:''; position:absolute; inset:0; background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.26) 50%,transparent 65%); transform:translateX(-100%); animation:shimmer 3.4s ease-in-out infinite}
   @keyframes shimmer{0%{transform:translateX(-100%)}55%,100%{transform:translateX(100%)}}
   /* ── Fast mode: maximum speed on low-end devices ── */
-  @media (prefers-reduced-motion: reduce){*{transition:none !important; animation:none !important}}
+  @media (prefers-reduced-motion: reduce) and (min-width:99999px){*{transition:none !important; animation:none !important}}
   /* ── app features ── */
   .logbtn{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--stroke);background:transparent;cursor:pointer;display:grid;place-items:center;flex:none;position:relative;transition:all .2s}
   .logbtn::after{content:"";position:absolute;inset:-6px}   /* 34px visual circle, ~46px touch target */
@@ -617,7 +617,7 @@
   .playah-ar{transition:opacity .5s ease}
   .playah-en{transition:opacity .5s ease}
   .plock .pfx{margin-top:16px;background:none;border:none;color:var(--dim);font-family:var(--font);font-size:.78rem;cursor:pointer;text-decoration:underline}
-  @media (prefers-reduced-motion:reduce){ .pcount .pc-fg{transition:none} }
+  @media (prefers-reduced-motion:reduce) and (min-width:99999px){ .pcount .pc-fg{transition:none} }
   /* ── premium: welcome, toasts, xp, quests, daily ── */
   .greetline{font-size:.9rem;font-weight:700;color:var(--gold-ink);margin-bottom:6px;letter-spacing:.01em}
   /* the welcome / auth overlay is ALWAYS dark → pin the focus-ring gold to its light value so the keyboard focus outline is visible on the light themes */
@@ -763,7 +763,7 @@
     transform:translateX(-130%);animation:dotsweep 3.2s ease-in-out infinite}
   @keyframes dotshine{0%,100%{background-position:0% 0;box-shadow:0 0 10px rgba(217,180,91,.45),inset 0 1px 1px rgba(255,255,255,.55)}50%{background-position:100% 0;box-shadow:0 0 22px rgba(217,180,91,.9),inset 0 1px 1px rgba(255,255,255,.7)}}
   @keyframes dotsweep{0%{transform:translateX(-130%)}55%,100%{transform:translateX(130%)}}
-  @media (prefers-reduced-motion:reduce){ .ahero-dots i.on::after{display:none} }
+  @media (prefers-reduced-motion:reduce) and (min-width:99999px){ .ahero-dots i.on::after{display:none} }
   /* ── form panel ── */
   .aform{position:relative;padding:34px 32px 28px;display:flex;flex-direction:column;justify-content:center;text-align:center}
   .aform-body{width:100%}
@@ -882,7 +882,7 @@
   /* screen slide+fade between auth screens */
   .aform-body{animation:aformin .42s cubic-bezier(.2,.8,.3,1)}
   @keyframes aformin{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
-  @media (prefers-reduced-motion:reduce){ .aform-body{animation:none!important} .bspin{animation-duration:1.2s} }
+  @media (prefers-reduced-motion:reduce) and (min-width:99999px){ .aform-body{animation:none!important} .bspin{animation-duration:1.2s} }
   .aform .autherr,.aform .wq{text-align:left}
   .aterms{display:flex;align-items:flex-start;gap:10px;margin:4px 2px 12px;color:var(--au-mid);font-size:.82rem;line-height:1.45;cursor:pointer;text-align:left}
   .aterms input{width:18px;height:18px;margin-top:1px;accent-color:var(--au-gold);flex:none;cursor:pointer}
@@ -965,7 +965,7 @@
     .aform{padding:20px 16px 18px}
     .ahero{padding:18px 16px 14px}
   }
-  @media (prefers-reduced-motion:reduce){
+  @media (prefers-reduced-motion:reduce) and (min-width:99999px){
     .acard,.aform-body>*,.ahero-ayah,.ahero-cr,.ahero-wm,.otpbox,.aseal circle,.aseal path,.asealwrap::before,.skmark .sk-spin,.skmark .sk-spin2,.skmark .sk-glow,.ahero-logo svg,.ahero-dots i.on{animation:none!important;transition:opacity .2s ease!important}
     .aform .wbtn:hover::after{animation:none!important}
     .aseal circle,.aseal path{stroke-dashoffset:0!important}
@@ -1000,7 +1000,7 @@
   .toast.show .tx b{animation:toastTx .85s cubic-bezier(.2,.9,.3,1) .34s both}
   .toast.show .tx span{animation:toastTx .85s cubic-bezier(.2,.9,.3,1) .5s both}
   @keyframes toastTx{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
-  @media (prefers-reduced-motion:reduce){ .toast.show:not(.cute):not(.k-ayah):not(.k-hadith) .ic{animation:none} .toast.show .tx b,.toast.show .tx span{animation:none} }
+  @media (prefers-reduced-motion:reduce) and (min-width:99999px){ .toast.show:not(.cute):not(.k-ayah):not(.k-hadith) .ic{animation:none} .toast.show .tx b,.toast.show .tx span{animation:none} }
   .toast .tx{display:flex;flex-direction:column;min-width:0;gap:2px}
   .toast .tx b{font-size:.95rem;font-weight:800;color:var(--text);letter-spacing:.004em}
   .toast .tx span{font-size:.8rem;color:var(--muted);line-height:1.4}
@@ -1019,7 +1019,7 @@
   .toast .tbar{position:absolute;left:0;bottom:0;height:2.5px;width:100%;transform-origin:left;border-radius:0 2px 2px 0;
     background:linear-gradient(90deg,#fbeeb8,#c9a24b);box-shadow:0 0 8px rgba(217,180,91,.55);transform:scaleX(1);animation:toastbar linear forwards}
   @keyframes toastbar{to{transform:scaleX(0)}}
-  @media (prefers-reduced-motion:reduce){
+  @media (prefers-reduced-motion:reduce) and (min-width:99999px){
     .toast{transition:opacity .25s ease!important}
     .toast .ic{animation:none!important}
     .toast .tbar{animation:none!important;opacity:.4}
@@ -1212,7 +1212,7 @@
   .cal-cell.today .cdot{background:#171204;box-shadow:none}
   .cal-cell.today{animation:calTodayGlow 2.8s ease-in-out infinite}
   @keyframes calTodayGlow{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--gold) 28%,transparent)}50%{box-shadow:0 0 15px 1px color-mix(in srgb,var(--gold) 46%,transparent)}}
-  @media (prefers-reduced-motion:reduce){ .cal-cell.cin{animation:none} .cal-cell.today{animation:none} }
+  @media (prefers-reduced-motion:reduce) and (min-width:99999px){ .cal-cell.cin{animation:none} .cal-cell.today{animation:none} }
   .cal-legend{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:12px;padding-top:11px;border-top:1px solid var(--stroke);font-size:.68rem;color:var(--dim)}
   .cal-legend span{display:inline-flex;align-items:center;gap:5px}
   .cal-legend i{position:static;transform:none;font-style:normal}
@@ -1341,7 +1341,7 @@
   .sajda-txt b{font-size:.84rem;font-weight:800;color:var(--gold-ink);letter-spacing:.01em}
   .sajda-txt span{font-size:.68rem;font-weight:600;color:var(--muted);text-transform:capitalize}
   @keyframes sajdaPulse{0%,100%{box-shadow:0 0 0 3px rgba(217,180,91,.18),0 2px 9px -2px var(--gold)}50%{box-shadow:0 0 0 6px rgba(217,180,91,.30),0 3px 15px 0 var(--gold)}}
-  @media (prefers-reduced-motion:reduce){ .sajda-glyph{animation:none} }
+  @media (prefers-reduced-motion:reduce) and (min-width:99999px){ .sajda-glyph{animation:none} }
   /* ── "following the Qari": the ayah currently being recited glows and gently pulses ── */
   .qayah{transition:background .45s ease,box-shadow .45s ease,border-color .45s ease}
   .qayah.reciting{position:relative;border:1px solid var(--stroke-gold);border-radius:16px;padding:12px 14px 12px 18px;background:color-mix(in srgb,var(--gold) 14%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,var(--gold-ink) 40%,transparent),0 12px 34px -12px color-mix(in srgb,var(--gold-ink) 62%,transparent);animation:ayahBloom .95s cubic-bezier(.22,.61,.36,1) both;transform-origin:center}   /* ONE-SHOT bloom each time an ayah becomes the reciting one — a slow, buttery settle-in (scale + glow bloom). Not infinite → no continuous repaint. Solid gold tint (not a gradient) so the exit also CROSS-FADES via the .qayah transition; the ::before accent bar pulses on compositor-only opacity/transform */
@@ -1355,7 +1355,7 @@
   .qar .qw.rw{color:var(--gold-ink); text-shadow:0 0 22px rgba(217,180,91,1), 0 0 8px rgba(255,244,214,.9)}
   /* The recitation flow is a functional reading aid → keep it buttery EVEN under reduced-motion (scoped
      !important overrides the global *{transition:none!important} just for the reciting elements). */
-  @media (prefers-reduced-motion:reduce){
+  @media (prefers-reduced-motion:reduce) and (min-width:99999px){
     .qayah{transition:background-color .8s ease,box-shadow .9s ease,border-color .7s ease!important}
     .qayah.reciting{animation:ayahBloom .95s cubic-bezier(.22,.61,.36,1) both!important}
     .qayah.reciting::before{animation:reciteBar 2.4s ease-in-out infinite!important}
@@ -1382,7 +1382,7 @@
   .mood.on .moodIcon svg{transform:scale(1.12)}
   .mood.on .moodIcon{animation:moodpop .55s cubic-bezier(.2,1.6,.42,1)}
   @keyframes moodpop{0%{transform:scale(.82)}55%{transform:scale(1.14)}100%{transform:scale(1)}}
-  @media (prefers-reduced-motion:reduce){ .mood,.mood.on .moodIcon,.mood .moodIcon svg{animation:none!important;transition:border-color .2s,background .2s!important} }
+  @media (prefers-reduced-motion:reduce) and (min-width:99999px){ .mood,.mood.on .moodIcon,.mood .moodIcon svg{animation:none!important;transition:border-color .2s,background .2s!important} }
   .toast.cute .lhint{display:block;font-size:.62rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--gold-ink);margin-top:6px;opacity:.9}
   .toast.k-ayah .lar{font-size:1.06rem;line-height:1.95}
   .toast.k-ayah,.toast.k-hadith{cursor:pointer}
@@ -1480,7 +1480,7 @@
   .qprog i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);transform:translateX(-100%);animation:qslide 3.8s cubic-bezier(.4,0,.25,1) .8s infinite}
   @keyframes qslide{0%{transform:translateX(-100%)}60%,100%{transform:translateX(240%)}}
   @keyframes qglowpulse{0%,100%{box-shadow:0 0 10px rgba(90,211,198,.42),0 0 2px rgba(180,244,232,.7)}50%{box-shadow:0 0 20px rgba(143,227,214,.7),0 0 5px rgba(212,247,238,.9)}}
-  @media (prefers-reduced-motion:reduce){ .qprog i{animation:none;transition:width .6s ease} .qprog i::after{animation:none;display:none} }
+  @media (prefers-reduced-motion:reduce) and (min-width:99999px){ .qprog i{animation:none;transition:width .6s ease} .qprog i::after{animation:none;display:none} }
   /* per-prayer ledger rows */
   .qledgers{border-top:1px solid var(--stroke)}
   .qledger{display:flex;align-items:center;gap:12px;padding:12px 2px;border-bottom:1px solid var(--stroke);transition:background .25s,opacity .3s}
@@ -5013,7 +5013,27 @@ const VERSES = [
   {ar:"وَأَقِمِ ٱلصَّلَوٰةَ لِذِكْرِىٓ", tr:"And establish prayer for My remembrance.", ref:"Ta-Ha 20:14", tags:['prayer']},
   {ar:"إِنَّ ٱلْحَسَنَٰتِ يُذْهِبْنَ ٱلسَّيِّـَٔاتِ", tr:"Indeed, good deeds do away with misdeeds.", ref:"Hud 11:114", tags:['prayer']},
   {ar:"لَا تَقْنَطُوا۟ مِن رَّحْمَةِ ٱللَّهِ ۚ إِنَّ ٱللَّهَ يَغْفِرُ ٱلذُّنُوبَ جَمِيعًا", tr:"Do not despair of the mercy of Allah. Indeed, Allah forgives all sins.", ref:"Az-Zumar 39:53", tags:['prayer']},
-  {ar:"وَلَا تَيْـَٔسُوا۟ مِن رَّوْحِ ٱللَّهِ", tr:"And do not despair of the mercy of Allah.", ref:"Yusuf 12:87", tags:['prayer']}
+  {ar:"وَلَا تَيْـَٔسُوا۟ مِن رَّوْحِ ٱللَّهِ", tr:"And do not despair of the mercy of Allah.", ref:"Yusuf 12:87", tags:['prayer']},
+  {ar:"وَإِذَا سَأَلَكَ عِبَادِى عَنِّى فَإِنِّى قَرِيبٌ ۖ أُجِيبُ دَعْوَةَ ٱلدَّاعِ إِذَا دَعَانِ ۖ فَلْيَسْتَجِيبُوا۟ لِى وَلْيُؤْمِنُوا۟ بِى لَعَلَّهُمْ يَرْشُدُونَ", tr:"And when My servants ask you, [O Muhammad], concerning Me - indeed I am near. I respond to the invocation of the supplicant when he calls upon Me. So let them respond to Me [by obedience] and believe in Me that they may be [rightly] guided.", ref:"Al-Baqarah 2:186", tags:['daily'], tl:"Wa izaa sa alaka 'ibaadee 'annnee fa innee qareebun ujeebu da'wataddaa'i izaa da'aani falyastajeeboo lee walyu minoo beela 'allahum yarshudoon", surah:2,ayah:186,g:193},
+  {ar:"ٱللَّهُ لَآ إِلَٰهَ إِلَّا هُوَ ٱلْحَىُّ ٱلْقَيُّومُ ۚ لَا تَأْخُذُهُۥ سِنَةٌۭ وَلَا نَوْمٌۭ ۚ لَّهُۥ مَا فِى ٱلسَّمَٰوَٰتِ وَمَا فِى ٱلْأَرْضِ ۗ مَن ذَا ٱلَّذِى يَشْفَعُ عِندَهُۥٓ إِلَّا بِإِذْنِهِۦ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ بِشَىْءٍۢ مِّنْ عِلْمِهِۦٓ إِلَّا بِمَا شَآءَ ۚ وَسِعَ كُرْسِيُّهُ ٱلسَّمَٰوَٰتِ وَٱلْأَرْضَ ۖ وَلَا يَـُٔودُهُۥ حِفْظُهُمَا ۚ وَهُوَ ٱلْعَلِىُّ ٱلْعَظِيمُ", tr:"Allah - there is no deity except Him, the Ever-Living, the Sustainer of [all] existence. Neither drowsiness overtakes Him nor sleep. To Him belongs whatever is in the heavens and whatever is on the earth. Who is it that can intercede with Him except by His permission? He knows what is [presently] before them and what will be after them, and they encompass not a thing of His knowledge except for what He wills. His Kursi extends over the heavens and the earth, and their preservation tires Him not. And He is the Most High, the Most Great.", ref:"Al-Baqarah 2:255", tags:['daily'], tl:"Allahu laaa ilaaha illaa Huwal Haiyul Qaiyoom; laa taakhuzuhoo sinatunw wa laa nawm; lahoo maa fissamaawaati wa maa fil ard; man zal lazee yashfa'u indahooo illaa bi-iznih; ya'lamu maa baina aydeehim wa mww khalfahum wa laa yuheetoona bishai'im min 'ilmihee illaa bimaa shaaa'; wasi'a Kursiyyuhus samaawaati wal arda wa laa ya'ooduho hifzuhumaa; wa Huwal Aliyyul 'Azeem", surah:2,ayah:255,g:262},
+  {ar:"وَلَا تَهِنُوا۟ وَلَا تَحْزَنُوا۟ وَأَنتُمُ ٱلْأَعْلَوْنَ إِن كُنتُم مُّؤْمِنِينَ", tr:"So do not weaken and do not grieve, and you will be superior if you are [true] believers.", ref:"Ali 'Imran 3:139", tags:['daily'], tl:"Wa laa tahinoo wa laa tahzanoo wa antumul a'lawna in kuntum mu'mineen", surah:3,ayah:139,g:432},
+  {ar:"فَبِمَا رَحْمَةٍۢ مِّنَ ٱللَّهِ لِنتَ لَهُمْ ۖ وَلَوْ كُنتَ فَظًّا غَلِيظَ ٱلْقَلْبِ لَٱنفَضُّوا۟ مِنْ حَوْلِكَ ۖ فَٱعْفُ عَنْهُمْ وَٱسْتَغْفِرْ لَهُمْ وَشَاوِرْهُمْ فِى ٱلْأَمْرِ ۖ فَإِذَا عَزَمْتَ فَتَوَكَّلْ عَلَى ٱللَّهِ ۚ إِنَّ ٱللَّهَ يُحِبُّ ٱلْمُتَوَكِّلِينَ", tr:"So by mercy from Allah, [O Muhammad], you were lenient with them. And if you had been rude [in speech] and harsh in heart, they would have disbanded from about you. So pardon them and ask forgiveness for them and consult them in the matter. And when you have decided, then rely upon Allah. Indeed, Allah loves those who rely [upon Him].", ref:"Ali 'Imran 3:159", tags:['daily'], tl:"Fabimaa rahmatim minal laahi linta lahum wa law kunta fazzan ghaleezal qalbi lanfaddoo min hawlika fafu 'anhum wastaghfir lahum wa shaawirhum fil amri fa izaa 'azamta fatawakkal 'alal laah; innallaaha yuhibbul mutawak kileen", surah:3,ayah:159,g:452},
+  {ar:"ٱلَّذِينَ قَالَ لَهُمُ ٱلنَّاسُ إِنَّ ٱلنَّاسَ قَدْ جَمَعُوا۟ لَكُمْ فَٱخْشَوْهُمْ فَزَادَهُمْ إِيمَٰنًۭا وَقَالُوا۟ حَسْبُنَا ٱللَّهُ وَنِعْمَ ٱلْوَكِيلُ", tr:"Those to whom hypocrites said, \"Indeed, the people have gathered against you, so fear them.\" But it [merely] increased them in faith, and they said, \"Sufficient for us is Allah, and [He is] the best Disposer of affairs.\"", ref:"Ali 'Imran 3:173", tags:['daily'], tl:"Allazeena qaala lahumun naasu innan naasa qad jama'oo lakum fakhshawhuin fazaadahum eemaannanwa wa qaaloo hasbunal laahu wa ni'malwakeel", surah:3,ayah:173,g:466},
+  {ar:"وَأَطِيعُوا۟ ٱللَّهَ وَرَسُولَهُۥ وَلَا تَنَٰزَعُوا۟ فَتَفْشَلُوا۟ وَتَذْهَبَ رِيحُكُمْ ۖ وَٱصْبِرُوٓا۟ ۚ إِنَّ ٱللَّهَ مَعَ ٱلصَّٰبِرِينَ", tr:"And obey Allah and His Messenger, and do not dispute and [thus] lose courage and [then] your strength would depart; and be patient. Indeed, Allah is with the patient.", ref:"Al-Anfal 8:46", tags:['daily'], tl:"Wa atee'ul laaha wa Rasoolahoo wa laa tanaaza'oo fatafshaloo wa tazhaba reehukum wasbiroo; innal laaha ma'as saabireen", surah:8,ayah:46,g:1206},
+  {ar:"وَإِذْ تَأَذَّنَ رَبُّكُمْ لَئِن شَكَرْتُمْ لَأَزِيدَنَّكُمْ ۖ وَلَئِن كَفَرْتُمْ إِنَّ عَذَابِى لَشَدِيدٌۭ", tr:"And [remember] when your Lord proclaimed, 'If you are grateful, I will surely increase you [in favor]; but if you deny, indeed, My punishment is severe.' \"", ref:"Ibrahim 14:7", tags:['daily'], tl:"Wa iz ta azzana Rabbukum la'in shakartum la azeedannakum wa la'in kafartum inn'azaabee lashadeed", surah:14,ayah:7,g:1757},
+  {ar:"مَنْ عَمِلَ صَٰلِحًۭا مِّن ذَكَرٍ أَوْ أُنثَىٰ وَهُوَ مُؤْمِنٌۭ فَلَنُحْيِيَنَّهُۥ حَيَوٰةًۭ طَيِّبَةًۭ ۖ وَلَنَجْزِيَنَّهُمْ أَجْرَهُم بِأَحْسَنِ مَا كَانُوا۟ يَعْمَلُونَ", tr:"Whoever does righteousness, whether male or female, while he is a believer - We will surely cause him to live a good life, and We will surely give them their reward [in the Hereafter] according to the best of what they used to do.", ref:"An-Nahl 16:97", tags:['daily'], tl:"Man 'amila saaliham min zakarin aw unsaa wa huwa mu'minun falanuhyiyannahoo hayaatan taiiyibatanw wa lanajzi yannnahum ajrahum bi ahsani maa kaanoo ya'maloon", surah:16,ayah:97,g:1998},
+  {ar:"۞ ٱللَّهُ نُورُ ٱلسَّمَٰوَٰتِ وَٱلْأَرْضِ ۚ مَثَلُ نُورِهِۦ كَمِشْكَوٰةٍۢ فِيهَا مِصْبَاحٌ ۖ ٱلْمِصْبَاحُ فِى زُجَاجَةٍ ۖ ٱلزُّجَاجَةُ كَأَنَّهَا كَوْكَبٌۭ دُرِّىٌّۭ يُوقَدُ مِن شَجَرَةٍۢ مُّبَٰرَكَةٍۢ زَيْتُونَةٍۢ لَّا شَرْقِيَّةٍۢ وَلَا غَرْبِيَّةٍۢ يَكَادُ زَيْتُهَا يُضِىٓءُ وَلَوْ لَمْ تَمْسَسْهُ نَارٌۭ ۚ نُّورٌ عَلَىٰ نُورٍۢ ۗ يَهْدِى ٱللَّهُ لِنُورِهِۦ مَن يَشَآءُ ۚ وَيَضْرِبُ ٱللَّهُ ٱلْأَمْثَٰلَ لِلنَّاسِ ۗ وَٱللَّهُ بِكُلِّ شَىْءٍ عَلِيمٌۭ", tr:"Allah is the Light of the heavens and the earth. The example of His light is like a niche within which is a lamp, the lamp is within glass, the glass as if it were a pearly [white] star lit from [the oil of] a blessed olive tree, neither of the east nor of the west, whose oil would almost glow even if untouched by fire. Light upon light. Allah guides to His light whom He wills. And Allah presents examples for the people, and Allah is Knowing of all things.", ref:"An-Nur 24:35", tags:['daily'], tl:"Allaahu noorus samaawaati wal ard; masalu noorihee kamishkaatin feehaa misbaah; almisbaahu fee zujaajatin azzujaajatu ka annahaa kawkabun durriyyuny yooqadu min shajaratim mubaarakatin zaitoonatil laa shariqiyyatinw wa laa gharbiyyatiny yakaadu zaituhaa yudeee'u wa law alm tamsashu naar; noorun 'alaa noor; yahdil laahu linoorihee mai yashaaa'; wa yadribul laahul amsaala linnaas; wallaahu bikulli shai'in Aleem", surah:24,ayah:35,g:2826},
+  {ar:"ٱللَّهُ لَطِيفٌۢ بِعِبَادِهِۦ يَرْزُقُ مَن يَشَآءُ ۖ وَهُوَ ٱلْقَوِىُّ ٱلْعَزِيزُ", tr:"Allah is Subtle with His servants; He gives provisions to whom He wills. And He is the Powerful, the Exalted in Might.", ref:"Ash-Shura 42:19", tags:['daily'], tl:"Allahu lateefum bi'ibaadihee yarzuqu mai yashaaa'u wa Huwal Qawiyyul 'Azeez", surah:42,ayah:19,g:4291},
+  {ar:"هُوَ ٱلَّذِى خَلَقَ ٱلسَّمَٰوَٰتِ وَٱلْأَرْضَ فِى سِتَّةِ أَيَّامٍۢ ثُمَّ ٱسْتَوَىٰ عَلَى ٱلْعَرْشِ ۚ يَعْلَمُ مَا يَلِجُ فِى ٱلْأَرْضِ وَمَا يَخْرُجُ مِنْهَا وَمَا يَنزِلُ مِنَ ٱلسَّمَآءِ وَمَا يَعْرُجُ فِيهَا ۖ وَهُوَ مَعَكُمْ أَيْنَ مَا كُنتُمْ ۚ وَٱللَّهُ بِمَا تَعْمَلُونَ بَصِيرٌۭ", tr:"It is He who created the heavens and earth in six days and then established Himself above the Throne. He knows what penetrates into the earth and what emerges from it and what descends from the heaven and what ascends therein; and He is with you wherever you are. And Allah, of what you do, is Seeing.", ref:"Al-Hadid 57:4", tags:['daily'], tl:"Huwal lazee khalaqas samaawaati wal arda fee sittati ayyaamin summas tawaa 'alal 'Arsh; ya'lamu maa yaliju filardi wa maa yakhruju minhaa wa maa yanzilu minas samaaa'i wa maa ya'ruju feeha wa Huwa ma'akum ayna maa kuntum; wallaahu bimaa ta'maloona Baseer", surah:57,ayah:4,g:5079},
+  {ar:"مَآ أَصَابَ مِن مُّصِيبَةٍ إِلَّا بِإِذْنِ ٱللَّهِ ۗ وَمَن يُؤْمِنۢ بِٱللَّهِ يَهْدِ قَلْبَهُۥ ۚ وَٱللَّهُ بِكُلِّ شَىْءٍ عَلِيمٌۭ", tr:"No disaster strikes except by permission of Allah. And whoever believes in Allah - He will guide his heart. And Allah is Knowing of all things.", ref:"At-Taghabun 64:11", tags:['daily'], tl:"Maaa asaaba mim musee batin illaa bi-iznil laah; wa many yu'mim billaahi yahdi qalbah; wallaahu bikulli shai;in Aleem", surah:64,ayah:11,g:5210},
+  {ar:"فَإِذَا بَلَغْنَ أَجَلَهُنَّ فَأَمْسِكُوهُنَّ بِمَعْرُوفٍ أَوْ فَارِقُوهُنَّ بِمَعْرُوفٍۢ وَأَشْهِدُوا۟ ذَوَىْ عَدْلٍۢ مِّنكُمْ وَأَقِيمُوا۟ ٱلشَّهَٰدَةَ لِلَّهِ ۚ ذَٰلِكُمْ يُوعَظُ بِهِۦ مَن كَانَ يُؤْمِنُ بِٱللَّهِ وَٱلْيَوْمِ ٱلْءَاخِرِ ۚ وَمَن يَتَّقِ ٱللَّهَ يَجْعَل لَّهُۥ مَخْرَجًۭا", tr:"And when they have [nearly] fulfilled their term, either retain them according to acceptable terms or part with them according to acceptable terms. And bring to witness two just men from among you and establish the testimony for [the acceptance of] Allah. That is instructed to whoever should believe in Allah and the Last day. And whoever fears Allah - He will make for him a way out", ref:"At-Talaq 65:2", tags:['daily'], tl:"Fa izaa balaghna ajalahunna fa amsikoohunna bima'roofin aw faariqoohunna bima'roofinw wa ashhidoo zawai 'adlim minkum wa aqeemush shahaadata lillaah; zaalikum yoo'azu bihee man kaana yu'minu billaahi wal yawmil aakhir; wa many yattaqil laaha yaj'al lahoo makhrajaa", surah:65,ayah:2,g:5219},
+  {ar:"يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوا۟ ٱصْبِرُوا۟ وَصَابِرُوا۟ وَرَابِطُوا۟ وَٱتَّقُوا۟ ٱللَّهَ لَعَلَّكُمْ تُفْلِحُونَ", tr:"O you who have believed, persevere and endure and remain stationed and fear Allah that you may be successful.", ref:"Ali 'Imran 3:200", tags:['daily'], tl:"Yaaa aiyuhal lazeena aamanus biroo wa saabiroo wa raabitoo wattaqul laaha la'allakum tuflihoon", surah:3,ayah:200,g:493},
+  {ar:"يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوا۟ ٱذْكُرُوا۟ ٱللَّهَ ذِكْرًۭا كَثِيرًۭا", tr:"O you who have believed, remember Allah with much remembrance", ref:"Al-Ahzab 33:41", tags:['daily'], tl:"Yaaa aiyuhal lazeena aamanuz kurul laaha zikran kaseera", surah:33,ayah:41,g:3574},
+  {ar:"۞ وَعِندَهُۥ مَفَاتِحُ ٱلْغَيْبِ لَا يَعْلَمُهَآ إِلَّا هُوَ ۚ وَيَعْلَمُ مَا فِى ٱلْبَرِّ وَٱلْبَحْرِ ۚ وَمَا تَسْقُطُ مِن وَرَقَةٍ إِلَّا يَعْلَمُهَا وَلَا حَبَّةٍۢ فِى ظُلُمَٰتِ ٱلْأَرْضِ وَلَا رَطْبٍۢ وَلَا يَابِسٍ إِلَّا فِى كِتَٰبٍۢ مُّبِينٍۢ", tr:"And with Him are the keys of the unseen; none knows them except Him. And He knows what is on the land and in the sea. Not a leaf falls but that He knows it. And no grain is there within the darknesses of the earth and no moist or dry [thing] but that it is [written] in a clear record.", ref:"Al-An'am 6:59", tags:['daily'], tl:"Wa 'indahoo mafaatihul ghaibi laa ya'lamuhaaa illaa Hoo; wa ya'lamu maa fil barri walbahr; wa maa tasqutu minw waraqatin illaa ya'lamuhaa wa laa habbatin fee zulumaatil ardi wa laa ratbinw wa laa yaabisin illaa fee Kitaabim Mubeen", surah:6,ayah:59,g:848},
+  {ar:"ٱلَّذِى خَلَقَ ٱلْمَوْتَ وَٱلْحَيَوٰةَ لِيَبْلُوَكُمْ أَيُّكُمْ أَحْسَنُ عَمَلًۭا ۚ وَهُوَ ٱلْعَزِيزُ ٱلْغَفُورُ", tr:"[He] who created death and life to test you [as to] which of you is best in deed - and He is the Exalted in Might, the Forgiving -", ref:"Al-Mulk 67:2", tags:['daily'], tl:"Allazee khalaqal mawta walhayaata liyabluwakum ayyukum ahsanu 'amalaa; wa huwal 'azeezul ghafoor", surah:67,ayah:2,g:5243},
+  {ar:"قُلِ ٱللَّهُمَّ مَٰلِكَ ٱلْمُلْكِ تُؤْتِى ٱلْمُلْكَ مَن تَشَآءُ وَتَنزِعُ ٱلْمُلْكَ مِمَّن تَشَآءُ وَتُعِزُّ مَن تَشَآءُ وَتُذِلُّ مَن تَشَآءُ ۖ بِيَدِكَ ٱلْخَيْرُ ۖ إِنَّكَ عَلَىٰ كُلِّ شَىْءٍۢ قَدِيرٌۭ", tr:"Say, \"O Allah, Owner of Sovereignty, You give sovereignty to whom You will and You take sovereignty away from whom You will. You honor whom You will and You humble whom You will. In Your hand is [all] good. Indeed, You are over all things competent.", ref:"Ali 'Imran 3:26", tags:['daily'], tl:"Qulil laahumma Maalikal Mulki tu'til mulka man tashaaa'u wa tanzi'ulmulka mimman tashhaaa'u wa tu'izzu man tashaaa'u wa tuzillu man tashaaa'u biyadikal khairu innaka 'alaa kulli shai'in Qadeer", surah:3,ayah:26,g:319},
+  {ar:"يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوا۟ ٱسْتَعِينُوا۟ بِٱلصَّبْرِ وَٱلصَّلَوٰةِ ۚ إِنَّ ٱللَّهَ مَعَ ٱلصَّٰبِرِينَ", tr:"O you who have believed, seek help through patience and prayer. Indeed, Allah is with the patient.", ref:"Al-Baqarah 2:153", tags:['daily'], tl:"Yaaa ayyuhal laazeena aamanus ta'eenoo bissabri was Salaah; innal laaha ma'as-saabireen", surah:2,ayah:153,g:160},
+  {ar:"إِنَّ هَٰذَا كَانَ لَكُمْ جَزَآءًۭ وَكَانَ سَعْيُكُم مَّشْكُورًا", tr:"[And it will be said], \"Indeed, this is for you a reward, and your effort has been appreciated.\"", ref:"Al-Insan 76:22", tags:['daily'], tl:"Innaa haazaa kaana lakum jazz 'anw wa kaana sa'yukum mashkooraa", surah:76,ayah:22,g:5613},
 ];
 function versesByTag(t){ const r = VERSES.filter(v => v.tags && v.tags.indexOf(t) >= 0); return r.length ? r : VERSES; }
 // tagged views — each maps to the precise field-shape its renderer reads (tr quoting, `en`, `tl`, recite fields):
@@ -5581,7 +5601,11 @@ async function cloudPushPassword(){
 // lives only on the server. Local-only accounts recover via their security question or a backup file.
 /* ── Background reminders (web push) ── the app computes its own reminder timestamps and
    uploads them to the user's small push server, which fires them even when Sabr is closed. */
-function fastOn(){ return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches); }
+/* Sirat Khushu plays its full premium motion for EVERYONE, by explicit owner request — it does NOT
+   surrender its animations to the OS "Reduce Motion" setting (which was blanking the moon, the glows and
+   every transition). Kept as a function (many callers) so a single return flip re-enables OS respect, or
+   an in-app "calm mode" toggle, later. The CSS reduced-motion @media blocks are likewise neutralised. */
+function fastOn(){ return false; }
 function refreshNow(){
   const st=document.getElementById('refreshStatus'); const set=function(m){ if(st) st.textContent=m; };
   set('Refreshing\u2026');
@@ -5868,7 +5892,64 @@ const ASMA = [
   {ar:'الْهَادِي',tr:'Al-Hadi',en:'The Guide to the straight path.'},
   {ar:'الصَّبُور',tr:'As-Sabur',en:'The Most Patient, never hasty.'},
   {ar:'الْغَنِيّ',tr:'Al-Ghaniyy',en:'The Self-Sufficient, needing nothing.'},
-  {ar:'الْبَاقِي',tr:'Al-Baqi',en:'The Everlasting who never ends.'}
+  {ar:'الْبَاقِي',tr:'Al-Baqi',en:'The Everlasting who never ends.'},
+  // ── completing the full 99 (Asma ul-Husna) ──
+  {ar:'الْقَابِض',tr:'Al-Qabid',en:'The Withholder, by perfect wisdom.'},
+  {ar:'الْبَاسِط',tr:'Al-Basit',en:'The Extender of provision and mercy.'},
+  {ar:'الْخَافِض',tr:'Al-Khafid',en:'The Abaser of the arrogant.'},
+  {ar:'الرَّافِع',tr:'Ar-Rafi’',en:'The Exalter who raises whom He wills.'},
+  {ar:'الْمُعِزّ',tr:'Al-Mu’izz',en:'The Giver of honour.'},
+  {ar:'الْمُذِلّ',tr:'Al-Muzill',en:'The Giver of dishonour, by justice.'},
+  {ar:'الْحَكَم',tr:'Al-Hakam',en:'The Judge whose ruling is final.'},
+  {ar:'الْعَدْل',tr:'Al-Adl',en:'The Utterly Just.'},
+  {ar:'الْخَبِير',tr:'Al-Khabir',en:'The All-Aware of every hidden thing.'},
+  {ar:'الْعَلِيّ',tr:'Al-Aliyy',en:'The Most High, above all.'},
+  {ar:'الْكَبِير',tr:'Al-Kabir',en:'The Most Great.'},
+  {ar:'الْمُقِيت',tr:'Al-Muqit',en:'The Sustainer and Nourisher.'},
+  {ar:'الْحَسِيب',tr:'Al-Hasib',en:'The Reckoner, sufficient for all.'},
+  {ar:'الْجَلِيل',tr:'Al-Jalil',en:'The Majestic and Sublime.'},
+  {ar:'الْوَاسِع',tr:'Al-Wasi’',en:'The All-Encompassing, boundless.'},
+  {ar:'الْحَكِيم',tr:'Al-Hakim',en:'The All-Wise in every decree.'},
+  {ar:'الْمَجِيد',tr:'Al-Majid',en:'The Most Glorious and Noble.'},
+  {ar:'الْبَاعِث',tr:'Al-Ba’ith',en:'The Resurrector of the dead.'},
+  {ar:'الشَّهِيد',tr:'Ash-Shahid',en:'The Witness over all things.'},
+  {ar:'الْقَوِيّ',tr:'Al-Qawiyy',en:'The All-Strong.'},
+  {ar:'الْمَتِين',tr:'Al-Matin',en:'The Firm, of unbreakable strength.'},
+  {ar:'الْمُحْصِي',tr:'Al-Muhsi',en:'The Enumerator who counts all.'},
+  {ar:'الْمُبْدِئ',tr:'Al-Mubdi’',en:'The Originator who begins creation.'},
+  {ar:'الْمُعِيد',tr:'Al-Mu’id',en:'The Restorer who brings back.'},
+  {ar:'الْمُحْيِي',tr:'Al-Muhyi',en:'The Giver of life.'},
+  {ar:'الْمُمِيت',tr:'Al-Mumit',en:'The Bringer of death, by His decree.'},
+  {ar:'الْحَيّ',tr:'Al-Hayy',en:'The Ever-Living.'},
+  {ar:'الْقَيُّوم',tr:'Al-Qayyum',en:'The Self-Subsisting, sustaining all.'},
+  {ar:'الْوَاجِد',tr:'Al-Wajid',en:'The Perceiver, lacking nothing.'},
+  {ar:'الْمَاجِد',tr:'Al-Maajid',en:'The All-Noble and Generous.'},
+  {ar:'الْوَاحِد',tr:'Al-Wahid',en:'The One, without partner.'},
+  {ar:'الأَحَد',tr:'Al-Ahad',en:'The Unique, indivisibly One.'},
+  {ar:'الصَّمَد',tr:'As-Samad',en:'The Eternal Refuge all depend upon.'},
+  {ar:'الْقَادِر',tr:'Al-Qadir',en:'The All-Able.'},
+  {ar:'الْمُقْتَدِر',tr:'Al-Muqtadir',en:'The Omnipotent, prevailing.'},
+  {ar:'الْمُقَدِّم',tr:'Al-Muqaddim',en:'The Expediter who brings forward.'},
+  {ar:'الْمُؤَخِّر',tr:'Al-Mu’akhkhir',en:'The Delayer who puts back.'},
+  {ar:'الأَوَّل',tr:'Al-Awwal',en:'The First, before all.'},
+  {ar:'الآخِر',tr:'Al-Akhir',en:'The Last, after all.'},
+  {ar:'الظَّاهِر',tr:'Az-Zahir',en:'The Manifest, evident in His signs.'},
+  {ar:'الْبَاطِن',tr:'Al-Batin',en:'The Hidden, beyond perception.'},
+  {ar:'الْوَالِي',tr:'Al-Wali',en:'The Governor of all affairs.'},
+  {ar:'الْمُتَعَالِي',tr:'Al-Muta’ali',en:'The Supremely Exalted.'},
+  {ar:'الْبَرّ',tr:'Al-Barr',en:'The Source of all goodness.'},
+  {ar:'الْمُنْتَقِم',tr:'Al-Muntaqim',en:'The Avenger against wrongdoing.'},
+  {ar:'مَالِكُ الْمُلْك',tr:'Malik-ul-Mulk',en:'Master of all dominion.'},
+  {ar:'ذُو الْجَلَالِ وَالْإِكْرَام',tr:'Dhul-Jalali wal-Ikram',en:'Lord of Majesty and Honour.'},
+  {ar:'الْمُقْسِط',tr:'Al-Muqsit',en:'The Equitable, perfectly fair.'},
+  {ar:'الْجَامِع',tr:'Al-Jami’',en:'The Gatherer of all creation.'},
+  {ar:'الْمُغْنِي',tr:'Al-Mughni',en:'The Enricher who suffices His servants.'},
+  {ar:'الْمَانِع',tr:'Al-Mani’',en:'The Withholder and Defender.'},
+  {ar:'الضَّارّ',tr:'Ad-Darr',en:'The Distresser, by His wisdom.'},
+  {ar:'النَّافِع',tr:'An-Nafi’',en:'The Bringer of benefit.'},
+  {ar:'الْبَدِيع',tr:'Al-Badi’',en:'The Incomparable Originator.'},
+  {ar:'الْوَارِث',tr:'Al-Warith',en:'The Inheritor of all that remains.'},
+  {ar:'الرَّشِيد',tr:'Ar-Rashid',en:'The Guide to right conduct.'}
 ];
 
 /* XP · levels · the journey */
@@ -5998,7 +6079,25 @@ const DUAS = [
   {ar:'اللَّهُمَّ أَعِنِّي عَلَى ذِكْرِكَ وَشُكْرِكَ وَحُسْنِ عِبَادَتِكَ', tr:'"O Allah, help me to remember You, to thank You, and to worship You well."', ref:'Sunan Abi Dawud 1522 · sahih'},
   {ar:'رَبِّ اشْرَحْ لِي صَدْرِي وَيَسِّرْ لِي أَمْرِي', tr:'"My Lord, expand for me my chest, and ease for me my task."', ref:'Taha 20:25–26'},
   {ar:'حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ', tr:'"Allah is sufficient for us, and He is the best disposer of affairs."', ref:'Al-Imran 3:173'},
-  {ar:'رَبِّ زِدْنِي عِلْمًا', tr:'"My Lord, increase me in knowledge."', ref:'Taha 20:114'}
+  {ar:'رَبِّ زِدْنِي عِلْمًا', tr:'"My Lord, increase me in knowledge."', ref:'Taha 20:114'},
+  {ar:"قَالَا رَبَّنَا ظَلَمْنَآ أَنفُسَنَا وَإِن لَّمْ تَغْفِرْ لَنَا وَتَرْحَمْنَا لَنَكُونَنَّ مِنَ ٱلْخَٰسِرِينَ", tr:"They said, \"Our Lord, we have wronged ourselves, and if You do not forgive us and have mercy upon us, we will surely be among the losers.\"", ref:"Al-A'raf 7:23"},
+  {ar:"لَا يُكَلِّفُ ٱللَّهُ نَفْسًا إِلَّا وُسْعَهَا ۚ لَهَا مَا كَسَبَتْ وَعَلَيْهَا مَا ٱكْتَسَبَتْ ۗ رَبَّنَا لَا تُؤَاخِذْنَآ إِن نَّسِينَآ أَوْ أَخْطَأْنَا ۚ رَبَّنَا وَلَا تَحْمِلْ عَلَيْنَآ إِصْرًۭا كَمَا حَمَلْتَهُۥ عَلَى ٱلَّذِينَ مِن قَبْلِنَا ۚ رَبَّنَا وَلَا تُحَمِّلْنَا مَا لَا طَاقَةَ لَنَا بِهِۦ ۖ وَٱعْفُ عَنَّا وَٱغْفِرْ لَنَا وَٱرْحَمْنَآ ۚ أَنتَ مَوْلَىٰنَا فَٱنصُرْنَا عَلَى ٱلْقَوْمِ ٱلْكَٰفِرِينَ", tr:"Allah does not charge a soul except [with that within] its capacity. It will have [the consequence of] what [good] it has gained, and it will bear [the consequence of] what [evil] it has earned. \"Our Lord, do not impose blame upon us if we have forgotten or erred. Our Lord, and lay not upon us a burden like that which You laid upon those before us. Our Lord, and burden us not with that which we have no ability to bear. And pardon us; and forgive us; and have mercy upon us. You are our protector, so give us victory over the disbelieving people.\"", ref:"Al-Baqarah 2:286"},
+  {ar:"رَبَّنَا لَا تُزِغْ قُلُوبَنَا بَعْدَ إِذْ هَدَيْتَنَا وَهَبْ لَنَا مِن لَّدُنكَ رَحْمَةً ۚ إِنَّكَ أَنتَ ٱلْوَهَّابُ", tr:"[Who say], \"Our Lord, let not our hearts deviate after You have guided us and grant us from Yourself mercy. Indeed, You are the Bestower.", ref:"Ali 'Imran 3:8"},
+  {ar:"ٱلَّذِينَ يَقُولُونَ رَبَّنَآ إِنَّنَآ ءَامَنَّا فَٱغْفِرْ لَنَا ذُنُوبَنَا وَقِنَا عَذَابَ ٱلنَّارِ", tr:"Those who say, \"Our Lord, indeed we have believed, so forgive us our sins and protect us from the punishment of the Fire,\"", ref:"Ali 'Imran 3:16"},
+  {ar:"وَمَا كَانَ قَوْلَهُمْ إِلَّآ أَن قَالُوا۟ رَبَّنَا ٱغْفِرْ لَنَا ذُنُوبَنَا وَإِسْرَافَنَا فِىٓ أَمْرِنَا وَثَبِّتْ أَقْدَامَنَا وَٱنصُرْنَا عَلَى ٱلْقَوْمِ ٱلْكَٰفِرِينَ", tr:"And their words were not but that they said, \"Our Lord, forgive us our sins and the excess [committed] in our affairs and plant firmly our feet and give us victory over the disbelieving people.\"", ref:"Ali 'Imran 3:147"},
+  {ar:"وَذَا ٱلنُّونِ إِذ ذَّهَبَ مُغَٰضِبًۭا فَظَنَّ أَن لَّن نَّقْدِرَ عَلَيْهِ فَنَادَىٰ فِى ٱلظُّلُمَٰتِ أَن لَّآ إِلَٰهَ إِلَّآ أَنتَ سُبْحَٰنَكَ إِنِّى كُنتُ مِنَ ٱلظَّٰلِمِينَ", tr:"And [mention] the man of the fish, when he went off in anger and thought that We would not decree [anything] upon him. And he called out within the darknesses, \"There is no deity except You; exalted are You. Indeed, I have been of the wrongdoers.\"", ref:"Al-Anbiya 21:87"},
+  {ar:"وَٱلَّذِينَ يَقُولُونَ رَبَّنَا هَبْ لَنَا مِنْ أَزْوَٰجِنَا وَذُرِّيَّٰتِنَا قُرَّةَ أَعْيُنٍۢ وَٱجْعَلْنَا لِلْمُتَّقِينَ إِمَامًا", tr:"And those who say, \"Our Lord, grant us from among our wives and offspring comfort to our eyes and make us an example for the righteous.\"", ref:"Al-Furqan 25:74"},
+  {ar:"وَٱخْفِضْ لَهُمَا جَنَاحَ ٱلذُّلِّ مِنَ ٱلرَّحْمَةِ وَقُل رَّبِّ ٱرْحَمْهُمَا كَمَا رَبَّيَانِى صَغِيرًۭا", tr:"And lower to them the wing of humility out of mercy and say, \"My Lord, have mercy upon them as they brought me up [when I was] small.\"", ref:"Al-Isra 17:24"},
+  {ar:"وَقُل رَّبِّ أَدْخِلْنِى مُدْخَلَ صِدْقٍۢ وَأَخْرِجْنِى مُخْرَجَ صِدْقٍۢ وَٱجْعَل لِّى مِن لَّدُنكَ سُلْطَٰنًۭا نَّصِيرًۭا", tr:"And say, \"My Lord, cause me to enter a sound entrance and to exit a sound exit and grant me from Yourself a supporting authority.\"", ref:"Al-Isra 17:80"},
+  {ar:"إِذْ أَوَى ٱلْفِتْيَةُ إِلَى ٱلْكَهْفِ فَقَالُوا۟ رَبَّنَآ ءَاتِنَا مِن لَّدُنكَ رَحْمَةًۭ وَهَيِّئْ لَنَا مِنْ أَمْرِنَا رَشَدًۭا", tr:"[Mention] when the youths retreated to the cave and said, \"Our Lord, grant us from Yourself mercy and prepare for us from our affair right guidance.\"", ref:"Al-Kahf 18:10"},
+  {ar:"ٱلَّذِينَ يَحْمِلُونَ ٱلْعَرْشَ وَمَنْ حَوْلَهُۥ يُسَبِّحُونَ بِحَمْدِ رَبِّهِمْ وَيُؤْمِنُونَ بِهِۦ وَيَسْتَغْفِرُونَ لِلَّذِينَ ءَامَنُوا۟ رَبَّنَا وَسِعْتَ كُلَّ شَىْءٍۢ رَّحْمَةًۭ وَعِلْمًۭا فَٱغْفِرْ لِلَّذِينَ تَابُوا۟ وَٱتَّبَعُوا۟ سَبِيلَكَ وَقِهِمْ عَذَابَ ٱلْجَحِيمِ", tr:"Those [angels] who carry the Throne and those around it exalt [Allah] with praise of their Lord and believe in Him and ask forgiveness for those who have believed, [saying], \"Our Lord, You have encompassed all things in mercy and knowledge, so forgive those who have repented and followed Your way and protect them from the punishment of Hellfire.", ref:"Ghafir 40:7"},
+  {ar:"وَوَصَّيْنَا ٱلْإِنسَٰنَ بِوَٰلِدَيْهِ إِحْسَٰنًا ۖ حَمَلَتْهُ أُمُّهُۥ كُرْهًۭا وَوَضَعَتْهُ كُرْهًۭا ۖ وَحَمْلُهُۥ وَفِصَٰلُهُۥ ثَلَٰثُونَ شَهْرًا ۚ حَتَّىٰٓ إِذَا بَلَغَ أَشُدَّهُۥ وَبَلَغَ أَرْبَعِينَ سَنَةًۭ قَالَ رَبِّ أَوْزِعْنِىٓ أَنْ أَشْكُرَ نِعْمَتَكَ ٱلَّتِىٓ أَنْعَمْتَ عَلَىَّ وَعَلَىٰ وَٰلِدَىَّ وَأَنْ أَعْمَلَ صَٰلِحًۭا تَرْضَىٰهُ وَأَصْلِحْ لِى فِى ذُرِّيَّتِىٓ ۖ إِنِّى تُبْتُ إِلَيْكَ وَإِنِّى مِنَ ٱلْمُسْلِمِينَ", tr:"And We have enjoined upon man, to his parents, good treatment. His mother carried him with hardship and gave birth to him with hardship, and his gestation and weaning [period] is thirty months. [He grows] until, when he reaches maturity and reaches [the age of] forty years, he says, \"My Lord, enable me to be grateful for Your favor which You have bestowed upon me and upon my parents and to work righteousness of which You will approve and make righteous for me my offspring. Indeed, I have repented to You, and indeed, I am of the Muslims.\"", ref:"Al-Ahqaf 46:15"},
+  {ar:"وَٱلَّذِينَ جَآءُو مِنۢ بَعْدِهِمْ يَقُولُونَ رَبَّنَا ٱغْفِرْ لَنَا وَلِإِخْوَٰنِنَا ٱلَّذِينَ سَبَقُونَا بِٱلْإِيمَٰنِ وَلَا تَجْعَلْ فِى قُلُوبِنَا غِلًّۭا لِّلَّذِينَ ءَامَنُوا۟ رَبَّنَآ إِنَّكَ رَءُوفٌۭ رَّحِيمٌ", tr:"And [there is a share for] those who came after them, saying, \"Our Lord, forgive us and our brothers who preceded us in faith and put not in our hearts [any] resentment toward those who have believed. Our Lord, indeed You are Kind and Merciful.\"", ref:"Al-Hashr 59:10"},
+  {ar:"وَلَمَّا بَرَزُوا۟ لِجَالُوتَ وَجُنُودِهِۦ قَالُوا۟ رَبَّنَآ أَفْرِغْ عَلَيْنَا صَبْرًۭا وَثَبِّتْ أَقْدَامَنَا وَٱنصُرْنَا عَلَى ٱلْقَوْمِ ٱلْكَٰفِرِينَ", tr:"And when they went forth to [face] Goliath and his soldiers, they said, \"Our Lord, pour upon us patience and plant firmly our feet and give us victory over the disbelieving people.\"", ref:"Al-Baqarah 2:250"},
+  {ar:"وَإِذْ يَرْفَعُ إِبْرَٰهِۦمُ ٱلْقَوَاعِدَ مِنَ ٱلْبَيْتِ وَإِسْمَٰعِيلُ رَبَّنَا تَقَبَّلْ مِنَّآ ۖ إِنَّكَ أَنتَ ٱلسَّمِيعُ ٱلْعَلِيمُ", tr:"And [mention] when Abraham was raising the foundations of the House and [with him] Ishmael, [saying], \"Our Lord, accept [this] from us. Indeed You are the Hearing, the Knowing.", ref:"Al-Baqarah 2:127"},
+  {ar:"يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوا۟ تُوبُوٓا۟ إِلَى ٱللَّهِ تَوْبَةًۭ نَّصُوحًا عَسَىٰ رَبُّكُمْ أَن يُكَفِّرَ عَنكُمْ سَيِّـَٔاتِكُمْ وَيُدْخِلَكُمْ جَنَّٰتٍۢ تَجْرِى مِن تَحْتِهَا ٱلْأَنْهَٰرُ يَوْمَ لَا يُخْزِى ٱللَّهُ ٱلنَّبِىَّ وَٱلَّذِينَ ءَامَنُوا۟ مَعَهُۥ ۖ نُورُهُمْ يَسْعَىٰ بَيْنَ أَيْدِيهِمْ وَبِأَيْمَٰنِهِمْ يَقُولُونَ رَبَّنَآ أَتْمِمْ لَنَا نُورَنَا وَٱغْفِرْ لَنَآ ۖ إِنَّكَ عَلَىٰ كُلِّ شَىْءٍۢ قَدِيرٌۭ", tr:"O you who have believed, repent to Allah with sincere repentance. Perhaps your Lord will remove from you your misdeeds and admit you into gardens beneath which rivers flow [on] the Day when Allah will not disgrace the Prophet and those who believed with him. Their light will proceed before them and on their right; they will say, \"Our Lord, perfect for us our light and forgive us. Indeed, You are over all things competent.\"", ref:"At-Tahrim 66:8"},
+  {ar:"فَسَقَىٰ لَهُمَا ثُمَّ تَوَلَّىٰٓ إِلَى ٱلظِّلِّ فَقَالَ رَبِّ إِنِّى لِمَآ أَنزَلْتَ إِلَىَّ مِنْ خَيْرٍۢ فَقِيرٌۭ", tr:"So he watered [their flocks] for them; then he went back to the shade and said, \"My Lord, indeed I am, for whatever good You would send down to me, in need.\"", ref:"Al-Qasas 28:24"},
+  {ar:"إِنَّهُۥ كَانَ فَرِيقٌۭ مِّنْ عِبَادِى يَقُولُونَ رَبَّنَآ ءَامَنَّا فَٱغْفِرْ لَنَا وَٱرْحَمْنَا وَأَنتَ خَيْرُ ٱلرَّٰحِمِينَ", tr:"Indeed, there was a party of My servants who said, 'Our Lord, we have believed, so forgive us and have mercy upon us, and You are the best of the merciful.'", ref:"Al-Mu'minun 23:109"},
 ];
 const PHRASES = [{ar:'سُبْحَانَ اللَّهِ',en:'SubhanAllah'},{ar:'الْحَمْدُ لِلَّهِ',en:'Alhamdulillah'},{ar:'اللَّهُ أَكْبَرُ',en:'Allahu Akbar'},{ar:'أَسْتَغْفِرُ اللَّهَ',en:'Astaghfirullah'},{ar:'لَا إِلَٰهَ إِلَّا اللَّهُ',en:'La ilaha illallah'}];
 const MOODS = ['😞','😐','🙂','😊','🤲'];
