@@ -1146,7 +1146,7 @@
   .qtitle{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
   .qname{font-family:var(--serif,var(--font));font-weight:800;font-size:1.18rem;color:var(--gold-ink)}
   .qarname{font-size:1.1rem;color:var(--ink)}
-  .qayah{display:flex;gap:11px;padding:15px 0;border-bottom:1px solid color-mix(in srgb,var(--stroke) 55%,transparent);content-visibility:auto;contain-intrinsic-size:340px;contain-intrinsic-size:auto 340px}   /* skip layout+paint of the hundreds of off-screen ayat in a long surah (Al-Baqarah = 286 rows / ~96,000px) so the WebView isn't re-rasterising them while the Qari mp3 decodes and the follow scrolls. 'auto' remembers each row's real height after first render, so scroll math stays stable; the plain length is the fallback for older WebViews. */
+  .qayah{display:flex;gap:11px;padding:15px 0;border-bottom:1px solid color-mix(in srgb,var(--stroke) 55%,transparent);content-visibility:auto;contain-intrinsic-size:340px;contain-intrinsic-size:auto 340px;transition:background-color .55s ease,box-shadow .6s ease,border-color .55s ease}   /* one-shot cross-fade of the reciting glow as recitation flows ayah→ayah (fires only on the .reciting class toggle — NOT a per-frame animation, so it stays perf-safe) */   /* skip layout+paint of the hundreds of off-screen ayat in a long surah (Al-Baqarah = 286 rows / ~96,000px) so the WebView isn't re-rasterising them while the Qari mp3 decodes and the follow scrolls. 'auto' remembers each row's real height after first render, so scroll math stays stable; the plain length is the fallback for older WebViews. */
   .qayah:last-child{border-bottom:none}
   .qnum{flex:none;width:27px;height:27px;border-radius:50%;border:1px solid var(--stroke-gold);color:var(--gold-ink);display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;background:var(--gold-soft)}
   .qbody{flex:1;min-width:0}
@@ -1256,8 +1256,36 @@
   .cd-event .commem-quote{margin-top:11px}
   .refrow{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
   .qselrow{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-  .qsel{flex:1;min-width:0;background:color-mix(in srgb,var(--ink) 6%,transparent);color:var(--ink);border:1px solid var(--stroke-gold);border-radius:12px;padding:11px 12px;font-family:var(--font);font-weight:700;font-size:.9rem;cursor:pointer}
-  .qsel option{background:#faf6ea;color:#1a1a1a}
+  /* Premium surah picker — a glossy trigger that drops a searchable, scrollable list of all 114 surahs */
+  .qpick{position:relative;flex:1;min-width:0}
+  .qpick-trigger{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:color-mix(in srgb,var(--gold) 7%,var(--bg2));border:1px solid var(--stroke-gold);border-radius:14px;padding:8px 12px;cursor:pointer;font-family:var(--font);color:var(--ink);transition:border-color .18s,box-shadow .18s,background .18s}
+  .qpick-trigger:hover{border-color:var(--gold)}
+  .qpick.open .qpick-trigger{border-color:var(--gold);box-shadow:0 6px 22px rgba(217,180,91,.22);background:var(--gold-soft)}
+  .qpick-num{flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;color:var(--gold-ink);background:var(--gold-soft);border:1px solid var(--stroke-gold);border-radius:9px;font-size:.72rem;width:30px;height:30px;font-variant-numeric:tabular-nums}
+  .qpick-num.lg{width:38px;height:38px;border-radius:11px;font-size:.92rem}
+  .qpick-cur{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+  .qpick-curname{font-weight:800;font-size:.98rem;color:var(--gold-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .qpick-curar{font-family:var(--arabic);font-weight:400;color:var(--ink);font-size:.95rem}
+  .qpick-curmeta{font-size:.67rem;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .qpick-chev{flex:none;color:var(--gold-ink);font-size:.85rem;transition:transform .22s}
+  .qpick.open .qpick-chev{transform:rotate(180deg)}
+  .qpick-panel{position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:50;background:var(--bg2);border:1px solid var(--stroke-gold);border-radius:16px;box-shadow:0 26px 64px rgba(0,0,0,.34);padding:10px;animation:qpickIn .18s ease}
+  @keyframes qpickIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+  .qpick-searchwrap{margin-bottom:8px}
+  .qpick-search{width:100%;box-sizing:border-box;background:color-mix(in srgb,var(--ink) 6%,transparent);border:1px solid var(--stroke-gold);border-radius:11px;padding:10px 12px;font-family:var(--font);font-size:.86rem;color:var(--ink)}
+  .qpick-search::placeholder{color:var(--dim)}
+  .qpick-search:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 2px var(--gold-soft)}
+  .qpick-list{max-height:min(52vh,384px);overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:3px;-webkit-overflow-scrolling:touch}
+  .qpick-item{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;border:1px solid transparent;border-radius:11px;padding:8px 9px;cursor:pointer;font-family:var(--font);color:var(--ink)}
+  .qpick-item:hover{background:color-mix(in srgb,var(--gold) 9%,transparent);border-color:var(--stroke-gold)}
+  .qpick-item.active{background:var(--gold-soft);border-color:var(--stroke-gold)}
+  .qpick-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+  .qpick-name{font-weight:700;font-size:.88rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .qpick-item.active .qpick-name{color:var(--gold-ink)}
+  .qpick-ar{font-family:var(--arabic);font-weight:400;color:var(--gold-ink);font-size:.9rem}
+  .qpick-meta{font-size:.67rem;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .qpick-tick{flex:none;width:16px;color:var(--gold-ink);font-weight:800;text-align:center;font-size:.8rem}
+  .qpick-none{padding:16px 10px;text-align:center;color:var(--dim);font-size:.82rem}
   .qbism{text-align:center;font-size:clamp(1.15rem,5vw,1.5rem);color:var(--gold-ink);margin:8px 0 2px;padding-bottom:10px;border-bottom:1px solid var(--stroke)}
   .adhtabs{flex-wrap:wrap}
   .adh .qtr{color:var(--gold-ink);font-style:italic}
@@ -1298,7 +1326,7 @@
   @media (prefers-reduced-motion:reduce){ .sajda-glyph{animation:none} }
   /* ── "following the Qari": the ayah currently being recited glows and gently pulses ── */
   .qayah{transition:background .45s ease,box-shadow .45s ease,border-color .45s ease}
-  .qayah.reciting{position:relative;border:1px solid var(--stroke-gold);border-radius:16px;padding:12px 14px 12px 18px;background:linear-gradient(120deg,color-mix(in srgb,var(--gold) 15%,transparent),transparent 68%);box-shadow:0 0 0 1px color-mix(in srgb,var(--gold-ink) 40%,transparent),0 12px 34px -12px color-mix(in srgb,var(--gold-ink) 62%,transparent)}   /* STATIC glow (was an infinite box-shadow animation → a continuous main-thread repaint the whole recitation; the ::before accent bar still pulses on compositor-only opacity/transform) */
+  .qayah.reciting{position:relative;border:1px solid var(--stroke-gold);border-radius:16px;padding:12px 14px 12px 18px;background:color-mix(in srgb,var(--gold) 14%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,var(--gold-ink) 40%,transparent),0 12px 34px -12px color-mix(in srgb,var(--gold-ink) 62%,transparent)}   /* STATIC glow (was an infinite box-shadow animation → a continuous repaint the whole recitation). Solid gold tint (not a gradient) so background-color CROSS-FADES smoothly as recitation flows to the next ayah; the ::before accent bar still pulses on compositor-only opacity/transform */
   .qayah.reciting::before{content:"";position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:0 3px 3px 0;background:linear-gradient(180deg,#f7e9b0,#c9a24b);box-shadow:0 0 12px color-mix(in srgb,var(--gold-ink) 75%,transparent);animation:reciteBar 1.5s ease-in-out infinite}
   .qayah.reciting .qnum{background:linear-gradient(135deg,var(--gold),#b8933f);color:#171204;box-shadow:0 0 15px color-mix(in srgb,var(--gold-ink) 55%,transparent)}
   .qayah.reciting .qar{text-shadow:0 0 20px rgba(217,180,91,.4)}
@@ -3927,12 +3955,12 @@ function startReciteScroll(){
       const vh = window.innerHeight || document.documentElement.clientHeight;
       let f = 0; const a = _qsAudio;
       if (a && a.duration && isFinite(a.duration) && a.duration > 0) f = Math.min(1, Math.max(0, a.currentTime / a.duration));
-      _qsFrac += (f - _qsFrac) * 0.15;                          // low-pass the audio fraction → silky (snapped to 0 at each ayah start in setRecitingAyah)
+      _qsFrac += (f - _qsFrac) * 0.10;                          // low-pass the audio fraction → silky, gentle (lower = flowier; snapped to 0 at each ayah start in setRecitingAyah)
       const targetY = _qsAyTop + _qsAyH * _qsFrac - vh * 0.42;  // absolute page-Y to reach — from CACHED geometry, no per-frame layout
       const diff = targetY - _qsPos;
       if (Math.abs(diff) > 0.4){                                // deadzone → park perfectly still when seated
-        let move = diff * 0.08;                                 // ease 8%/frame → smooth deceleration
-        if (move > 14) move = 14; else if (move < -14) move = -14;   // cap ≈ 14px/frame → gentle, never a lurch
+        let move = diff * 0.06;                                 // ease 6%/frame → slower, flowier deceleration (was 8%)
+        if (move > 11) move = 11; else if (move < -11) move = -11;   // cap ≈ 11px/frame → extra-gentle, never a lurch
         _qsPos += move;
         const y = Math.round(_qsPos);
         if (y !== _qsWrote){ _qsWrote = y; window.scrollTo({ top: y, left: 0, behavior: 'auto' }); }   // skip redundant writes
@@ -4270,7 +4298,27 @@ const SAJDA = {'7:206':'obligatory','13:15':'recommended','16:50':'recommended',
 function reciteAyahBtn(surah, ayah, g){ return '<button class="recitebtn" onpointerdown="prefetchAyahAudio(' + surah + ', ' + ayah + ', ' + g + ')" onclick="reciteAyah(' + surah + ', ' + ayah + ', ' + g + ', this)">' + RICON_SVG + '<span class="rlbl">Recite</span></button>'; }
 function recitePassageBtn(surah, from, count, g){ return '<button class="recitebtn" onpointerdown="prefetchAyahAudio(' + surah + ', ' + from + ', ' + g + ')" onclick="recitePassage(' + surah + ', ' + from + ', ' + count + ', ' + g + ', this)">' + RICON_SVG + '<span class="rlbl">Recite</span></button>'; }
 function reciteSurahBtn(surah, count, firstG){ return '<button class="recitebtn" onpointerdown="prefetchAyahAudio(1, 1, 1); prefetchAyahAudio(' + surah + ', 1, ' + firstG + ')" onclick="reciteSurahAudio(' + surah + ', ' + count + ', ' + firstG + ', this)">' + RICON_SVG + '<span class="rlbl">Recite surah</span></button>'; }
-let quranSel = 0;
+/* Verified Hafs/Uthmani ayah counts for all 114 surahs (sum = 6236). Lets us derive the GLOBAL ayah
+   number of any (surah, ayah) even when the loaded data lacks a `g` field — so the whole-surah / per-ayah
+   Recite buttons ALWAYS render (the everyayah path uses surah+ayah; the cdn.islamic.network fallback
+   needs the global index, which this table supplies). */
+const SURAH_AYAH_COUNTS = [7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,30,52,52,44,28,28,20,56,40,31,50,40,46,42,29,19,36,25,22,17,19,26,30,20,15,21,11,8,8,19,5,8,8,11,11,8,3,9,5,4,7,3,6,3,5,4,5,6];
+function surahFirstGlobal(n){ n = +n; if (!(n >= 1 && n <= 114)) return 0; let g = 1; for (let i = 1; i < n; i++) g += SURAH_AYAH_COUNTS[i-1]; return g; }
+function globalAyahOf(s, ayahNo){ return (s && s.n >= 1 && s.n <= 114) ? surahFirstGlobal(s.n) + (ayahNo - 1) : 0; }
+/* Whole-surah Recite button that renders for EVERY real surah (uses `g` when present, else the table). */
+function reciteSurahBtnFor(s){
+  if (!s || !isRealSurah(s) || !(s.n >= 1 && s.n <= 114) || !s.ayahs || !s.ayahs.length) return '';
+  const firstG = (s.ayahs[0] && s.ayahs[0].g) ? s.ayahs[0].g : surahFirstGlobal(s.n);
+  return reciteSurahBtn(s.n, s.ayahs.length, firstG);
+}
+/* Per-ayah Recite button — `g` when present, else derived from the table; only the offline non-surah
+   subset (e.g. a standalone Ayat al-Kursi) falls back to text-match recite. */
+function reciteAyahBtnFor(s, a){
+  if (a.g) return reciteAyahBtn(s.n, a.n, a.g);
+  const g = globalAyahOf(s, a.n);
+  return g ? reciteAyahBtn(s.n, a.n, g) : reciteBtn(a.ar);
+}
+let quranSel = 0, _qpickOpen = false;
 let QALL = null, QBISM = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ', _qpromise = null;
 function quranList(){ return QALL || QURAN; }
 // Display surah names as "Surah Al-Baqarah" (and "سُورَة البقرة"). Non-surah entries in the offline
@@ -4315,8 +4363,8 @@ function loadQuranData(){
   })();
   return _qpromise;
 }
-function setQuranSurah(i){ try{ stopReciteAudio(); }catch(e){} quranSel = (+i) || 0; renderQuran(); const c = document.getElementById('quranCard'); if (c) c.scrollIntoView({block:'start', behavior:'smooth'}); }   // stop any recitation of the OLD surah before switching (else it plays over the new view + the teleprompter scroll-fights the reader)
-function quranStep(delta){ try{ stopReciteAudio(); }catch(e){} const l = quranList(); quranSel = (quranSel + delta + l.length) % l.length; renderQuran(); const c = document.getElementById('quranCard'); if (c) c.scrollIntoView({block:'start'}); }
+function setQuranSurah(i){ try{ stopReciteAudio(); }catch(e){} try{ closeQuranPicker(); }catch(e){} quranSel = (+i) || 0; renderQuran(); const c = document.getElementById('quranCard'); if (c) c.scrollIntoView({block:'start', behavior:'smooth'}); }   // stop any recitation of the OLD surah before switching (else it plays over the new view + the teleprompter scroll-fights the reader)
+function quranStep(delta){ try{ stopReciteAudio(); }catch(e){} try{ closeQuranPicker(); }catch(e){} const l = quranList(); quranSel = (quranSel + delta + l.length) % l.length; renderQuran(); const c = document.getElementById('quranCard'); if (c) c.scrollIntoView({block:'start'}); }
 async function renderQuran(){
   const el = document.getElementById('quranCard'); if (!el) return;
   el.className = 'glass';
@@ -4330,25 +4378,87 @@ async function renderQuran(){
   const s = list[quranSel] || list[0];
   const full = s.ayahs.map(a => a.ar).join('  ');
   const showBism = QALL && s.bismillah !== false && s.n !== 1 && s.n !== 9;
-  const opts = list.map((x,i) => '<option value="' + i + '"' + (i===quranSel?' selected':'') + '>' + esc((x.n || (i+1)) + ' · ' + surahLabel(x) + (x.meaning ? ' — ' + x.meaning : '') + ' · ' + x.ayahs.length + ' ayah' + (x.ayahs.length>1?'s':'')) + '</option>').join('');
+  const pickItems = list.map((x,i) => {
+    const num = x.n || (i+1);
+    const nm = surahLabel(x), arnm = surahArLabel(x);
+    const ac = x.ayahs.length;
+    const meta = (x.meaning ? esc(x.meaning) : '') + (x.place ? ' · ' + esc(x.place) : '') + ' · ' + ac + ' ayah' + (ac>1?'s':'');
+    const key = esc(String(num + ' ' + nm + ' ' + (x.meaning||'') + ' ' + (x.arname||'')).toLowerCase());
+    return '<button type="button" class="qpick-item' + (i===quranSel?' active':'') + '" role="option" aria-selected="' + (i===quranSel?'true':'false') + '" data-key="' + key + '" onclick="setQuranSurah(' + i + ')">'
+      + '<span class="qpick-num">' + num + '</span>'
+      + '<span class="qpick-txt"><span class="qpick-name">' + esc(nm) + ' <span class="qpick-ar" lang="ar" dir="rtl">' + esc(arnm) + '</span></span>'
+      + '<span class="qpick-meta">' + meta + '</span></span>'
+      + '<span class="qpick-tick" aria-hidden="true">' + (i===quranSel?'✓':'') + '</span></button>';
+  }).join('');
   const body = s.ayahs.map(a =>
     '<div class="qayah' + (SAJDA[s.n + ':' + a.n] ? ' sajda' : '') + '" data-sn="' + s.n + '" data-an="' + a.n + '"><div class="qnum">' + a.n + '</div><div class="qbody">'
     + '<div class="ar qar" lang="ar" dir="rtl">' + a.ar + '</div>'
     + (SAJDA[s.n + ':' + a.n] ? '<div class="sajda-mark"><span class="sajda-glyph" aria-hidden="true">۩</span><span class="sajda-txt"><b>Place of Sajdah</b><span>Prostrate once here · ' + SAJDA[s.n + ':' + a.n] + '</span></span></div>' : '')
     + '<div class="qtr">' + esc(a.tr) + '</div>'
     + '<div class="qen">' + esc(a.en) + '</div>'
-    + '<div class="qact">' + (a.g ? reciteAyahBtn(s.n, a.n, a.g) : reciteBtn(a.ar)) + '</div></div></div>').join('');
+    + '<div class="qact">' + reciteAyahBtnFor(s, a) + '</div></div></div>').join('');
+  const curNum = s.n || (quranSel+1);
   el.innerHTML = '<h2 class="sec">Qur&rsquo;an &mdash; read &amp; recite</h2>'
     + '<div class="qselrow"><button class="cal-nav" onclick="quranStep(-1)" aria-label="Previous surah">&lsaquo;</button>'
-    + '<select class="qsel" onchange="setQuranSurah(this.value)" aria-label="Choose surah">' + opts + '</select>'
+    + '<div class="qpick' + (_qpickOpen ? ' open' : '') + '">'
+    +   '<button type="button" class="qpick-trigger" id="qpickTrigger" aria-expanded="' + (_qpickOpen?'true':'false') + '" aria-controls="qpickPanel" onclick="toggleQuranPicker()">'
+    +     '<span class="qpick-num lg">' + curNum + '</span>'
+    +     '<span class="qpick-cur"><span class="qpick-curname">' + esc(surahLabel(s)) + ' <span class="qpick-curar" lang="ar" dir="rtl">' + esc(surahArLabel(s)) + '</span></span>'
+    +     '<span class="qpick-curmeta">Surah ' + curNum + ' of ' + list.length + ' · ' + s.ayahs.length + ' ayah' + (s.ayahs.length>1?'s':'') + ' · tap to browse</span></span>'
+    +     '<span class="qpick-chev" aria-hidden="true">&#9662;</span></button>'
+    +   '<div class="qpick-panel" id="qpickPanel"' + (_qpickOpen ? '' : ' hidden') + '>'
+    +     '<div class="qpick-searchwrap"><input type="search" class="qpick-search" id="qpickSearch" placeholder="Search surah — name, number, meaning…" autocomplete="off" oninput="filterQuranPicker(this.value)"></div>'
+    +     '<div class="qpick-list" id="qpickList" role="listbox" aria-label="All surahs">' + pickItems + '</div>'
+    +   '</div>'
+    + '</div>'
     + '<button class="cal-nav" onclick="quranStep(1)" aria-label="Next surah">&rsaquo;</button></div>'
     + '<div class="qhead"><div class="qtitle"><span class="qname">' + esc((s.n ? s.n + '. ' : '') + surahLabel(s)) + '</span> <span class="qarname" lang="ar" dir="rtl">' + esc(surahArLabel(s)) + '</span></div>'
     + '<div class="small dim">' + esc(s.meaning) + ' · ' + esc(s.place) + ' · ' + s.ayahs.length + ' ayah' + (s.ayahs.length>1?'s':'') + '</div>'
-    + '<div style="margin-top:9px">' + ((s.ayahs[0] && s.ayahs[0].g) ? reciteSurahBtn(s.n, s.ayahs.length, s.ayahs[0].g) : reciteBtn(full, 'Recite surah')) + '</div></div>'
+    + '<div style="margin-top:9px">' + (reciteSurahBtnFor(s) || reciteBtn(full, 'Recite surah')) + '</div></div>'
     + (showBism ? '<div class="qbism ar" lang="ar" dir="rtl">' + QBISM + '</div>' : '')
     + body;
   // anonymous reading stat — no-op unless the user opted into usage sharing (and a server is set)
   try{ if (window.SiratTrack && s && s.n) SiratTrack.read(s.n); }catch(e){}
+}
+/* Expand/collapse the premium surah picker. Kept as a live DOM toggle (no full re-render) so opening is
+   instant and the search field keeps focus; `_qpickOpen` remembers the state across a renderQuran redraw. */
+function toggleQuranPicker(){
+  const p = document.getElementById('qpickPanel'), t = document.getElementById('qpickTrigger'), w = t && t.closest('.qpick');
+  if (!p || !t) return;
+  _qpickOpen = p.hidden;                    // was hidden → we're opening
+  p.hidden = !_qpickOpen;
+  t.setAttribute('aria-expanded', _qpickOpen ? 'true' : 'false');
+  if (w) w.classList.toggle('open', _qpickOpen);
+  if (_qpickOpen){
+    const sb = document.getElementById('qpickSearch'); if (sb){ sb.value=''; filterQuranPicker(''); setTimeout(()=>{ try{ sb.focus(); }catch(e){} }, 40); }
+    const a = p.querySelector('.qpick-item.active'); if (a) try{ a.scrollIntoView({block:'nearest'}); }catch(e){}
+    // dismiss on an outside click or Escape (self-removing so no listener leaks)
+    const off = (ev) => {
+      if (ev.type === 'keydown' && ev.key !== 'Escape') return;
+      if (ev.type === 'pointerdown' && w && w.contains(ev.target)) return;
+      closeQuranPicker();
+    };
+    _qpickOff = off;
+    setTimeout(()=>{ document.addEventListener('pointerdown', off, true); document.addEventListener('keydown', off, true); }, 0);
+  } else { closeQuranPicker(); }
+}
+let _qpickOff = null;
+function closeQuranPicker(){
+  if (_qpickOff){ document.removeEventListener('pointerdown', _qpickOff, true); document.removeEventListener('keydown', _qpickOff, true); _qpickOff = null; }
+  _qpickOpen = false;
+  const p = document.getElementById('qpickPanel'), t = document.getElementById('qpickTrigger'), w = t && t.closest('.qpick');
+  if (p) p.hidden = true;
+  if (t) t.setAttribute('aria-expanded', 'false');
+  if (w) w.classList.remove('open');
+}
+function filterQuranPicker(q){
+  q = String(q||'').trim().toLowerCase();
+  const list = document.getElementById('qpickList'); if (!list) return;
+  const items = list.querySelectorAll('.qpick-item'); let shown = 0;
+  for (const it of items){ const hit = !q || (it.getAttribute('data-key')||'').indexOf(q) !== -1; it.hidden = !hit; if (hit) shown++; }
+  let none = document.getElementById('qpickNone');
+  if (!shown){ if (!none){ none = document.createElement('div'); none.id='qpickNone'; none.className='qpick-none'; none.textContent='No surah matches that search.'; list.appendChild(none); } none.hidden=false; }
+  else if (none) none.hidden = true;
 }
 
 
