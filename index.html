@@ -491,6 +491,24 @@
   @media(hover:hover){ .dcount-btn:hover{border-color:var(--stroke-gold);color:var(--gold-ink)} }
   .dcount-btn .ricon{width:16px;height:16px}
   .dcount-btn.recitebtn.playing{border-color:var(--gold);color:var(--gold-ink);background:var(--gold-soft)}
+  .dcount-del{border-color:color-mix(in srgb,var(--rose,#c1565f) 40%,transparent);color:color-mix(in srgb,var(--rose,#c1565f) 80%,var(--dim))}
+  @media(hover:hover){ .dcount-del:hover{border-color:var(--rose,#c1565f);color:var(--rose,#c1565f);background:color-mix(in srgb,var(--rose,#c1565f) 12%,transparent)} }
+  /* Add-your-own-dhikr form */
+  .dadd{margin-top:12px}
+  .dadd-toggle{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;background:transparent;border:1px dashed var(--stroke-gold);border-radius:13px;padding:12px;color:var(--gold-ink);font-family:var(--font);font-weight:800;font-size:.82rem;letter-spacing:.01em;cursor:pointer;transition:background .18s,border-color .18s}
+  .dadd-toggle:hover{background:var(--gold-soft);border-color:var(--gold)}
+  .dadd-toggle svg{flex:none}
+  .dadd-form{margin-top:10px;display:flex;flex-direction:column;gap:8px;animation:qpickIn .18s ease}
+  .dadd-in{width:100%;box-sizing:border-box;background:color-mix(in srgb,var(--ink) 6%,transparent);border:1px solid var(--stroke-gold);border-radius:12px;padding:12px 13px;font-family:var(--font);font-size:.9rem;color:var(--ink)}
+  .dadd-in.ar{font-family:var(--arabic);font-size:1.25rem;line-height:1.9;text-align:right}
+  .dadd-in::placeholder{color:var(--dim);opacity:.85}
+  .dadd-in:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 2px var(--gold-soft)}
+  .dadd-actions{display:flex;gap:8px;margin-top:2px}
+  .dadd-save{flex:1;background:linear-gradient(135deg,var(--gold),#b8933f);color:#171204;border:none;border-radius:12px;padding:12px;font-family:var(--font);font-weight:800;font-size:.86rem;cursor:pointer;transition:transform .12s,box-shadow .18s}
+  .dadd-save:hover{box-shadow:0 7px 22px rgba(217,180,91,.32)}
+  .dadd-save:active{transform:scale(.97)}
+  .dadd-cancel{flex:none;background:transparent;border:1px solid var(--stroke);border-radius:12px;padding:12px 18px;color:var(--dim);font-family:var(--font);font-weight:700;font-size:.86rem;cursor:pointer}
+  .dadd-note{margin:2px 2px 0;color:var(--rose,#c1565f);text-align:center}
   .tasbih{position:relative}
   .tasbih::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--gold);opacity:0;pointer-events:none}
   .tasbih.counted::after{animation:tcount .55s ease}
@@ -1335,10 +1353,17 @@
   .qar .qw{transition:color .5s ease, opacity .5s ease}   /* text-shadow dropped from the transition — animating a 22px blur repainted the word every frame during scroll; the glow now applies instantly while colour eases slowly (buttery word-to-word flow) */
   .qar .qw.rw-done{color:var(--gold-ink); opacity:.7}
   .qar .qw.rw{color:var(--gold-ink); text-shadow:0 0 22px rgba(217,180,91,1), 0 0 8px rgba(255,244,214,.9)}
-  @media (prefers-reduced-motion:reduce){ .qar .qw{transition:color .12s ease} }
+  /* The recitation flow is a functional reading aid → keep it buttery EVEN under reduced-motion (scoped
+     !important overrides the global *{transition:none!important} just for the reciting elements). */
+  @media (prefers-reduced-motion:reduce){
+    .qayah{transition:background-color .8s ease,box-shadow .9s ease,border-color .7s ease!important}
+    .qayah.reciting{animation:ayahBloom .95s cubic-bezier(.22,.61,.36,1) both!important}
+    .qayah.reciting::before{animation:reciteBar 2.4s ease-in-out infinite!important}
+    .qar .qw{transition:color .5s ease,opacity .5s ease!important}
+  }
   @keyframes reciteGlow{0%,100%{box-shadow:0 0 0 1px color-mix(in srgb,var(--gold-ink) 26%,transparent),0 8px 26px -14px color-mix(in srgb,var(--gold-ink) 45%,transparent)}50%{box-shadow:0 0 0 1px color-mix(in srgb,var(--gold-ink) 50%,transparent),0 15px 42px -10px color-mix(in srgb,var(--gold-ink) 72%,transparent)}}
   @keyframes reciteBar{0%,100%{opacity:.5;transform:scaleY(.78)}50%{opacity:1;transform:scaleY(1)}}
-  @media (prefers-reduced-motion:reduce){ .qayah.reciting{animation:none} .qayah.reciting::before{animation:none} }
+  /* (recitation flow is deliberately KEPT under reduced-motion — see the scoped !important block above) */
   .mood .moodIcon{display:block;line-height:0}
   .mood .moodIcon svg{width:42px;height:42px;transition:transform .28s cubic-bezier(.2,1.5,.4,1)}
   /* cute kawaii mood faces — shared by the picker AND the journal-history medallion */
@@ -1602,8 +1627,17 @@
     <h2 class="sec">Dhikr counter</h2>
     <div class="tasbihwrap"><button class="tasbih" id="tasbih" aria-label="Count the selected dhikr"><span class="tn" id="tasbihN">0</span><span class="tof" id="tasbihOf">of 33</span><span class="tph" id="tasbihPhrase"></span></button></div>
     <div class="chiprow"><button class="chip2" onclick="setTarget(33)">33</button><button class="chip2" onclick="setTarget(99)">99</button><button class="chip2" onclick="setTarget(100)">100</button></div>
-    <p class="small dim" style="text-align:center;margin:8px 0 0">Pick a dhikr below, then tap the circle to count it. <b>Each keeps its own running total</b> — so you never lose track of how many you’ve done. ▶ recites it; ↺ resets just that one.</p>
+    <p class="small dim" style="text-align:center;margin:8px 0 0">Pick a dhikr below, then tap the circle to count it. <b>Each keeps its own running total</b> — so you never lose track of how many you’ve done. ↺ resets just that one.</p>
     <div class="dcounts" id="dhikrCounts"></div>
+    <div class="dadd" id="dhikrAdd">
+      <button class="dadd-toggle" id="dhikrAddToggle" onclick="toggleDhikrAdd()" aria-expanded="false"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>Add your own dhikr, darood or tasbeeh</span></button>
+      <div class="dadd-form" id="dhikrAddForm" hidden>
+        <input id="dhikrAddAr" class="dadd-in ar" lang="ar" dir="rtl" placeholder="Arabic — اللَّهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ" autocomplete="off" maxlength="200">
+        <input id="dhikrAddEn" class="dadd-in" placeholder="Name / transliteration — e.g. Darood Sharif" autocomplete="off" maxlength="80">
+        <div class="dadd-actions"><button class="dadd-save" onclick="addCustomDhikr()">Add dhikr</button><button class="dadd-cancel" onclick="toggleDhikrAdd()">Cancel</button></div>
+        <p class="dadd-note small dim" id="dhikrAddNote" hidden></p>
+      </div>
+    </div>
     <div style="text-align:center;margin-top:12px"><button class="tasbihReset" onclick="resetAllTasbih()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4v5h5"/></svg><span>Reset all counts</span></button></div>
   </div>
 
@@ -3926,7 +3960,9 @@ function _qsActiveEl(){
 }
 function startReciteScroll(){
   stopReciteScroll();                                        // never stack two loops
-  if (typeof fastOn === 'function' && fastOn()) return;      // respect prefers-reduced-motion — no auto-motion
+  // The recitation follow is a FUNCTIONAL reading aid (hands-free Qur'an), not decoration — so it runs even
+  // under prefers-reduced-motion (by explicit user request). It is a single, slow, eased glide (no flashing,
+  // no bounce), which is the gentlest possible motion; a reader who truly wants it still can pause it by hand.
   try{ document.documentElement.style.scrollBehavior = 'auto'; }catch(e){}   // CRITICAL: force the ROOT scroller instant. scrollTo({behavior:'auto'}) can INHERIT the computed html{scroll-behavior:smooth} on strict/older WebViews and re-animate every frame (the lag). Setting the property on the element guarantees instant on all engines. Restored in stopReciteScroll.
   _qsWatch = function(){ _qsUserTook = true; _qsLastTouch = performance.now(); };   // a hand-scroll PAUSES the follow (yields to the reader); it auto-resumes ~3s after the last gesture — not killed
   window.addEventListener('wheel', _qsWatch, { passive: true });
@@ -6567,43 +6603,97 @@ async function shareHadithImage(idx){
 // Per-phrase counts: each dhikr keeps its OWN running total, so switching between them never loses a count.
 // One-time migration lifts any legacy single count onto the active phrase.
 function _tasbihCounts(){
-  S.tasbih = S.tasbih || {count:0, target:33, phrase:0};
+  S.tasbih = S.tasbih || {count:0, target:33, phrase:'b0'};
   if (!S.tasbih.counts || typeof S.tasbih.counts !== 'object' || Array.isArray(S.tasbih.counts)){
     S.tasbih.counts = {};
-    if (Number(S.tasbih.count) > 0) S.tasbih.counts[S.tasbih.phrase || 0] = Number(S.tasbih.count) || 0;
+    if (Number(S.tasbih.count) > 0) S.tasbih.counts['b' + (Number(S.tasbih.phrase) || 0)] = Number(S.tasbih.count) || 0;
   }
+  // migrate legacy numeric-index keys (0..4) → STABLE 'b0'..'b4' keys, so custom dhikr can be added/removed
+  // without shifting anyone's saved counts. One-time, idempotent.
+  let migrated = false;
+  for (const k of Object.keys(S.tasbih.counts)){
+    if (/^\d+$/.test(k)){ const nk = 'b' + k; if (S.tasbih.counts[nk] == null) S.tasbih.counts[nk] = S.tasbih.counts[k]; delete S.tasbih.counts[k]; migrated = true; }
+  }
+  if (typeof S.tasbih.phrase === 'number' || /^\d+$/.test(String(S.tasbih.phrase == null ? '' : S.tasbih.phrase))){ S.tasbih.phrase = 'b' + (Number(S.tasbih.phrase) || 0); migrated = true; }
+  if (!Array.isArray(S.tasbih.custom)) S.tasbih.custom = [];
+  if (migrated) save();
   return S.tasbih.counts;
 }
+// The full dhikr list: the five built-ins (stable keys 'b0'..'b4') + the user's own additions ('c<id>').
+function phraseList(){
+  _tasbihCounts();
+  const out = PHRASES.map((p, i) => ({ k:'b'+i, ar:p.ar, en:p.en, custom:false }));
+  for (const c of (S.tasbih.custom || [])){ if (c && c.k && c.ar) out.push({ k:c.k, ar:String(c.ar), en:String(c.en||''), custom:true }); }
+  return out;
+}
+function activeKey(){ _tasbihCounts(); const cur = S.tasbih.phrase; return phraseList().some(p => p.k === cur) ? cur : 'b0'; }
 const _DRECITE_SVG = '<svg class="ricon" viewBox="0 0 24 24" aria-hidden="true"><path class="spk" d="M4 9v6h4l5 4V5L8 9H4z"/><path class="wv1" d="M15.6 8.7a3.7 3.7 0 0 1 0 6.6"/><path class="wv2" d="M18.2 6.2a7.2 7.2 0 0 1 0 11.6"/></svg>';
 const _DRESET_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 2.6-6.4"/><path d="M3 4v5h5"/></svg>';
+const _DDEL_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>';
 function renderDhikr(){
   const counts = _tasbihCounts();
-  const active = S.tasbih.phrase || 0;
+  const list = phraseList();
+  const active = activeKey();
+  const cur = list.find(p => p.k === active) || list[0] || {ar:'', en:''};
   const elN = document.getElementById('tasbihN'); if (elN) elN.textContent = Number(counts[active]) || 0;
   const elOf = document.getElementById('tasbihOf'); if (elOf) elOf.textContent = 'of ' + S.tasbih.target;
-  const elPh = document.getElementById('tasbihPhrase'); if (elPh) elPh.textContent = (PHRASES[active] || PHRASES[0]).ar;
-  const list = document.getElementById('dhikrCounts'); if (!list) return;
-  list.innerHTML = PHRASES.map(function(p, i){
-    const n = Number(counts[i]) || 0, arAttr = esc(p.ar).replace(/"/g, '&#34;');
-    return '<div class="dcount' + (i === active ? ' on' : '') + '" role="button" tabindex="0" onclick="setPhrase(' + i + ')" aria-label="' + esc(p.en) + ', counted ' + n + ' times">'
-      + '<div class="dcount-ph"><span class="ar" lang="ar" dir="rtl">' + p.ar + '</span><span class="en">' + esc(p.en) + '</span></div>'
+  const elPh = document.getElementById('tasbihPhrase'); if (elPh) elPh.textContent = cur.ar || '';
+  const box = document.getElementById('dhikrCounts'); if (!box) return;
+  box.innerHTML = list.map(function(p){
+    const n = Number(counts[p.k]) || 0, on = (p.k === active), kAttr = esc(String(p.k));
+    const enLbl = p.en ? (esc(p.en) + (p.custom ? ' · yours' : '')) : (p.custom ? 'Your dhikr' : '');
+    return '<div class="dcount' + (on ? ' on' : '') + '" role="button" tabindex="0" onclick="setPhrase(&quot;' + kAttr + '&quot;)" aria-label="' + esc(p.en || p.ar) + ', counted ' + n + ' times">'
+      + '<div class="dcount-ph"><span class="ar" lang="ar" dir="rtl">' + esc(p.ar) + '</span>' + (enLbl ? '<span class="en">' + enLbl + '</span>' : '') + '</div>'
       + '<div class="dcount-n" title="how many you’ve counted">' + n + '</div>'
       + '<div class="dcount-acts" onclick="event.stopPropagation()">'
-        + '<button class="dcount-btn recitebtn" title="Recite ' + esc(p.en) + '" aria-label="Recite ' + esc(p.en) + '" onclick="reciteText(&quot;' + arAttr + '&quot;, this)">' + _DRECITE_SVG + '</button>'
-        + '<button class="dcount-btn" title="Reset ' + esc(p.en) + '" aria-label="Reset ' + esc(p.en) + '" onclick="resetPhrase(' + i + ')">' + _DRESET_SVG + '</button>'
+        + '<button class="dcount-btn" title="Reset this count" aria-label="Reset ' + esc(p.en || p.ar) + '" onclick="resetPhrase(&quot;' + kAttr + '&quot;)">' + _DRESET_SVG + '</button>'
+        + (p.custom ? '<button class="dcount-btn dcount-del" title="Remove this dhikr" aria-label="Remove ' + esc(p.en || p.ar) + '" onclick="deleteCustomDhikr(&quot;' + kAttr + '&quot;)">' + _DDEL_SVG + '</button>' : '')
       + '</div></div>';
   }).join('');
 }
-function setPhrase(i){ S.tasbih.phrase = i; save(); renderDhikr(); }
+function setPhrase(k){ S.tasbih.phrase = k; save(); renderDhikr(); }
 function setTarget(n){ S.tasbih.target = n; save(); renderDhikr(); }        // target is a milestone only — it never wipes your counts
-function resetPhrase(i){ const c = _tasbihCounts(); c[i] = 0; save(); renderDhikr(); }
-function resetTasbih(){ resetPhrase(S.tasbih.phrase || 0); }                // back-compat alias: reset the active phrase
+function resetPhrase(k){ const c = _tasbihCounts(); c[k] = 0; save(); renderDhikr(); }
+function resetTasbih(){ resetPhrase(activeKey()); }                          // back-compat alias: reset the active phrase
 function resetAllTasbih(){ S.tasbih.counts = {}; save(); renderDhikr(); }
+// ── custom dhikr / darood / tasbeeh the user adds themselves ──
+function toggleDhikrAdd(){
+  const f = document.getElementById('dhikrAddForm'), t = document.getElementById('dhikrAddToggle'); if (!f) return;
+  const opening = f.hidden; f.hidden = !opening;
+  if (t) t.setAttribute('aria-expanded', opening ? 'true' : 'false');
+  const note = document.getElementById('dhikrAddNote'); if (note){ note.hidden = true; note.textContent = ''; }
+  if (opening){ const ar = document.getElementById('dhikrAddAr'); if (ar) setTimeout(() => { try{ ar.focus(); }catch(e){} }, 40); }
+  else { const ar = document.getElementById('dhikrAddAr'), en = document.getElementById('dhikrAddEn'); if (ar) ar.value = ''; if (en) en.value = ''; }
+}
+function addCustomDhikr(){
+  const arEl = document.getElementById('dhikrAddAr'), enEl = document.getElementById('dhikrAddEn'), note = document.getElementById('dhikrAddNote');
+  const ar = ((arEl && arEl.value) || '').trim(), en = ((enEl && enEl.value) || '').trim();
+  const warn = (m) => { if (note){ note.textContent = m; note.hidden = false; } };
+  if (!ar){ warn('Please type the Arabic text of your dhikr.'); if (arEl) arEl.focus(); return; }
+  if (ar.length > 200 || en.length > 80){ warn('That is a little long — keep the Arabic under 200 and the name under 80 characters.'); return; }
+  _tasbihCounts();
+  if ((S.tasbih.custom || []).length >= 50){ warn('You’ve reached the maximum of 50 custom dhikr.'); return; }
+  const k = 'c' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36);
+  S.tasbih.custom.push({ k, ar, en });
+  S.tasbih.counts[k] = 0;
+  S.tasbih.phrase = k;                                    // auto-select the freshly added one
+  save();
+  toggleDhikrAdd();
+  renderDhikr();
+  try{ toast('Added to your dhikr', (en || 'Your dhikr') + ' — tap the circle to start counting.', '📿'); }catch(e){}
+}
+function deleteCustomDhikr(k){
+  _tasbihCounts();
+  S.tasbih.custom = (S.tasbih.custom || []).filter(c => c.k !== k);
+  if (S.tasbih.counts) delete S.tasbih.counts[k];
+  if (S.tasbih.phrase === k) S.tasbih.phrase = 'b0';
+  save(); renderDhikr();
+}
 function bumpTasbih(){
   const dk = todayKey() || 'x';
   if (!S.dhikrDay || S.dhikrDay.date !== dk) S.dhikrDay = {date: dk, n: 0};
   S.dhikrDay.n++;
-  const counts = _tasbihCounts(), active = S.tasbih.phrase || 0;
+  const counts = _tasbihCounts(), active = activeKey();
   const n = (Number(counts[active]) || 0) + 1;
   counts[active] = n; S.dhikrTotal = (Number(S.dhikrTotal) || 0) + 1;       // counts PERSIST (no auto-reset) — the running history the user asked for
   const hitTarget = S.tasbih.target && (n % S.tasbih.target === 0);
@@ -8487,7 +8577,7 @@ function boot(){
   try{ setTimeout(function(){ checkForUpdate(); }, 4200); }catch(e){}   // quietly show the "update available" banner if a newer build is live
   try{ setTimeout(function(){ enforceFreshness(); }, 5200); }catch(e){}   // "circular update": force a fresh re-pull at least every 3 months, even if nothing new shipped
   try{ setTimeout(function(){ enforceRulesAcceptance(); }, 2200); }catch(e){}   // no-lock returning users: enforce Rules re-acceptance if the Rules changed (guarded off the lock screen)
-  try{ setTimeout(function(){ if (S.push && S.push.on) syncPush(); }, 2500); document.addEventListener('visibilitychange', function(){ if (document.visibilityState!=='visible') return; try{ renderTick(); if (S.loc){ var _s = currentSet(); var _td = _s.today; var _dk = _td.y + '-' + _td.m + '-' + _td.d; if (lastDayKey && _dk !== lastDayKey){ rollDaily('hadith'); rollDaily('ayah'); qadaReconcile(); maybeDailyHadith(); }   /* advance the daily picks ONLY on a real new civil day — not on every foreground */ lastDayKey = _dk; lastPrayerKey = currentPrayerKey(prayerWindows(_s), Date.now()); } renderAppFeatures(); renderReflection(); renderTopAyah(); }catch(e){} try{ refreshLocation(); }catch(e){} if (S.push && S.push.on) syncPush(); }); }catch(e){}
+  try{ setTimeout(function(){ if (S.push && S.push.on) syncPush(); }, 2500); document.addEventListener('visibilitychange', function(){ if (document.visibilityState!=='visible') return; try{ renderTick(); try{ rollDaily('ayah'); rollDaily('hadith'); rollDaily('name'); rollDaily('dua'); }catch(e){}   /* FRESH EVERY OPEN: every rotating gift (ayah · hadith · name · dua) advances each time the app is brought forward. rotAdvance is a non-repeating shuffle, so nothing repeats until its whole pool has been shown once. */ if (S.loc){ var _s = currentSet(); var _td = _s.today; var _dk = _td.y + '-' + _td.m + '-' + _td.d; if (lastDayKey && _dk !== lastDayKey){ qadaReconcile(); maybeDailyHadith(); }   /* day-scoped extras (qada reconcile, hadith popup re-arm) still only on a real new civil day */ lastDayKey = _dk; lastPrayerKey = currentPrayerKey(prayerWindows(_s), Date.now()); } renderAppFeatures(); renderReflection(); renderTopAyah(); try{ renderDaily(); }catch(e){} }catch(e){} try{ refreshLocation(); }catch(e){} if (S.push && S.push.on) syncPush(); }); }catch(e){}
   // Native Android splash: hide it now that the app has actually painted (config sets launchAutoHide:false),
   // with a 3s idempotent failsafe so a stalled boot can never strand the user on the splash.
   try { var _SS = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SplashScreen; if (_SS) { _SS.hide({ fadeOutDuration: 200 }); setTimeout(function(){ try{ _SS.hide(); }catch(e){} }, 3000); } } catch(e){}
