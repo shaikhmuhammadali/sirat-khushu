@@ -254,7 +254,7 @@
   .nextstrip .at{font-size:.78rem; color:var(--muted); text-align:right}
 
   .pgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin-bottom:16px}
-  .pcard{background:color-mix(in srgb, var(--bg2) 78%, transparent); border:1px solid var(--stroke); border-radius:20px; padding:15px 16px; transition:border-color .25s,background .25s}
+  .pcard{position:relative; background:color-mix(in srgb, var(--bg2) 78%, transparent); border:1px solid var(--stroke); border-radius:20px; padding:15px 16px; transition:border-color .25s,background .25s,transform .28s cubic-bezier(.2,.85,.3,1),box-shadow .3s ease}
   .pcard.active{border-color:var(--teal); background:linear-gradient(160deg,var(--teal-soft),var(--glass))}
   .pcard.next{border-color:var(--stroke-gold); background:linear-gradient(160deg,var(--gold-soft),var(--glass))}
   .pcard .hd{display:flex; align-items:center; justify-content:space-between; gap:6px}
@@ -273,6 +273,47 @@
   .pill.info{background:transparent; color:var(--dim); border:1px solid var(--stroke)}
   .bell{background:none; border:1px solid transparent; cursor:pointer; font-size:.95rem; opacity:.35; filter:grayscale(1); border-radius:8px; padding:2px 4px; line-height:1}
   .bell.on{opacity:1; filter:none}
+
+  /* ═══════════ Today page — luxury polish (all compositor-safe: transform/opacity only) ═══════════ */
+  .clockcard{position:relative; overflow:hidden}
+  .clockcard::before{content:""; position:absolute; left:50%; top:-34%; width:130%; height:150%; transform:translateX(-50%); background:radial-gradient(58% 42% at 50% 0%, color-mix(in srgb,var(--gold) 15%,transparent), transparent 72%); pointer-events:none; z-index:0}
+  .clockcard > *{position:relative; z-index:1}
+  .bigclock{text-shadow:0 2px 26px color-mix(in srgb,var(--gold-ink) 28%,transparent)}
+  .bigclock .ampm{background:linear-gradient(180deg,var(--gold-ink),var(--gold)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent}
+  .clockchips .chip{transition:transform .2s ease, border-color .2s ease}
+  @media(hover:hover){ .clockchips .chip:hover{transform:translateY(-1px)} }
+
+  .nextstrip{position:relative; overflow:hidden; box-shadow:0 12px 40px -20px color-mix(in srgb,var(--gold-ink) 55%,transparent)}
+  .nextstrip > *{position:relative; z-index:1}
+  .nextstrip::before{content:""; position:absolute; top:0; left:0; width:42%; height:100%; z-index:0; pointer-events:none;
+    background:linear-gradient(105deg,transparent, color-mix(in srgb,#fff 20%,transparent), transparent);
+    transform:translateX(-180%) skewX(-18deg); animation:nsSheen 7s ease-in-out infinite}
+  @keyframes nsSheen{0%,70%{transform:translateX(-180%) skewX(-18deg)} 90%,100%{transform:translateX(370%) skewX(-18deg)}}
+  .nextstrip .cd{text-shadow:0 2px 18px color-mix(in srgb,var(--gold-ink) 42%,transparent)}
+
+  @media(hover:hover){ .pcard:hover{transform:translateY(-3px); border-color:var(--stroke-gold); box-shadow:0 16px 40px -22px color-mix(in srgb,var(--gold-ink) 55%,transparent)} }
+  .pcard:active{transform:scale(.985)}
+  .pcard .tm{transition:color .25s ease}
+  .pcard.next{box-shadow:0 12px 34px -18px color-mix(in srgb,var(--gold-ink) 55%,transparent)}
+  .pcard.next .tm{color:var(--gold-ink)}
+  .pcard.active{box-shadow:0 12px 34px -18px color-mix(in srgb,var(--teal-ink,#0a5a52) 50%,transparent)}
+  /* the NEXT prayer card gently breathes a golden ring (opacity+scale → compositor; card persists so it never restarts) */
+  .pcard.next::after{content:""; position:absolute; inset:-1px; border-radius:20px; pointer-events:none;
+    border:1px solid color-mix(in srgb,var(--gold) 60%,transparent); opacity:0; animation:pcardRing 2.8s ease-in-out infinite}
+  @keyframes pcardRing{0%,100%{opacity:0; transform:scale(.996)} 50%{opacity:.85; transform:scale(1.006)}}
+
+  /* staggered entrance cascade when the Today tab appears (fill-mode BACKWARDS so hover transforms still work after) */
+  .wrap.tabfade .clockcard{animation-delay:.02s}
+  .wrap.tabfade .nextstrip{animation-delay:.09s}
+  .wrap.tabfade .pgrid{animation-delay:.15s}
+  .wrap.tabfade .pgrid .pcard{animation:pcardIn .55s cubic-bezier(.2,.85,.3,1) backwards}
+  .wrap.tabfade .pgrid .pcard:nth-child(1){animation-delay:.18s}
+  .wrap.tabfade .pgrid .pcard:nth-child(2){animation-delay:.24s}
+  .wrap.tabfade .pgrid .pcard:nth-child(3){animation-delay:.30s}
+  .wrap.tabfade .pgrid .pcard:nth-child(4){animation-delay:.36s}
+  .wrap.tabfade .pgrid .pcard:nth-child(5){animation-delay:.42s}
+  .wrap.tabfade .pgrid .pcard:nth-child(6){animation-delay:.48s}
+  @keyframes pcardIn{from{opacity:0; transform:translateY(12px)} to{opacity:1; transform:none}}
 
   .igrid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
   @media (max-width:560px){ .igrid{grid-template-columns:repeat(2,1fr)} }
