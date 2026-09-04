@@ -253,32 +253,7 @@
   .nextstrip .cd{font-size:1.7rem; font-weight:800; font-variant-numeric:tabular-nums; color:var(--gold-ink); text-align:right}
   .nextstrip .at{font-size:.78rem; color:var(--muted); text-align:right}
 
-  /* Prayer-flow connector: the passed prayer → the upcoming one, with time visibly streaming toward it */
-  .pflow{margin:-6px 4px 16px; padding:0 2px}
-  .pflow-ends{display:flex; align-items:baseline; justify-content:space-between; gap:10px; font-size:.66rem; font-weight:800; letter-spacing:.05em; text-transform:uppercase; margin-bottom:7px}
-  .pflow-prev{color:var(--muted)}
-  .pflow-next{color:var(--gold-ink)}
-  .pflow-track{position:relative; height:7px; border-radius:999px; background:color-mix(in srgb,var(--ink) 12%,transparent); overflow:hidden}
-  .pflow-fill{position:relative; height:100%; min-width:3px; border-radius:999px; transition:width 1s linear; overflow:hidden;
-    background:linear-gradient(90deg,var(--teal,#0e7a70), var(--gold))}
-  .pflow-fill::after{content:""; position:absolute; top:0; bottom:0; left:0; width:45%; pointer-events:none;
-    background:linear-gradient(90deg,transparent, color-mix(in srgb,#fff 55%,transparent), transparent);
-    transform:translateX(-160%); animation:trackShimmer 2.6s ease-in-out infinite}
-  @keyframes trackShimmer{0%{transform:translateX(-160%)} 60%,100%{transform:translateX(320%)}}
-  /* one dot per prayer along the whole-day track — built once, only their state (done/next/soon) flips each tick */
-  .pflow-rail{position:relative}
-  .pflow-marks{position:absolute; inset:0; pointer-events:none; z-index:2}
-  .pflow-dot{position:absolute; top:50%; width:9px; height:9px; margin-top:-4.5px; transform:translateX(-50%); border-radius:50%;
-    border:1.5px solid var(--stroke-gold); background:var(--bg2); transition:background .3s ease,border-color .3s ease,box-shadow .3s ease}
-  .pflow-dot.done{background:var(--teal,#0e7a70); border-color:var(--teal,#0e7a70)}
-  .pflow-dot.soon{background:var(--bg2); border-color:var(--stroke-gold)}
-  .pflow-dot.next{background:var(--gold); border-color:var(--gold); animation:pflowNextDot 1.9s ease-in-out infinite}
-  .pflow-dot.wp{width:5px; height:5px; margin-top:-2.5px; border:none; background:color-mix(in srgb,var(--muted) 55%,transparent)}
-  @keyframes pflowNextDot{0%,100%{box-shadow:0 0 0 2px var(--gold-soft)} 50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--gold) 20%,transparent)}}
-  .pflow-labels{position:relative; height:13px; margin-top:7px}
-  .pflow-labels span{position:absolute; transform:translateX(-50%); font-size:.58rem; font-weight:800; letter-spacing:.03em; color:var(--dim); transition:color .3s ease}
-  .pflow-labels span.done{color:var(--muted)}
-  .pflow-labels span.next{color:var(--gold-ink)}
+  @keyframes trackShimmer{0%{transform:translateX(-160%)} 55%,100%{transform:translateX(320%)}}
 
   /* Night Journey (Al-Layl) timeline inside the Islamic-day card */
   .njourney{margin:2px 0 16px}
@@ -287,14 +262,14 @@
   .nj-dot{flex:none; width:7px; height:7px; border-radius:50%; background:var(--gold); box-shadow:0 0 8px var(--gold-ink)}
   .nj-pill{flex:none; font-size:.74rem; font-weight:800; color:var(--ink); background:color-mix(in srgb,var(--ink) 9%,transparent); border:1px solid var(--stroke-gold); border-radius:999px; padding:5px 13px; white-space:nowrap; font-variant-numeric:tabular-nums}
   .nj-track{position:relative; height:6px; border-radius:999px; background:color-mix(in srgb,var(--ink) 15%,transparent); margin:0 5px}
-  .nj-fill{position:relative; height:100%; min-width:2px; border-radius:999px; overflow:hidden; background:linear-gradient(90deg, color-mix(in srgb,var(--teal,#0e7a70) 70%,transparent), var(--gold)); transition:width 1s linear}
-  .nj-fill::after{content:""; position:absolute; top:0; bottom:0; left:0; width:45%; pointer-events:none;
-    background:linear-gradient(90deg,transparent, color-mix(in srgb,#fff 55%,transparent), transparent);
-    transform:translateX(-160%); animation:trackShimmer 2.6s ease-in-out infinite}
-  .nj-marker{position:absolute; top:50%; width:15px; height:15px; margin-top:-7.5px; border-radius:50%; transform:translateX(-50%); transition:left 1s linear; z-index:2;
+  .nj-fill{position:relative; height:100%; min-width:2px; border-radius:999px; overflow:hidden; background:linear-gradient(90deg, color-mix(in srgb,var(--teal,#0e7a70) 70%,transparent), var(--gold)); transition:width 1.4s cubic-bezier(.4,0,.2,1)}
+  .nj-fill::after{content:""; position:absolute; top:0; bottom:0; left:0; width:42%; pointer-events:none;
+    background:linear-gradient(90deg,transparent, color-mix(in srgb,#fff 50%,transparent), transparent);
+    transform:translateX(-170%); animation:trackShimmer 5.5s cubic-bezier(.45,0,.55,1) infinite}
+  .nj-marker{position:absolute; top:50%; width:15px; height:15px; margin-top:-7.5px; border-radius:50%; transform:translateX(-50%); transition:left 1.4s cubic-bezier(.4,0,.2,1); z-index:2;
     background:radial-gradient(circle, #fff 28%, var(--gold-ink) 72%, transparent 84%); box-shadow:0 0 10px 2px color-mix(in srgb,var(--gold) 55%,transparent)}
-  .nj-marker::after{content:""; position:absolute; inset:-4px; border-radius:50%; border:1.5px solid color-mix(in srgb,var(--gold) 60%,transparent); animation:njMarkerPulse 2s ease-in-out infinite}
-  @keyframes njMarkerPulse{0%,100%{opacity:.7; transform:scale(.85)} 50%{opacity:0; transform:scale(1.5)}}
+  .nj-marker::after{content:""; position:absolute; inset:-4px; border-radius:50%; border:1.5px solid color-mix(in srgb,var(--gold) 60%,transparent); animation:njMarkerPulse 3.6s ease-in-out infinite}
+  @keyframes njMarkerPulse{0%,100%{opacity:.75; transform:scale(.82)} 50%{opacity:0; transform:scale(1.55)}}
   .nj-labels{display:flex; justify-content:space-between; gap:6px; margin:13px 4px 0}
   .nj-pt{display:flex; flex-direction:column; gap:2px; text-align:center; flex:1 1 0; min-width:0}
   .nj-pt:first-child{text-align:left}
@@ -1691,15 +1666,6 @@
     <div><div class="cd" id="nsCd">--:--:--</div><div class="at" id="nsAt"></div></div>
   </div>
 
-  <div class="pflow" id="prayerFlow" style="display:none" aria-hidden="true">
-    <div class="pflow-ends"><span class="pflow-prev" id="pflowPrev"></span><span class="pflow-next" id="pflowNext"></span></div>
-    <div class="pflow-rail">
-      <div class="pflow-track"><div class="pflow-fill" id="pflowFill"></div></div>
-      <div class="pflow-marks" id="pflowMarks"></div>
-    </div>
-    <div class="pflow-labels" id="pflowLabels"></div>
-  </div>
-
   <div class="pgrid" id="pgrid"></div>
 
   <div id="ramadanCard"></div>
@@ -1820,7 +1786,6 @@
   </div>
 
   <div class="glass" data-sec="today">
-    <h2 class="sec">Islamic day</h2>
     <div class="njourney" id="nightJourney" style="display:none">
       <div class="nj-head"><span class="nj-title"><i class="nj-dot"></i>Night journey &middot; Al-Layl</span><span class="nj-pill" id="njPill">&mdash;</span></div>
       <div class="nj-track"><div class="nj-fill" id="njFill"></div><i class="nj-marker" id="njMarker"></i></div>
@@ -1832,23 +1797,6 @@
       </div>
       <div class="nj-note" id="njNote"></div>
     </div>
-    <div class="igrid">
-      <div class="ig" title="The day of the current Islamic (Hijri) month">
-        <b id="tdHijriDay">—</b><span>Hijri day</span></div>
-      <div class="ig" title="The current Islamic (Hijri) month">
-        <b id="tdHijriMonth">—</b><span>Hijri month</span></div>
-      <div class="ig" title="The Islamic (Hijri) year — counted from the Prophet’s ﷺ Hijrah">
-        <b id="tdHijriYear">—</b><span>Hijri year</span></div>
-    </div>
-    <div class="igrid" style="margin-top:12px">
-      <div class="ig" title="Which day of the Islamic (Hijri) year this is — the Hijri year runs 354 or 355 days">
-        <b id="tdDoy">—</b><span>Hijri day of year</span></div>
-      <div class="ig" title="Time remaining until the next prayer or night-worship window (Tahajjud is in the last third of the night)">
-        <b id="tdNextMs">—</b><span id="tdNextMsLbl">Next milestone</span></div>
-      <div class="ig" title="The Islamic day begins at Maghrib (sunset), not midnight — so after sunset the date has already moved to the next day">
-        <b id="tdDayBegins">—</b><span>Islamic day begins</span></div>
-    </div>
-    <div class="small dim" id="tdIslamicNote" style="margin-top:14px">The Islamic day begins at Maghrib (sunset), not midnight — so after sunset today’s date has already moved to the next day.</div>
   </div>
 
   <div class="glass" id="qiblaCard">
@@ -2659,40 +2607,6 @@ function refreshCards(win, now, t1){
 /* The connector between the prayer that just passed and the upcoming one: a track whose fill grows with
    the elapsed fraction of the gap, a pulsing "now" comet at the leading edge, and a light that keeps
    streaming toward the next prayer — so at a glance you see where you are and what's coming. */
-let _pflowSig = '';
-function renderPrayerFlow(win, now, next, nextE, tz){
-  const fl = document.getElementById('prayerFlow'); if (!fl) return;
-  const obl = win.filter(w => !w.info && w.e != null);   // the five obligatory prayers (Fajr … Isha)
-  if (obl.length < 2 || !next){ fl.style.display = 'none'; return; }
-  const start = obl[0].e, end = obl[obl.length-1].e, span = Math.max(1, end - start);   // whole-day span: Fajr → Isha
-  const frac = Math.max(0, Math.min(1, (now - start) / span));
-  fl.style.display = 'block';
-  const p = document.getElementById('pflowPrev'), n = document.getElementById('pflowNext'), f = document.getElementById('pflowFill');
-  if (p) p.textContent = obl[0].k + ' · ' + fmtT(start, tz);
-  if (n) n.textContent = '▸ ' + (next.tomorrow ? 'Tomorrow · ' : '') + next.k + ' · ' + fmtT(nextE, tz);   // always the UPCOMING prayer, not fixed to Isha
-  if (f) f.style.width = (frac * 100).toFixed(2) + '%';
-  const marks = win.filter(w => w.e != null);            // obligatory + Sunrise (a subtle waypoint)
-  const rail = document.getElementById('pflowMarks'), lab = document.getElementById('pflowLabels');
-  const sig = start + '|' + end + '|' + marks.map(w => w.k + w.e).join(',');
-  if (sig !== _pflowSig && rail && lab){                 // positions are fixed for the day → build the dots ONCE
-    let dh = '', lh = '';
-    for (const w of marks){
-      const pos = Math.max(1.8, Math.min(98.2, (w.e - start) / span * 100));
-      dh += '<span class="pflow-dot' + (w.info ? ' wp' : '') + '" data-k="' + esc(w.k) + '" data-e="' + w.e + '" style="left:' + pos.toFixed(2) + '%"></span>';
-      if (!w.info){ const lp = Math.max(4, Math.min(96, (w.e - start) / span * 100)); lh += '<span data-k="' + esc(w.k) + '" data-e="' + w.e + '" style="left:' + lp.toFixed(2) + '%">' + esc(w.k[0]) + '</span>'; }
-    }
-    rail.innerHTML = dh; lab.innerHTML = lh; _pflowSig = sig;
-  }
-  // each tick: flip only the state (done → the prayer passed · next → the upcoming one · soon → later today)
-  const setState = (el) => {
-    if (el.classList.contains('wp')) return;
-    const e = +el.getAttribute('data-e'), k = el.getAttribute('data-k');
-    const st = (e <= now) ? 'done' : (k === next.k ? 'next' : 'soon');
-    if (!el.classList.contains(st)){ el.classList.remove('done','soon','next'); el.classList.add(st); }
-  };
-  if (rail) Array.prototype.forEach.call(rail.children, setState);
-  if (lab) Array.prototype.forEach.call(lab.children, setState);
-}
 /* ── the tick: everything time-dependent ── */
 let lastClock = '', notifiedKeys = {}, eventCache = null, eventCacheKey = '';
 function renderTick(){
@@ -2730,8 +2644,7 @@ function renderTick(){
     document.getElementById('nsAr').textContent = ar;
     document.getElementById('nsCd').textContent = cd(e-now);
     document.getElementById('nsAt').textContent = 'at ' + fmtT(e, tz);
-    renderPrayerFlow(win, now, next, e, tz);
-  } else { ns.style.display = 'none'; const _pf = document.getElementById('prayerFlow'); if (_pf) _pf.style.display = 'none'; }
+  } else { ns.style.display = 'none'; }
 
   renderSunNight(set, now, tz);
   renderVoluntary(set, now, tz);
