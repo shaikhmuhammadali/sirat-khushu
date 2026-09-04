@@ -470,7 +470,15 @@
   .tasbih .tof{color:var(--dim);font-size:.78rem;margin-top:4px}
   .tasbih .tph{font-family:var(--arabic);color:var(--teal-ink);font-size:1.05rem;margin-top:6px}
   .chiprow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:8px 0}
-  .chip2{padding:7px 15px;border-radius:999px;border:1px solid var(--stroke);background:var(--glass);color:var(--muted);font-size:.78rem;font-weight:700;cursor:pointer;font-family:var(--font)}
+  .chip2{padding:7px 15px;border-radius:999px;border:1px solid var(--stroke);background:var(--glass);color:var(--muted);font-size:.78rem;font-weight:700;cursor:pointer;font-family:var(--font);transition:border-color .18s,color .18s,background .18s}
+  .chip2.on{border-color:var(--stroke-gold);background:var(--gold-soft);color:var(--gold-ink)}
+  .chip-custom{width:88px;text-align:center;color:var(--ink);-moz-appearance:textfield}
+  .chip-custom::-webkit-outer-spin-button,.chip-custom::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .chip-custom::placeholder{color:var(--dim);font-weight:700}
+  .chip-custom:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 2px var(--gold-soft)}
+  /* Theme-switch crossfade veil */
+  #themeFade{position:fixed;inset:0;z-index:9998;opacity:0;pointer-events:none;background:var(--bg);transition:opacity .24s ease}
+  #themeFade.show{opacity:1}
   .tasbihReset{display:inline-flex;align-items:center;gap:7px;padding:9px 22px;border-radius:999px;border:1px solid var(--stroke-gold);background:var(--gold-soft);color:var(--gold-ink);font-family:var(--font);font-size:.82rem;font-weight:800;letter-spacing:.02em;cursor:pointer;transition:transform .12s ease, box-shadow .3s ease}
   .tasbihReset:hover{box-shadow:0 0 20px -6px var(--gold)}
   .tasbihReset:active{transform:scale(.94)}
@@ -1626,7 +1634,12 @@
   <div class="glass">
     <h2 class="sec">Dhikr counter</h2>
     <div class="tasbihwrap"><button class="tasbih" id="tasbih" aria-label="Count the selected dhikr"><span class="tn" id="tasbihN">0</span><span class="tof" id="tasbihOf">of 33</span><span class="tph" id="tasbihPhrase"></span></button></div>
-    <div class="chiprow"><button class="chip2" onclick="setTarget(33)">33</button><button class="chip2" onclick="setTarget(99)">99</button><button class="chip2" onclick="setTarget(100)">100</button></div>
+    <div class="chiprow" id="tasbihChips">
+      <button class="chip2" data-t="33" onclick="setTarget(33)">33</button>
+      <button class="chip2" data-t="99" onclick="setTarget(99)">99</button>
+      <button class="chip2" data-t="100" onclick="setTarget(100)">100</button>
+      <input class="chip2 chip-custom" id="tasbihCustom" type="number" inputmode="numeric" min="1" max="100000" placeholder="Custom" aria-label="Set a custom target count" onchange="setCustomTarget(this.value)" onkeydown="if(event.key==='Enter'){setCustomTarget(this.value);this.blur();}">
+    </div>
     <p class="small dim" style="text-align:center;margin:8px 0 0">Pick a dhikr below, then tap the circle to count it. <b>Each keeps its own running total</b> — so you never lose track of how many you’ve done. ↺ resets just that one.</p>
     <div class="dcounts" id="dhikrCounts"></div>
     <div class="dadd" id="dhikrAdd">
@@ -1866,7 +1879,6 @@
   <footer>
     <div class="ar" lang="ar" dir="rtl">إِنَّ الصَّلَاةَ كَانَتْ عَلَى الْمُؤْمِنِينَ كِتَابًا مَّوْقُوتًا</div>
     “Indeed, prayer has been decreed upon the believers at specified times.” — Surah An-Nisa 4:103
-    <div id="testout" style="display:none"></div>
     <div class="credit">
       <div class="ar" lang="ar" dir="rtl">وَمَا تَوْفِيقِي إِلَّا بِاللَّهِ</div>
       Created by a humble servant of Allah <span class="ar" lang="ar" dir="rtl">سُبْحَانَهُ وَتَعَالَىٰ</span><br>
@@ -6737,6 +6749,7 @@ function renderDhikr(){
   const elN = document.getElementById('tasbihN'); if (elN) elN.textContent = Number(counts[active]) || 0;
   const elOf = document.getElementById('tasbihOf'); if (elOf) elOf.textContent = 'of ' + S.tasbih.target;
   const elPh = document.getElementById('tasbihPhrase'); if (elPh) elPh.textContent = cur.ar || '';
+  try{ syncTargetChips(); }catch(e){}
   const box = document.getElementById('dhikrCounts'); if (!box) return;
   box.innerHTML = list.map(function(p){
     const n = Number(counts[p.k]) || 0, on = (p.k === active), kAttr = esc(String(p.k));
@@ -6752,6 +6765,18 @@ function renderDhikr(){
 }
 function setPhrase(k){ S.tasbih.phrase = k; save(); renderDhikr(); }
 function setTarget(n){ S.tasbih.target = n; save(); renderDhikr(); }        // target is a milestone only — it never wipes your counts
+function setCustomTarget(v){
+  const n = Math.round(Number(v));
+  if (!isFinite(n) || n < 1){ const el=document.getElementById('tasbihCustom'); if(el) el.value=''; return; }
+  setTarget(Math.min(n, 100000));
+}
+// reflect the active target on the chips (and mirror it into the custom box when it isn't a preset)
+function syncTargetChips(){
+  const t = S.tasbih.target, presets = [33,99,100];
+  document.querySelectorAll('#tasbihChips .chip2[data-t]').forEach(b => b.classList.toggle('on', Number(b.getAttribute('data-t')) === t));
+  const box = document.getElementById('tasbihCustom');
+  if (box && document.activeElement !== box) box.value = presets.indexOf(t) === -1 ? t : '';
+}
 function resetPhrase(k){ const c = _tasbihCounts(); c[k] = 0; save(); renderDhikr(); }
 function resetTasbih(){ resetPhrase(activeKey()); }                          // back-compat alias: reset the active phrase
 function resetAllTasbih(){ S.tasbih.counts = {}; save(); renderDhikr(); }
@@ -7468,7 +7493,21 @@ const THEMES = ['dark','light','cream','maroon','emerald','navy','brown','blush'
 const THEME_COLORS = {dark:'#0a0e14', light:'#f3f0e8', cream:'#f4ecd8', maroon:'#1a0b10', emerald:'#071612', navy:'#08111f', brown:'#150f09', blush:'#fbefef', midnight:'#161A30', pistachio:'#EEFABD', lavender:'#f8f4ff', azure:'#f0ffff', amoled:'#000000'};
 const THEME_LIST = [['dark','Dark','#0a0e14'],['light','Light','#f3f0e8'],['cream','Cream','#f4ecd8'],['maroon','Maroon','#2b1421'],['emerald','Emerald','#0f261e'],['navy','Navy','#101d33'],['brown','Brown','#241a10'],['blush','Blush','#fbefef'],['midnight','Midnight','#161A30'],['pistachio','Pistachio','#EEFABD'],['lavender','Lavender','#f8f4ff'],['azure','Azure','#f0ffff']];
 function renderThemes(){ const el=document.getElementById('themeRow'); if(!el) return; el.innerHTML=THEME_LIST.map(t=>'<button class="swatch '+(S.theme===t[0]?'on':'')+'" style="background:'+t[2]+'" onclick="setTheme(\''+t[0]+'\')" aria-label="'+t[1]+' theme"><span>'+t[1]+'</span></button>').join(''); }
-function setTheme(name){ S.theme=name; save(); applyTheme(); }
+/* Premium theme switch: a soft full-screen veil fades IN over the old theme, the palette is swapped
+   behind it, then the veil fades OUT to reveal the new theme — a gentle crossfade, never a hard flip. */
+function setTheme(name){
+  if (S.theme === name){ return; }
+  let ov = document.getElementById('themeFade');
+  if (!ov){ ov = document.createElement('div'); ov.id = 'themeFade'; document.body.appendChild(ov); }
+  try{ ov.style.background = (getComputedStyle(document.documentElement).getPropertyValue('--bg') || getComputedStyle(document.body).backgroundColor).trim(); }catch(e){}
+  // reduced-motion is overridden app-wide, but if a veil can't animate just swap instantly
+  ov.classList.add('show');
+  setTimeout(function(){
+    S.theme = name; save(); applyTheme();
+    try{ ov.style.background = (getComputedStyle(document.documentElement).getPropertyValue('--bg') || getComputedStyle(document.body).backgroundColor).trim(); }catch(e){}
+    setTimeout(function(){ ov.classList.remove('show'); }, 40);
+  }, 240);
+}
 function assignSections(){
   const wrap = document.querySelector('.wrap'); if (!wrap) return;
   const idMap = {topAyah:'today',nextstrip:'today',pgrid:'today',ramadanCard:'today',escalationBanner:'today',growthCard:'today',streakCard:'today',catchupCard:'today',xpCard:'today',questCard:'today',dailyCard:'dhikr',adhkarCard:'dhikr',duasCard:'dhikr',bookmarksCard:'learn',calendarCard:'calendar',quranCard:'learn',commemTodayCard:'calendar',eventsCard:'calendar',reciterCard:'settings',savedCard:'settings'};
@@ -8552,10 +8591,9 @@ function runTests(){
 
   T('Events list resolves ≥ 3 upcoming', computeEvents({y:2026,m:7,d:2}, 'Asia/Kolkata', Date.UTC(2026,6,2)).length >= 3);
 
-  const el = document.getElementById('testout');
-  el.style.display = 'block';
-  el.textContent = out.join('\n') + `\n\n${pass} passed · ${fail} failed`;
-  return {pass, fail};
+  const el = document.getElementById('testout');   // dev-only sink; not present in the UI (kept so the suite can still be run from the console during development)
+  if (el){ el.style.display = 'block'; el.textContent = out.join('\n') + `\n\n${pass} passed · ${fail} failed`; }
+  return {pass, fail, out};
 }
 
 /* ── "Update available" check ─────────────────────────────────────────────────
