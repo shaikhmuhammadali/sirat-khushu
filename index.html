@@ -1146,7 +1146,7 @@
   .qtitle{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
   .qname{font-family:var(--serif,var(--font));font-weight:800;font-size:1.18rem;color:var(--gold-ink)}
   .qarname{font-size:1.1rem;color:var(--ink)}
-  .qayah{display:flex;gap:11px;padding:15px 0;border-bottom:1px solid color-mix(in srgb,var(--stroke) 55%,transparent);content-visibility:auto;contain-intrinsic-size:340px;contain-intrinsic-size:auto 340px;transition:background-color .55s ease,box-shadow .6s ease,border-color .55s ease}   /* one-shot cross-fade of the reciting glow as recitation flows ayah→ayah (fires only on the .reciting class toggle — NOT a per-frame animation, so it stays perf-safe) */   /* skip layout+paint of the hundreds of off-screen ayat in a long surah (Al-Baqarah = 286 rows / ~96,000px) so the WebView isn't re-rasterising them while the Qari mp3 decodes and the follow scrolls. 'auto' remembers each row's real height after first render, so scroll math stays stable; the plain length is the fallback for older WebViews. */
+  .qayah{display:flex;gap:11px;padding:15px 0;border-bottom:1px solid color-mix(in srgb,var(--stroke) 55%,transparent);content-visibility:auto;contain-intrinsic-size:340px;contain-intrinsic-size:auto 340px;transition:background-color .8s ease,box-shadow .9s ease,border-color .7s ease}   /* long cross-fade of the reciting glow as recitation flows ayah→ayah (fires only on the .reciting class toggle — NOT a per-frame animation, so it stays perf-safe) */   /* skip layout+paint of the hundreds of off-screen ayat in a long surah (Al-Baqarah = 286 rows / ~96,000px) so the WebView isn't re-rasterising them while the Qari mp3 decodes and the follow scrolls. 'auto' remembers each row's real height after first render, so scroll math stays stable; the plain length is the fallback for older WebViews. */
   .qayah:last-child{border-bottom:none}
   .qnum{flex:none;width:27px;height:27px;border-radius:50%;border:1px solid var(--stroke-gold);color:var(--gold-ink);display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;background:var(--gold-soft)}
   .qbody{flex:1;min-width:0}
@@ -1326,12 +1326,13 @@
   @media (prefers-reduced-motion:reduce){ .sajda-glyph{animation:none} }
   /* ── "following the Qari": the ayah currently being recited glows and gently pulses ── */
   .qayah{transition:background .45s ease,box-shadow .45s ease,border-color .45s ease}
-  .qayah.reciting{position:relative;border:1px solid var(--stroke-gold);border-radius:16px;padding:12px 14px 12px 18px;background:color-mix(in srgb,var(--gold) 14%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,var(--gold-ink) 40%,transparent),0 12px 34px -12px color-mix(in srgb,var(--gold-ink) 62%,transparent)}   /* STATIC glow (was an infinite box-shadow animation → a continuous repaint the whole recitation). Solid gold tint (not a gradient) so background-color CROSS-FADES smoothly as recitation flows to the next ayah; the ::before accent bar still pulses on compositor-only opacity/transform */
-  .qayah.reciting::before{content:"";position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:0 3px 3px 0;background:linear-gradient(180deg,#f7e9b0,#c9a24b);box-shadow:0 0 12px color-mix(in srgb,var(--gold-ink) 75%,transparent);animation:reciteBar 1.5s ease-in-out infinite}
+  .qayah.reciting{position:relative;border:1px solid var(--stroke-gold);border-radius:16px;padding:12px 14px 12px 18px;background:color-mix(in srgb,var(--gold) 14%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,var(--gold-ink) 40%,transparent),0 12px 34px -12px color-mix(in srgb,var(--gold-ink) 62%,transparent);animation:ayahBloom .95s cubic-bezier(.22,.61,.36,1) both;transform-origin:center}   /* ONE-SHOT bloom each time an ayah becomes the reciting one — a slow, buttery settle-in (scale + glow bloom). Not infinite → no continuous repaint. Solid gold tint (not a gradient) so the exit also CROSS-FADES via the .qayah transition; the ::before accent bar pulses on compositor-only opacity/transform */
+  @keyframes ayahBloom{0%{transform:scale(.972);background-color:transparent;box-shadow:0 0 0 1px transparent,0 4px 14px -12px transparent}55%{background-color:color-mix(in srgb,var(--gold) 18%,transparent)}100%{transform:none;background-color:color-mix(in srgb,var(--gold) 14%,transparent);box-shadow:0 0 0 1px color-mix(in srgb,var(--gold-ink) 40%,transparent),0 12px 34px -12px color-mix(in srgb,var(--gold-ink) 62%,transparent)}}
+  .qayah.reciting::before{content:"";position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:0 3px 3px 0;background:linear-gradient(180deg,#f7e9b0,#c9a24b);box-shadow:0 0 12px color-mix(in srgb,var(--gold-ink) 75%,transparent);animation:reciteBar 2.4s ease-in-out infinite}
   .qayah.reciting .qnum{background:linear-gradient(135deg,var(--gold),#b8933f);color:#171204;box-shadow:0 0 15px color-mix(in srgb,var(--gold-ink) 55%,transparent)}
   .qayah.reciting .qar{text-shadow:0 0 20px rgba(217,180,91,.4)}
   /* word-by-word "lafẓ" glow: the current word lights up, recited words dim, upcoming stay full */
-  .qar .qw{transition:color .3s ease, opacity .3s ease}   /* text-shadow dropped from the transition — animating a 22px blur repainted the word every frame during scroll; the glow now applies instantly while colour still eases */
+  .qar .qw{transition:color .5s ease, opacity .5s ease}   /* text-shadow dropped from the transition — animating a 22px blur repainted the word every frame during scroll; the glow now applies instantly while colour eases slowly (buttery word-to-word flow) */
   .qar .qw.rw-done{color:var(--gold-ink); opacity:.7}
   .qar .qw.rw{color:var(--gold-ink); text-shadow:0 0 22px rgba(217,180,91,1), 0 0 8px rgba(255,244,214,.9)}
   @media (prefers-reduced-motion:reduce){ .qar .qw{transition:color .12s ease} }
@@ -3955,12 +3956,12 @@ function startReciteScroll(){
       const vh = window.innerHeight || document.documentElement.clientHeight;
       let f = 0; const a = _qsAudio;
       if (a && a.duration && isFinite(a.duration) && a.duration > 0) f = Math.min(1, Math.max(0, a.currentTime / a.duration));
-      _qsFrac += (f - _qsFrac) * 0.10;                          // low-pass the audio fraction → silky, gentle (lower = flowier; snapped to 0 at each ayah start in setRecitingAyah)
+      _qsFrac += (f - _qsFrac) * 0.07;                          // low-pass the audio fraction → extra-silky, buttery (lower = flowier; snapped to 0 at each ayah start in setRecitingAyah)
       const targetY = _qsAyTop + _qsAyH * _qsFrac - vh * 0.42;  // absolute page-Y to reach — from CACHED geometry, no per-frame layout
       const diff = targetY - _qsPos;
       if (Math.abs(diff) > 0.4){                                // deadzone → park perfectly still when seated
-        let move = diff * 0.06;                                 // ease 6%/frame → slower, flowier deceleration (was 8%)
-        if (move > 11) move = 11; else if (move < -11) move = -11;   // cap ≈ 11px/frame → extra-gentle, never a lurch
+        let move = diff * 0.045;                                // ease 4.5%/frame → slow, buttery deceleration (was 8%)
+        if (move > 9) move = 9; else if (move < -9) move = -9;   // cap ≈ 9px/frame → very gentle, never a lurch
         _qsPos += move;
         const y = Math.round(_qsPos);
         if (y !== _qsWrote){ _qsWrote = y; window.scrollTo({ top: y, left: 0, behavior: 'auto' }); }   // skip redundant writes
